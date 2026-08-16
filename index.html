@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DaddyGoFaster — Full send, family included.</title>
-<meta name="description" content="Three seats, one throttle, and a house rule about never lifting early. Builds, runs, and noise from the DaddyGoFaster garage.">
+<title>DaddyGoFaster</title>
+<meta name="description" content="DaddyGoFaster — the name two kids gave the guy driving. Watch on YouTube, shop on Etsy.">
 <link rel="canonical" href="https://daddygofaster.com/">
 <meta name="theme-color" content="#120E0C">
 <script>document.documentElement.className="js"</script>
 
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://daddygofaster.com/">
-<meta property="og:title" content="DaddyGoFaster — Full send, family included.">
-<meta property="og:description" content="Three seats, one throttle, and a house rule about never lifting early.">
+<meta property="og:title" content="DaddyGoFaster">
+<meta property="og:description" content="The name two kids gave the guy driving. Watch on YouTube, shop on Etsy.">
 <meta property="og:image" content="https://daddygofaster.com/assets/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://daddygofaster.com/assets/og.jpg">
@@ -27,14 +27,13 @@
 <style>
 /* ---- tokens ------------------------------------------------ */
 :root{
-  --tarmac:#120E0C;      /* warm asphalt black */
-  --slick:#1C1613;       /* raised panel       */
-  --grit:#2E2420;        /* hairlines          */
-  --afterburn:#FF5A1F;   /* flame              */
-  --nitro:#FFC23D;       /* sunset gold        */
-  --bone:#F2EBE1;        /* warm paper / text  */
-  --dust:#A2948A;        /* muted body         */
-  --teal:#16B3A3;        /* the cap            */
+  --tarmac:#120E0C;
+  --slick:#1C1613;
+  --grit:#2E2420;
+  --afterburn:#FF5A1F;
+  --nitro:#FFC23D;
+  --bone:#F2EBE1;
+  --dust:#A2948A;
   --flag-r:#B4232A;
   --flag-b:#1F3E7A;
 
@@ -43,7 +42,7 @@
   --data:"Courier Prime",ui-monospace,monospace;
 
   --pad:clamp(20px,5vw,72px);
-  --gut:max(var(--pad),(100% - 1560px) / 2);   /* centres content on wide screens */
+  --gut:max(var(--pad),(100% - 1560px) / 2);
   --rule:1px solid var(--grit);
 }
 *,*::before,*::after{box-sizing:border-box}
@@ -56,184 +55,216 @@ body{
 img{max-width:100%;display:block}
 a{color:inherit}
 ::selection{background:var(--afterburn);color:#120E0C}
-:focus-visible{outline:2px solid var(--teal);outline-offset:3px;border-radius:2px}
+:focus-visible{outline:2px solid var(--nitro);outline-offset:3px;border-radius:2px}
 
-/* ---- shared type ------------------------------------------- */
-.wide{font-family:var(--display);font-stretch:125%;font-weight:900;letter-spacing:-.02em;line-height:.86;text-transform:uppercase}
+/* ---- shared ------------------------------------------------ */
 .tag{font-family:var(--data);font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--dust)}
-.stripe{display:inline-block;width:7px;height:1em;vertical-align:-.12em;
+.stripe{display:inline-block;width:7px;height:1em;vertical-align:-.12em;flex:0 0 auto;
   background:linear-gradient(to bottom,var(--flag-r) 0 33.3%,var(--bone) 33.3% 66.6%,var(--flag-b) 66.6% 100%)}
+.flagrule{height:3px;opacity:.9;
+  background:linear-gradient(90deg,var(--flag-r) 0 33.3%,var(--bone) 33.3% 66.6%,var(--flag-b) 66.6% 100%)}
+
+.btn{font-family:var(--data);font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;
+  padding:15px 26px;border:1px solid transparent;cursor:pointer;transition:.2s;
+  display:inline-flex;align-items:center;gap:10px}
+.btn svg{width:16px;height:16px;flex:0 0 auto}
+.btn--fire{background:var(--afterburn);color:#120E0C;font-weight:700}
+.btn--fire:hover{background:var(--nitro);transform:translateY(-2px)}
+.btn--gold{background:var(--nitro);color:#120E0C;font-weight:700}
+.btn--gold:hover{background:var(--bone);transform:translateY(-2px)}
+
+.chip{font-family:var(--data);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;text-decoration:none;
+  border:1px solid var(--grit);color:var(--bone);padding:8px 13px;transition:.18s;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:7px;background:rgba(11,8,7,.55)}
+.chip svg{width:13px;height:13px;flex:0 0 auto}
+.chip:hover{border-color:var(--nitro);color:var(--nitro)}
+.chip--fire{background:var(--afterburn);border-color:var(--afterburn);color:#120E0C;font-weight:700}
+.chip--fire:hover{background:var(--nitro);border-color:var(--nitro);color:#120E0C}
 
 /* ---- top bar ----------------------------------------------- */
-.bar{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:24px;
-  padding:12px var(--gut);background:rgba(18,14,12,.86);backdrop-filter:blur(12px);border-bottom:var(--rule)}
+.bar{position:sticky;top:0;z-index:80;display:flex;align-items:center;gap:clamp(10px,2vw,24px);
+  padding:12px var(--gut);background:rgba(18,14,12,.96);border-bottom:var(--rule)}
 .bar__mark{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:.95rem;letter-spacing:.02em;
   text-transform:uppercase;text-decoration:none;display:flex;align-items:center;gap:9px;white-space:nowrap}
-.bar__markers{margin-left:auto;display:flex;gap:18px}
-.bar__markers a{font-family:var(--data);font-size:.7rem;letter-spacing:.18em;color:var(--dust);text-decoration:none;transition:color .18s}
-.bar__markers a:hover{color:var(--afterburn)}
-.bar__cta{font-family:var(--data);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;
-  border:1px solid var(--afterburn);color:var(--afterburn);padding:7px 14px;transition:.18s}
-.bar__cta:hover{background:var(--afterburn);color:var(--tarmac)}
-@media(max-width:820px){.bar__markers{display:none}.bar__cta{margin-left:auto}}
+.bar__nav{margin-left:auto;display:flex;gap:20px}
+.bar__nav a{font-family:var(--data);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--dust);text-decoration:none;transition:color .18s}
+.bar__nav a:hover{color:var(--nitro)}
+.bar__links{display:flex;gap:8px;margin-left:auto}
+.bar__nav ~ .bar__links{margin-left:clamp(12px,2vw,28px)}
+@media(max-width:880px){.bar__nav{display:none}}
+@media(max-width:520px){.chip span{display:none}.chip{padding:9px 11px}}
+
+/* ---- eagles (real photographs) ----------------------------- */
+.sky{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+.eagle{position:absolute;left:0;will-change:transform}
+.eagle img{width:100%;height:auto}
+.eagle--a{width:clamp(200px,29vw,500px);top:5%;animation:glideA 24s linear infinite}
+.eagle--b{width:clamp(130px,17vw,290px);top:15%;opacity:.95;animation:glideB 32s linear infinite 5s}
+.eagle--c{width:clamp(90px,11vw,185px);top:9%;opacity:.85;animation:glideC 40s linear infinite 13s}
+@keyframes glideA{
+  0%{transform:translate(-34vw,2vh) rotate(-3deg) scale(.92)}
+  50%{transform:translate(48vw,-5vh) rotate(2deg) scale(1)}
+  100%{transform:translate(138vw,4vh) rotate(-2deg) scale(.94)}}
+@keyframes glideB{
+  0%{transform:translate(-30vw,6vh) rotate(2deg)}
+  55%{transform:translate(55vw,-3vh) rotate(-3deg)}
+  100%{transform:translate(136vw,7vh) rotate(1deg)}}
+@keyframes glideC{
+  0%{transform:translate(-24vw,0) rotate(-1deg)}
+  100%{transform:translate(132vw,9vh) rotate(3deg)}}
+
+/* ---- fireworks canvas -------------------------------------- */
+.fx{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none;display:block}
 
 /* ---- hero -------------------------------------------------- */
 .hero{position:relative;display:flex;align-items:center;
   padding:clamp(40px,5vw,74px) var(--gut) clamp(44px,5vw,80px);
-  min-height:min(84vh,820px);overflow:hidden}
-.hero::before{content:"";position:absolute;inset:auto -20% -40% -20%;height:70%;
-  background:radial-gradient(60% 100% at 70% 100%,rgba(255,90,31,.20),transparent 70%);pointer-events:none}
+  min-height:min(88vh,860px);overflow:hidden}
 
-.hero__left{position:relative;z-index:2;display:grid;grid-template-columns:auto minmax(0,1fr);
-  gap:clamp(18px,2.6vw,36px);width:100%;max-width:min(68vw,1080px)}
-.hero__copy{min-width:0}
-.hero__eyebrow{margin:0 0 clamp(14px,2vw,22px)}
+/* waving flag behind the type */
+.hero__flag{position:absolute;inset:0 auto 0 0;width:min(78%,1250px);z-index:1;pointer-events:none;overflow:hidden}
+.hero__flag img{width:100%;height:100%;object-fit:cover;object-position:18% 50%;opacity:.42;
+  -webkit-mask-image:linear-gradient(90deg,#000 0,#000 30%,transparent 92%);
+  mask-image:linear-gradient(90deg,#000 0,#000 30%,transparent 92%)}
+.hero::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(90deg,rgba(18,14,12,.74) 0%,rgba(18,14,12,.56) 40%,rgba(18,14,12,0) 72%),
+             linear-gradient(0deg,rgba(18,14,12,.9) 0%,rgba(18,14,12,0) 45%)}
+
+.hero__art{position:absolute;inset:0 0 0 auto;width:min(52%,860px);z-index:2;pointer-events:none}
+.hero__art img{width:100%;height:100%;object-fit:cover;object-position:50% 44%;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 42%),linear-gradient(0deg,transparent 0,#000 14%,#000 88%,transparent 100%);
+  mask-image:linear-gradient(90deg,transparent 0,#000 42%),linear-gradient(0deg,transparent 0,#000 14%,#000 88%,transparent 100%);
+  -webkit-mask-composite:source-in;mask-composite:intersect}
+
+.hero__copy{position:relative;z-index:6;width:100%;max-width:min(68vw,1060px)}
+.hero__eyebrow{margin:0 0 clamp(14px,2vw,22px);color:var(--bone)}
 .hero__h1{margin:0;font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;
-  font-size:clamp(2rem,10.4vw,10rem);line-height:.82;letter-spacing:-.035em}
+  font-size:clamp(2rem,10.4vw,10rem);line-height:.82;letter-spacing:-.035em;
+  text-shadow:0 8px 46px rgba(18,14,12,.85)}
 .hero__h1 span{display:block}
 .hero__h1 .go{color:var(--dust);font-stretch:100%;font-weight:800;font-size:.52em;letter-spacing:.02em;margin:.12em 0 .04em}
 .hero__h1 .faster{background:linear-gradient(96deg,var(--nitro),var(--afterburn) 62%,var(--afterburn));
   -webkit-background-clip:text;background-clip:text;color:transparent}
-.hero__sub{max-width:44ch;margin:clamp(20px,2.6vw,30px) 0 0;color:var(--dust);font-size:1.06rem}
+.hero__sub{max-width:44ch;margin:clamp(20px,2.6vw,30px) 0 0;color:var(--dust);font-size:1.06rem;
+  text-shadow:0 2px 18px rgba(18,14,12,.95)}
 .hero__sub b{color:var(--bone);font-weight:600}
 .hero__actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:clamp(24px,3vw,34px)}
-
-.btn{font-family:var(--data);font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;
-  padding:15px 26px;border:1px solid transparent;cursor:pointer;transition:.2s;display:inline-block}
-.btn--fire{background:var(--afterburn);color:#120E0C;font-weight:700}
-.btn--fire:hover{background:var(--nitro);transform:translateY(-2px)}
-.btn--ghost{border-color:var(--grit);color:var(--bone);background:none}
-.btn--ghost:hover{border-color:var(--bone)}
-
-/* the christmas tree -- signature element */
-.tree{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:9px;
-  padding:14px 11px;border:1px solid var(--grit);background:#0B0807;align-self:start;margin-top:.5rem}
-.tree::after{content:"";width:1px;height:26px;background:var(--grit)}
-.bulb{width:20px;height:20px;border-radius:50%;background:#241C18;border:1px solid #322722;
-  transition:background .07s linear,box-shadow .07s linear}
-.bulb--pre{width:11px;height:11px}
-.bulb.on.pre{background:#E8D9A0;box-shadow:0 0 9px rgba(232,217,160,.85)}
-.bulb.on.amb{background:var(--nitro);box-shadow:0 0 16px rgba(255,194,61,.9),0 0 34px rgba(255,194,61,.35)}
-.bulb.on.grn{background:#2BE06A;box-shadow:0 0 18px rgba(43,224,106,.95),0 0 44px rgba(43,224,106,.4)}
-.tree__row{display:flex;gap:7px}
-@media(max-width:560px){
-  .tree{flex-direction:row;gap:8px;padding:10px 12px;align-self:start;justify-self:start;margin:0 0 20px}
-  .tree::after{display:none}
-  .tree__row{flex-direction:column}
-}
-
-/* hero art -- fills the right half, feathered into the tarmac on every inside edge */
-.hero__art{position:absolute;inset:0 0 0 auto;width:min(52%,860px);z-index:1;pointer-events:none}
-.hero__frame{position:relative;height:100%;overflow:hidden}
-.hero__frame img{width:100%;height:100%;object-fit:cover;object-position:50% 44%;
-  transform:scale(1.03);transition:transform 1.2s cubic-bezier(.2,.7,.2,1);
-  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 42%),linear-gradient(0deg,transparent 0,#000 14%,#000 88%,transparent 100%);
-  mask-image:linear-gradient(90deg,transparent 0,#000 42%),linear-gradient(0deg,transparent 0,#000 14%,#000 88%,transparent 100%);
-  -webkit-mask-composite:source-in;mask-composite:intersect}
-.launched .hero__frame img{transform:scale(1.1)}
-
-/* spec row under the copy */
-.hero__spec{list-style:none;display:flex;flex-wrap:wrap;gap:6px 28px;margin:clamp(26px,3vw,38px) 0 0;
-  padding:14px 0 0;border-top:var(--rule);max-width:min(100%,620px);font-family:var(--data);font-size:.7rem;
-  letter-spacing:.16em;text-transform:uppercase;color:var(--bone)}
-.hero__spec b{color:#5E534B;font-weight:400;margin-right:8px}
-.hero__spec li:last-child{color:var(--afterburn)}
 
 @media(max-width:1000px){
   .hero{flex-direction:column;align-items:stretch;min-height:auto;padding-top:0;gap:clamp(18px,4vw,32px)}
   .hero__art{position:static;width:auto;order:-1;margin:0 calc(var(--pad) * -1)}
-  .hero__frame{height:auto;aspect-ratio:16/10}
-  .hero__frame img{height:100%;object-fit:cover;object-position:50% 40%;
+  .hero__art .shot{aspect-ratio:16/10}
+  .hero__art img{height:100%;object-position:50% 40%;
     -webkit-mask-image:linear-gradient(0deg,transparent 0,rgba(0,0,0,.55) 16%,#000 40%);
     mask-image:linear-gradient(0deg,transparent 0,rgba(0,0,0,.55) 16%,#000 40%);
     -webkit-mask-composite:source-over;mask-composite:add}
-  .hero__left{grid-template-columns:1fr;max-width:none}
+  .hero__flag{width:100%}
+  .hero__flag img{opacity:.3}
+  .hero::after{background:linear-gradient(0deg,rgba(18,14,12,.92) 30%,rgba(18,14,12,.3) 70%,rgba(18,14,12,.6) 100%)}
+  .hero__copy{max-width:none}
   .hero__h1{font-size:clamp(2rem,15.5vw,9.5rem)}
-  .tree{justify-self:start;margin-top:0;margin-bottom:6px}
+  .sky{bottom:auto;height:62vw;max-height:430px}
+  .eagle--a{top:1%;width:clamp(120px,30vw,210px)}
+  .eagle--b{display:none}
+  .eagle--c{top:22%;width:clamp(66px,15vw,110px)}
+}
+.hero__art .shot{position:relative;height:100%;overflow:hidden}
+
+/* ---- flag band --------------------------------------------- */
+.band{position:relative;min-height:clamp(330px,48vw,560px);display:flex;align-items:center;
+  padding:clamp(44px,6vw,90px) var(--gut);overflow:hidden;border-top:var(--rule);border-bottom:var(--rule)}
+.band__bg{position:absolute;inset:0;z-index:1}
+.band__bg img{width:100%;height:100%;object-fit:cover;object-position:50% 46%}
+.band::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(90deg,rgba(18,14,12,.94) 0%,rgba(18,14,12,.72) 38%,rgba(18,14,12,.25) 70%,rgba(18,14,12,.55) 100%),
+             linear-gradient(0deg,rgba(18,14,12,.8),rgba(18,14,12,0) 40%,rgba(18,14,12,.55))}
+.band__in{position:relative;z-index:5;max-width:34ch}
+.band__h{margin:12px 0 0;font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;
+  font-size:clamp(1.9rem,5.4vw,4rem);line-height:.9;letter-spacing:-.03em;text-shadow:0 6px 30px rgba(18,14,12,.9)}
+.band__p{margin:18px 0 0;color:#D8CEC3;text-shadow:0 2px 14px rgba(18,14,12,.95)}
+.band__eagle{position:absolute;right:2%;top:50%;z-index:4;width:clamp(180px,32vw,560px);
+  transform:translateY(-50%);pointer-events:none}
+.band__eagle img{width:100%;height:auto;filter:drop-shadow(0 22px 40px rgba(0,0,0,.6))}
+@media(max-width:820px){
+  .band__eagle{right:-6%;top:auto;bottom:-4%;transform:none;width:min(62%,320px);opacity:.85}
+  .band__in{max-width:none}
 }
 
-/* ---- flag rule --------------------------------------------- */
-.flagrule{height:3px;opacity:.85;
-  background:linear-gradient(90deg,var(--flag-r) 0 33.3%,var(--bone) 33.3% 66.6%,var(--flag-b) 66.6% 100%)}
+/* ---- prose section ----------------------------------------- */
+.name{padding:clamp(56px,8vw,120px) var(--gut);border-bottom:var(--rule);
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:clamp(28px,5vw,80px)}
+@media(max-width:840px){.name{grid-template-columns:1fr}}
+.name__h{margin:12px 0 0;font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;
+  font-size:clamp(1.9rem,5vw,3.6rem);line-height:.9;letter-spacing:-.03em}
+.name__h em{font-style:normal;color:var(--nitro)}
+.name__body p{margin:0 0 18px;color:var(--dust);font-size:1.04rem}
+.name__body p:last-child{margin-bottom:0}
+.name__body b{color:var(--bone);font-weight:600}
+.name__pull{margin:26px 0 0;padding:20px 24px;border-left:3px solid var(--afterburn);background:var(--slick);
+  font-family:var(--display);font-stretch:110%;font-weight:800;text-transform:uppercase;
+  font-size:clamp(1.05rem,2.2vw,1.5rem);line-height:1.1;letter-spacing:-.01em;color:var(--bone)}
 
-/* ---- ticker ------------------------------------------------ */
-.ticker{border-bottom:var(--rule);overflow:hidden;background:#0E0B09}
-.ticker__track{display:flex;width:max-content;animation:roll 44s linear infinite}
-.ticker__track span{font-family:var(--data);text-transform:uppercase;
-  font-size:.72rem;letter-spacing:.26em;padding:11px 22px;color:#6B5D54;white-space:nowrap}
-.ticker__track span.hot{color:var(--afterburn);padding:11px 4px}
-@keyframes roll{to{transform:translateX(-50%)}}
+/* ---- storefront panels ------------------------------------- */
+.shop{position:relative;padding:clamp(56px,8vw,120px) var(--gut);border-bottom:var(--rule);overflow:hidden}
+.shop__glow{position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(46% 62% at 78% 50%,rgba(255,90,31,.16),transparent 70%)}
+.shop--gold .shop__glow{background:radial-gradient(46% 62% at 22% 50%,rgba(255,194,61,.15),transparent 70%)}
+.shop__grid{position:relative;z-index:2;display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(250px,380px);
+  gap:clamp(28px,5vw,80px);align-items:center}
+.shop--flip .shop__grid{grid-template-columns:minmax(250px,380px) minmax(0,1fr)}
+.shop__h{margin:14px 0 0;font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;
+  font-size:clamp(2.1rem,6.2vw,4.4rem);line-height:.88;letter-spacing:-.03em}
+.shop__h em{font-style:normal;color:var(--afterburn)}
+.shop--gold .shop__h em{color:var(--nitro)}
+.shop__p{max-width:46ch;margin:20px 0 0;color:var(--dust)}
+.shop__cta{margin-top:clamp(24px,3vw,34px);display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.shop__handle{font-family:var(--data);font-size:.72rem;letter-spacing:.16em;color:var(--dust);text-transform:uppercase}
+@media(max-width:880px){
+  .shop__grid,.shop--flip .shop__grid{grid-template-columns:1fr}
+  .shop--flip .shop__art{order:-1}
+}
+.tile{position:relative;aspect-ratio:1;border:var(--rule);overflow:hidden;background:#0B0807;display:grid;place-items:center}
+.tile__flag{position:absolute;inset:0}
+.tile__flag img{width:100%;height:100%;object-fit:cover;opacity:.26}
+.tile__mark{position:relative;z-index:2;width:52%;color:var(--afterburn);
+  filter:drop-shadow(0 8px 20px rgba(0,0,0,.7))}
+.shop--gold .tile__mark{color:var(--nitro)}
+.tile__cap{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:10px 14px;background:rgba(11,8,7,.92);
+  border-top:var(--rule);font-family:var(--data);font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dust);display:flex;justify-content:space-between;gap:12px}
 
-/* ---- distance-marker sections ------------------------------ */
-.mark{padding:clamp(56px,8vw,120px) var(--gut);border-bottom:var(--rule)}
-.mark__head{display:flex;align-items:baseline;gap:clamp(16px,3vw,34px);flex-wrap:wrap;
-  padding-bottom:22px;margin-bottom:clamp(30px,4vw,52px);border-bottom:var(--rule)}
-.mark__ft{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:clamp(1.6rem,4vw,2.6rem);
-  color:var(--afterburn);letter-spacing:-.02em;line-height:1}
-.mark__ft small{font-size:.42em;color:var(--dust);letter-spacing:.16em;margin-left:.4em;font-family:var(--data);font-weight:400}
-.mark__title{margin:0;font-size:clamp(1.6rem,4vw,2.6rem)}
-.mark__note{margin-left:auto;max-width:34ch;color:var(--dust);font-size:.92rem}
-@media(max-width:760px){.mark__note{margin-left:0}}
-
-/* crew */
-.crew{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1px;background:var(--grit);border:var(--rule)}
-.crew__cell{background:var(--slick);padding:clamp(24px,3vw,34px);transition:background .25s}
-.crew__cell:hover{background:#241C18}
-.crew__role{margin:0 0 6px;font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;
-  font-size:1.28rem;letter-spacing:-.01em}
-.crew__cell p{margin:12px 0 0;color:var(--dust);font-size:.95rem}
-.crew__cell:nth-child(2) .crew__role{color:var(--nitro)}
-.crew__cell:nth-child(3) .crew__role{color:var(--teal)}
-
-/* build list */
-.build{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:clamp(20px,3vw,40px)}
-.build__item{border-top:2px solid var(--afterburn);padding-top:18px}
-.build__item h3{margin:0 0 8px;font-family:var(--display);font-stretch:110%;font-weight:800;text-transform:uppercase;
-  font-size:1.12rem;letter-spacing:.01em}
-.build__item p{margin:0;color:var(--dust);font-size:.95rem}
-
-/* ---- timing slip (value inversion) ------------------------- */
-.slipwrap{background:#0E0B09;padding:clamp(56px,8vw,120px) var(--gut);border-bottom:var(--rule);
-  display:grid;grid-template-columns:minmax(0,600px) minmax(300px,420px);justify-content:center;
-  gap:clamp(30px,5vw,88px);align-items:center}
-@media(max-width:860px){.slipwrap{grid-template-columns:1fr}}
-.slipwrap h2{margin:0 0 18px;font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;
-  font-size:clamp(2rem,6vw,3.8rem);line-height:.9;letter-spacing:-.03em}
-.slipwrap p{color:var(--dust);max-width:42ch}
-
-.slip{position:relative;background:var(--bone);color:#1A1512;font-family:var(--data);font-size:.82rem;line-height:1.75;
-  padding:30px 26px;transform:rotate(-1.1deg);box-shadow:0 24px 60px rgba(0,0,0,.55)}
-.slip::before,.slip::after{content:"";position:absolute;left:0;right:0;height:9px;
-  background:radial-gradient(circle at 5px 0,transparent 5px,var(--bone) 5px);background-size:10px 9px}
-.slip::before{top:-8px;transform:rotate(180deg)}
-.slip::after{bottom:-8px}
-.slip__hd{display:flex;justify-content:space-between;font-weight:700;letter-spacing:.06em;
-  border-bottom:1px dashed #B7ADA1;padding-bottom:8px}
-.slip__row{display:flex;justify-content:space-between;gap:14px;border-bottom:1px dotted #CFC5B8;padding:3px 0}
-.slip__row b{font-weight:700;white-space:nowrap;color:#6E645A}
-.slip__row span{text-align:right}
-.slip__stamp{margin-top:14px;display:inline-block;border:2px solid var(--afterburn);color:var(--afterburn);
-  font-weight:700;letter-spacing:.18em;padding:4px 10px;transform:rotate(-3deg)}
-
-/* ---- ride along -------------------------------------------- */
-.ride{padding:clamp(60px,9vw,140px) var(--gut);text-align:center;position:relative;overflow:hidden}
-.ride::before{content:"";position:absolute;inset:-50% -10% auto -10%;height:180%;pointer-events:none;
-  background:radial-gradient(50% 50% at 50% 40%,rgba(255,90,31,.16),transparent 70%)}
-.ride__h{position:relative;margin:14px auto 0;font-family:var(--display);font-stretch:125%;font-weight:900;
-  text-transform:uppercase;font-size:clamp(2.4rem,9vw,6.4rem);line-height:.86;letter-spacing:-.035em;max-width:16ch}
-.ride__p{position:relative;max-width:46ch;margin:22px auto 0;color:var(--dust)}
-.ride__form{position:relative;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:34px auto 0;max-width:520px}
-.ride__form input{flex:1 1 260px;background:#0B0807;border:1px solid var(--grit);color:var(--bone);
+/* ---- finale ------------------------------------------------ */
+.ride{position:relative;padding:clamp(70px,10vw,150px) var(--gut);text-align:center;overflow:hidden}
+.ride__bg{position:absolute;inset:0;z-index:1}
+.ride__bg img{width:100%;height:100%;object-fit:cover;object-position:50% 40%;opacity:.34}
+.ride::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:radial-gradient(62% 70% at 50% 45%,rgba(18,14,12,.62),rgba(18,14,12,.93) 78%)}
+.ride__in{position:relative;z-index:6}
+.ride__eagle{width:clamp(190px,26vw,420px);margin:0 auto clamp(10px,2vw,26px)}
+.ride__eagle img{width:100%;height:auto;filter:drop-shadow(0 20px 36px rgba(0,0,0,.7))}
+.ride__h{margin:14px auto 0;font-family:var(--display);font-stretch:125%;font-weight:900;
+  text-transform:uppercase;font-size:clamp(2.4rem,9vw,6.4rem);line-height:.86;letter-spacing:-.035em;max-width:16ch;
+  text-shadow:0 8px 40px rgba(18,14,12,.9)}
+.ride__p{max-width:46ch;margin:22px auto 0;color:#CFC4B9;text-shadow:0 2px 14px rgba(18,14,12,.9)}
+.ride__form{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:34px auto 0;max-width:520px}
+.ride__form input{flex:1 1 260px;background:rgba(11,8,7,.85);border:1px solid var(--grit);color:var(--bone);
   font-family:var(--data);font-size:.85rem;padding:15px 16px}
-.ride__form input::placeholder{color:#5E534B}
-.ride__form input:focus{border-color:var(--afterburn);outline:none}
+.ride__form input::placeholder{color:#6B5D54}
+.ride__form input:focus{border-color:var(--nitro);outline:none}
+.ride__links{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:26px auto 0}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 /* ---- footer ------------------------------------------------ */
-.foot{border-top:var(--rule);padding:34px var(--gut);display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.foot{border-top:var(--rule);padding:34px var(--gut);display:flex;flex-wrap:wrap;gap:16px 24px;align-items:center}
 .foot__mark{font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;display:flex;align-items:center;gap:9px}
-.foot__meta{margin-left:auto;font-family:var(--data);font-size:.7rem;letter-spacing:.16em;color:#5E534B;text-transform:uppercase}
-@media(max-width:640px){.foot__meta{margin-left:0}}
+.foot__links{display:flex;gap:18px}
+.foot__links a{font-family:var(--data);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--dust);text-decoration:none}
+.foot__links a:hover{color:var(--nitro)}
+.foot__meta{margin-left:auto;font-family:var(--data);font-size:.66rem;letter-spacing:.14em;color:#5E534B;
+  text-transform:uppercase;text-align:right;line-height:1.9}
+@media(max-width:760px){.foot__meta{margin-left:0;text-align:left}}
 
 /* ---- reveal ------------------------------------------------ */
 .js .rise{opacity:0;transform:translateY(22px);
@@ -244,6 +275,8 @@ a{color:inherit}
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
   .js .rise{opacity:1;transform:none}
+  .eagle--a{transform:translate(58vw,-4vh)}
+  .eagle--b,.eagle--c{display:none}
 }
 </style>
 </head>
@@ -251,50 +284,68 @@ a{color:inherit}
 
 <header class="bar">
   <a class="bar__mark" href="#top"><i class="stripe"></i>DaddyGoFaster</a>
-  <nav class="bar__markers" aria-label="Distance markers">
-    <a href="#ft60">60 FT</a><a href="#ft330">330 FT</a><a href="#ft660">660 FT</a><a href="#ft1320">1320 FT</a>
+  <nav class="bar__nav" aria-label="Sections">
+    <a href="#name">The name</a><a href="#watch">Watch</a><a href="#shop">Shop</a><a href="#hello">Say hello</a>
   </nav>
-  <a class="bar__cta" href="#ft1320">Ride along</a>
+  <div class="bar__links">
+    <a class="chip" href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
+      <span>Watch</span></a>
+    <a class="chip chip--fire" href="https://www.etsy.com/shop/DaddyGoFaster" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 3h11l.6 4.2h-1.2C16.9 5.4 16 4.6 14 4.6h-3.4c-.5 0-.6.1-.6.5v5.4h2.5c1.6 0 2.2-.6 2.5-2.1h1.2v5.6h-1.2c-.3-1.6-.9-2.1-2.5-2.1H10v4.9c0 1.4.4 1.9 2 1.9h2.7c2.2 0 3.2-.8 4-3h1.1L19 21H7v-1.2c1.6-.1 2-.4 2-1.6V5.8c0-1.2-.4-1.5-2-1.6V3z"/></svg>
+      <span>Shop</span></a>
+  </div>
 </header>
 
 <main id="top">
 
   <!-- ===== HERO ============================================ -->
   <section class="hero" id="hero">
-    <div class="hero__left">
 
-      <!-- pre-stage, stage, three ambers, green -->
-      <div class="tree" id="tree" aria-hidden="true">
-        <div class="tree__row"><i class="bulb bulb--pre pre" data-b="pre"></i><i class="bulb bulb--pre pre" data-b="pre"></i></div>
-        <div class="tree__row"><i class="bulb bulb--pre pre" data-b="stage"></i><i class="bulb bulb--pre pre" data-b="stage"></i></div>
-        <i class="bulb amb" data-b="a1"></i>
-        <i class="bulb amb" data-b="a2"></i>
-        <i class="bulb amb" data-b="a3"></i>
-        <i class="bulb grn" data-b="go"></i>
+    <div class="hero__flag" aria-hidden="true">
+      <picture>
+        <source srcset="/assets/flag.webp" type="image/webp">
+        <img src="/assets/flag.jpg" alt="" width="1800" height="1200" fetchpriority="high">
+      </picture>
+    </div>
+
+    <canvas class="fx" id="fxHero" aria-hidden="true"></canvas>
+
+    <div class="sky" aria-hidden="true">
+      <div class="eagle eagle--a">
+        <picture><source srcset="/assets/eagle-a.webp" type="image/webp">
+          <img src="/assets/eagle-a.png" alt="" width="900" height="905" loading="lazy"></picture>
       </div>
+      <div class="eagle eagle--b">
+        <picture><source srcset="/assets/eagle-b.webp" type="image/webp">
+          <img src="/assets/eagle-b.png" alt="" width="700" height="539" loading="lazy"></picture>
+      </div>
+      <div class="eagle eagle--c">
+        <picture><source srcset="/assets/eagle-c.webp" type="image/webp">
+          <img src="/assets/eagle-c.png" alt="" width="520" height="320" loading="lazy"></picture>
+      </div>
+    </div>
 
-      <div class="hero__copy">
-        <p class="tag hero__eyebrow">Est. 2026 &nbsp;&middot;&nbsp; Somewhere past the speed limit</p>
-        <h1 class="hero__h1">
-          <span>Daddy,</span>
-          <span class="go">go</span>
-          <span class="faster">Faster.</span>
-        </h1>
-        <p class="hero__sub">Three seats, one throttle, and a house rule about <b>never lifting early</b>. This is where the builds, the runs, and the noise live.</p>
-        <div class="hero__actions">
-          <a class="btn btn--fire" href="#ft1320">Ride along</a>
-          <button class="btn btn--ghost" id="restage" type="button">Re-stage the tree</button>
-        </div>
-        <ul class="hero__spec">
-          <li><b>Lane</b>Right</li>
-          <li><b>Dial in</b>Whatever it takes</li>
-          <li><b>Status</b><span id="status">Staged</span></li>
-        </ul>
+    <div class="hero__copy">
+      <p class="tag hero__eyebrow">Red, white, and wide open</p>
+      <h1 class="hero__h1">
+        <span>Daddy,</span>
+        <span class="go">go</span>
+        <span class="faster">Faster.</span>
+      </h1>
+      <p class="hero__sub">Three words hollered from the back seat, and now the name on <b>everything we make</b>. Come watch it, or wear it.</p>
+      <div class="hero__actions">
+        <a class="btn btn--fire" href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
+          Watch on YouTube</a>
+        <a class="btn btn--gold" href="https://www.etsy.com/shop/DaddyGoFaster" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 3h11l.6 4.2h-1.2C16.9 5.4 16 4.6 14 4.6h-3.4c-.5 0-.6.1-.6.5v5.4h2.5c1.6 0 2.2-.6 2.5-2.1h1.2v5.6h-1.2c-.3-1.6-.9-2.1-2.5-2.1H10v4.9c0 1.4.4 1.9 2 1.9h2.7c2.2 0 3.2-.8 4-3h1.1L19 21H7v-1.2c1.6-.1 2-.4 2-1.6V5.8c0-1.2-.4-1.5-2-1.6V3z"/></svg>
+          Shop on Etsy</a>
       </div>
     </div>
 
     <div class="hero__art">
-      <div class="hero__frame">
+      <div class="shot">
         <picture>
           <source media="(max-width:700px)" type="image/webp" srcset="/assets/hero-sm.webp">
           <source type="image/webp" srcset="/assets/hero.webp">
@@ -307,94 +358,126 @@ a{color:inherit}
 
   <div class="flagrule"></div>
 
-  <div class="ticker" aria-hidden="true">
-    <div class="ticker__track">
-      <span>Full send</span><span class="hot">&#10022;</span><span>No lifting</span><span class="hot">&#10022;</span><span>Loud is right</span><span class="hot">&#10022;</span><span>Back by dinner</span><span class="hot">&#10022;</span>
-      <span>Full send</span><span class="hot">&#10022;</span><span>No lifting</span><span class="hot">&#10022;</span><span>Loud is right</span><span class="hot">&#10022;</span><span>Back by dinner</span><span class="hot">&#10022;</span>
+  <!-- ===== FLAG BAND ======================================= -->
+  <section class="band" id="creed">
+    <div class="band__bg" aria-hidden="true">
+      <picture><source srcset="/assets/flag-tall.webp" type="image/webp">
+        <img src="/assets/flag-tall.jpg" alt="" loading="lazy"></picture>
     </div>
-  </div>
-
-  <!-- ===== 60 FT =========================================== -->
-  <section class="mark" id="ft60">
-    <div class="mark__head rise">
-      <div class="mark__ft">60<small>FT</small></div>
-      <h2 class="mark__title wide">Who&rsquo;s in the car</h2>
-      <p class="mark__note">The launch is the only part you can&rsquo;t fix later. Everybody has a job before the lights drop.</p>
+    <div class="band__eagle" aria-hidden="true">
+      <picture><source srcset="/assets/eagle-b.webp" type="image/webp">
+        <img src="/assets/eagle-b.png" alt="" width="700" height="539" loading="lazy"></picture>
     </div>
-    <div class="crew rise">
-      <div class="crew__cell">
-        <h3 class="crew__role">Driver</h3>
-        <p class="tag">Right foot &middot; Final say</p>
-        <p>Builds it, checks it twice, then hands the throttle its instructions. Answers to &ldquo;Daddy&rdquo; and to the tech inspector.</p>
-      </div>
-      <div class="crew__cell">
-        <h3 class="crew__role">Co-pilot</h3>
-        <p class="tag">Left seat &middot; Calls the count</p>
-        <p>Reads the tree, counts down the ambers, and yells the two words this whole place is named after.</p>
-      </div>
-      <div class="crew__cell">
-        <h3 class="crew__role">Hype crew</h3>
-        <p class="tag">Right seat &middot; Volume control</p>
-        <p>Fists up before the burnout, still up at the finish line. Undefeated at making a good run feel better.</p>
-      </div>
+    <div class="band__in rise">
+      <p class="tag">Made loud in the USA</p>
+      <h2 class="band__h">Louder is<br>a love language.</h2>
+      <p class="band__p">Everything here gets made in the same country it gets used in, by people who think the fun part is the whole point.</p>
     </div>
   </section>
 
-  <!-- ===== 330 FT ========================================== -->
-  <section class="mark" id="ft330">
-    <div class="mark__head rise">
-      <div class="mark__ft">330<small>FT</small></div>
-      <h2 class="mark__title wide">What we get up to</h2>
-      <p class="mark__note">Past the launch, still gathering. This is where the plan meets the pavement.</p>
-    </div>
-    <div class="build rise">
-      <div class="build__item">
-        <h3>The builds</h3>
-        <p>Whatever is on the lift this month &mdash; torn down, argued over, and put back together with two extra sets of hands.</p>
-      </div>
-      <div class="build__item">
-        <h3>The runs</h3>
-        <p>Every pass, good or ugly. Slips get posted either way; that is the only way the next one gets quicker.</p>
-      </div>
-      <div class="build__item">
-        <h3>The road trips</h3>
-        <p>Small-town strips, county fairgrounds, and any stretch of American asphalt worth the drive to get there.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== 660 FT -- the slip ============================== -->
-  <section class="slipwrap" id="ft660">
+  <!-- ===== THE NAME ======================================== -->
+  <section class="name" id="name">
     <div class="rise">
-      <p class="tag">660 FT &middot; Halfway, wide open</p>
-      <h2>House rules,<br>printed on the way<br>past the eighth.</h2>
-      <p>Every strip hands you a paper slip on the return road. Ours has never had a car&rsquo;s numbers on it.</p>
+      <p class="tag">Where it came from</p>
+      <h2 class="name__h">It started as<br><em>a request.</em></h2>
     </div>
-    <div class="slip rise" role="img" aria-label="A drag strip timing slip listing the family house rules at each distance marker: belts on every time, if it is loud it is right, nobody lifts early, kids pick the music, back by dinner.">
-      <div class="slip__hd"><span>DADDYGOFASTER</span><span>TICKET 0001</span></div>
-      <div class="slip__row"><b>LANE</b><span>RIGHT</span></div>
-      <div class="slip__row"><b>DIAL IN</b><span>WHATEVER IT TAKES</span></div>
-      <div class="slip__row"><b>R/T</b><span>.012</span></div>
-      <div class="slip__row"><b>60 FT</b><span>BELTS ON. EVERY TIME.</span></div>
-      <div class="slip__row"><b>330 FT</b><span>IF IT&rsquo;S LOUD, IT&rsquo;S RIGHT.</span></div>
-      <div class="slip__row"><b>660 FT</b><span>NOBODY LIFTS EARLY.</span></div>
-      <div class="slip__row"><b>1000 FT</b><span>KIDS PICK THE MUSIC.</span></div>
-      <div class="slip__row"><b>1320 FT</b><span>BACK BY DINNER.</span></div>
-      <div class="slip__row"><b>MPH</b><span>ENOUGH</span></div>
-      <span class="slip__stamp">GOOD RUN</span>
+    <div class="name__body rise">
+      <p>There is a moment every parent knows. You are pulling out of the driveway, two small people are buckled in behind you, and one of them decides the current speed is a personal insult.</p>
+      <p><b>DaddyGoFaster</b> is that moment, kept. It is not a team or a series or a sponsorship deal. It is a name — the one that got yelled first, then laughed about, then printed on a shirt, and now sits on the front of a channel, a shop, and this page.</p>
+      <p>If you have ever been the one driving, or the one yelling, you already get it.</p>
+      <p class="name__pull">Two kids. One gas pedal. One very American request.</p>
     </div>
   </section>
 
-  <!-- ===== 1320 FT ========================================= -->
-  <section class="ride" id="ft1320">
-    <p class="tag">1320 FT &middot; The traps</p>
-    <h2 class="ride__h">Come stand<br>at the fence.</h2>
-    <p class="ride__p">Drop an address and we will send word when the next build fires up or the next run gets posted. No noise you did not ask for.</p>
-    <form class="ride__form" id="ride" action="mailto:hello@daddygofaster.com" method="post" enctype="text/plain">
-      <label class="visually-hidden" for="email">Email address</label>
-      <input id="email" name="email" type="email" required placeholder="you@yourgarage.com" autocomplete="email">
-      <button class="btn btn--fire" type="submit">Send it</button>
-    </form>
+  <!-- ===== WATCH =========================================== -->
+  <section class="shop" id="watch">
+    <div class="shop__glow" aria-hidden="true"></div>
+    <div class="shop__grid">
+      <div class="rise">
+        <p class="tag">On YouTube</p>
+        <h2 class="shop__h">See what<br><em>we get up to.</em></h2>
+        <p class="shop__p">The stuff we build, the places we take it, and the parts that did not survive the trip. New video whenever something is worth pointing a camera at.</p>
+        <div class="shop__cta">
+          <a class="btn btn--fire" href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
+            Watch on YouTube</a>
+          <span class="shop__handle">@DaddyGoFaster</span>
+        </div>
+      </div>
+      <div class="shop__art rise">
+        <div class="tile">
+          <div class="tile__flag" aria-hidden="true">
+            <picture><source srcset="/assets/flag.webp" type="image/webp"><img src="/assets/flag.jpg" alt="" loading="lazy"></picture>
+          </div>
+          <svg class="tile__mark" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+            <circle cx="60" cy="60" r="46" stroke="currentColor" stroke-width="6"/>
+            <path d="M50 39l34 21-34 21z" fill="currentColor"/>
+          </svg>
+          <span class="tile__cap"><span>YouTube</span><span>@DaddyGoFaster</span></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SHOP ============================================ -->
+  <section class="shop shop--flip shop--gold" id="shop">
+    <div class="shop__glow" aria-hidden="true"></div>
+    <div class="shop__grid">
+      <div class="shop__art rise">
+        <div class="tile">
+          <div class="tile__flag" aria-hidden="true">
+            <picture><source srcset="/assets/flag.webp" type="image/webp"><img src="/assets/flag.jpg" alt="" loading="lazy"></picture>
+          </div>
+          <svg class="tile__mark" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+            <path d="M26 24h68M26 24v72M26 96h68M26 60h36" stroke="currentColor" stroke-width="6" stroke-linecap="square"/>
+            <circle cx="86" cy="60" r="11" fill="currentColor"/>
+          </svg>
+          <span class="tile__cap"><span>Etsy</span><span>DaddyGoFaster</span></span>
+        </div>
+      </div>
+      <div class="rise">
+        <p class="tag">On Etsy</p>
+        <h2 class="shop__h">Wear it<br><em>loud.</em></h2>
+        <p class="shop__p">Shirts, stickers, and whatever else the crew talks me into printing. Small batches, shipped from the same address the fun happens at.</p>
+        <div class="shop__cta">
+          <a class="btn btn--gold" href="https://www.etsy.com/shop/DaddyGoFaster" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 3h11l.6 4.2h-1.2C16.9 5.4 16 4.6 14 4.6h-3.4c-.5 0-.6.1-.6.5v5.4h2.5c1.6 0 2.2-.6 2.5-2.1h1.2v5.6h-1.2c-.3-1.6-.9-2.1-2.5-2.1H10v4.9c0 1.4.4 1.9 2 1.9h2.7c2.2 0 3.2-.8 4-3h1.1L19 21H7v-1.2c1.6-.1 2-.4 2-1.6V5.8c0-1.2-.4-1.5-2-1.6V3z"/></svg>
+            Shop on Etsy</a>
+          <span class="shop__handle">etsy.com/shop/DaddyGoFaster</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FINALE ========================================== -->
+  <section class="ride" id="hello">
+    <div class="ride__bg" aria-hidden="true">
+      <picture><source srcset="/assets/flag.webp" type="image/webp">
+        <img src="/assets/flag.jpg" alt="" loading="lazy"></picture>
+    </div>
+    <canvas class="fx" id="fxRide" aria-hidden="true"></canvas>
+    <div class="ride__in">
+      <div class="ride__eagle rise" aria-hidden="true">
+        <picture><source srcset="/assets/eagle-d.webp" type="image/webp">
+          <img src="/assets/eagle-d.png" alt="" width="620" height="533" loading="lazy"></picture>
+      </div>
+      <p class="tag">Say hello</p>
+      <h2 class="ride__h">Ride along.</h2>
+      <p class="ride__p">Drop an address and we will send word when something new lands on the channel or in the shop. No noise you did not ask for.</p>
+      <form class="ride__form" action="mailto:hello@daddygofaster.com" method="post" enctype="text/plain">
+        <label class="visually-hidden" for="email">Email address</label>
+        <input id="email" name="email" type="email" required placeholder="you@wherever.com" autocomplete="email">
+        <button class="btn btn--fire" type="submit">Send it</button>
+      </form>
+      <div class="ride__links">
+        <a class="chip" href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
+          <span>YouTube &middot; @DaddyGoFaster</span></a>
+        <a class="chip" href="https://www.etsy.com/shop/DaddyGoFaster" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 3h11l.6 4.2h-1.2C16.9 5.4 16 4.6 14 4.6h-3.4c-.5 0-.6.1-.6.5v5.4h2.5c1.6 0 2.2-.6 2.5-2.1h1.2v5.6h-1.2c-.3-1.6-.9-2.1-2.5-2.1H10v4.9c0 1.4.4 1.9 2 1.9h2.7c2.2 0 3.2-.8 4-3h1.1L19 21H7v-1.2c1.6-.1 2-.4 2-1.6V5.8c0-1.2-.4-1.5-2-1.6V3z"/></svg>
+          <span>Etsy &middot; DaddyGoFaster</span></a>
+      </div>
+    </div>
   </section>
 
   <div class="flagrule"></div>
@@ -402,59 +485,162 @@ a{color:inherit}
 
 <footer class="foot">
   <span class="foot__mark"><i class="stripe"></i>DaddyGoFaster</span>
-  <span class="foot__meta">&copy; 2026 &middot; Made loud in the USA</span>
+  <nav class="foot__links" aria-label="Elsewhere">
+    <a href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">YouTube</a>
+    <a href="https://www.etsy.com/shop/DaddyGoFaster" target="_blank" rel="noopener">Etsy</a>
+  </nav>
+  <span class="foot__meta">
+    &copy; 2026 DaddyGoFaster &middot; Made loud in the USA<br>
+    Eagle photos: U.S. Fish &amp; Wildlife Service, public domain &middot; Flag photo: CC0
+  </span>
 </footer>
 
 <script>
 (function(){
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var tree   = document.getElementById('tree');
-  var hero   = document.getElementById('hero');
-  if(!tree || !hero) return;
 
-  var bulbs  = Array.prototype.slice.call(tree.querySelectorAll('.bulb'));
-  var status = document.getElementById('status');
-  var seq    = [['pre',260],['stage',560],['a1',980],['a2',1360],['a3',1740],['go',2140]];
-  var timers = [];
-  var words  = {pre:'Pre-staged',stage:'Staged',a1:'Amber',a2:'Amber',a3:'Amber',go:'Gone'};
+  /* ---------- fireworks ---------- */
+  var COLORS = ['#FF5A1F','#FFC23D','#F2EBE1','#E0333B','#5A8CF0','#2BE06A'];
 
-  function say(w){ if(status) status.textContent = w; }
-  function clearAll(){ timers.forEach(clearTimeout); timers = []; }
-  function reset(){
-    bulbs.forEach(function(b){ b.classList.remove('on'); });
-    hero.classList.remove('launched');
-    say('Rolling in');
-  }
-  function light(key){
-    bulbs.forEach(function(b){ if(b.getAttribute('data-b') === key) b.classList.add('on'); });
-  }
+  function fireworks(canvas){
+    if(!canvas || reduce) return null;
+    var ctx = canvas.getContext('2d');
+    if(!ctx) return null;
 
-  function run(){
-    clearAll(); reset();
-    if(reduce){
-      bulbs.forEach(function(b){ b.classList.add('on'); });
-      hero.classList.add('launched');
-      say('Gone');
-      return;
+    var W = 0, H = 0, shells = [], parts = [], flashes = [], raf = null, live = false, idle = null;
+
+    /* one pre-rendered glow sprite beats createRadialGradient() every frame */
+    var glow = document.createElement('canvas');
+    glow.width = glow.height = 128;
+    var gx = glow.getContext('2d');
+    var gg = gx.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gg.addColorStop(0, 'rgba(255,247,236,1)');
+    gg.addColorStop(1, 'rgba(255,247,236,0)');
+    gx.fillStyle = gg; gx.fillRect(0, 0, 128, 128);
+
+    function resize(){
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = canvas.clientWidth; H = canvas.clientHeight;
+      canvas.width  = Math.max(1, Math.round(W * dpr));
+      canvas.height = Math.max(1, Math.round(H * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
-    seq.forEach(function(step){
-      timers.push(setTimeout(function(){
-        if(step[0] === 'go'){
-          bulbs.forEach(function(b){
-            if(b.getAttribute('data-b').charAt(0) === 'a') b.classList.remove('on');
-          });
-          hero.classList.add('launched');
-        }
-        light(step[0]);
-        say(words[step[0]]);
-      }, step[1]));
+
+    function launch(){
+      if(!W || !H || shells.length > 3) return;
+      shells.push({
+        x: W * (0.10 + Math.random() * 0.80), y: H + 6, px: 0, py: 0,
+        vx: (Math.random() - 0.5) * 0.9,
+        vy: -(6.4 + Math.random() * 3.6),
+        c: COLORS[(Math.random() * COLORS.length) | 0],
+        stop: H * (0.08 + Math.random() * 0.34)
+      });
+    }
+
+    function burst(s){
+      flashes.push({x:s.x, y:s.y, life:1});
+      if(parts.length > 620) return;
+      var n = 54 + ((Math.random() * 40) | 0);
+      var base = 1.9 + Math.random() * 2.1;
+      var two = Math.random() < 0.45 ? COLORS[(Math.random() * COLORS.length) | 0] : s.c;
+      for(var i = 0; i < n; i++){
+        var a = (i / n) * Math.PI * 2 + Math.random() * 0.16;
+        var sp = base * (0.45 + Math.random() * 0.9);
+        parts.push({
+          x: s.x, y: s.y, px: s.x, py: s.y,
+          vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+          c: i % 3 === 0 ? two : s.c,
+          life: 1, decay: 0.006 + Math.random() * 0.010
+        });
+      }
+    }
+
+    function frame(){
+      ctx.clearRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+
+      var i, s, p, f;
+
+      for(i = flashes.length - 1; i >= 0; i--){
+        f = flashes[i]; f.life -= 0.085;
+        if(f.life <= 0){ flashes.splice(i, 1); continue; }
+        var rad = 130 * (1.25 - f.life);
+        ctx.globalAlpha = f.life * 0.55;
+        ctx.drawImage(glow, f.x - rad, f.y - rad, rad * 2, rad * 2);
+      }
+
+      for(i = shells.length - 1; i >= 0; i--){
+        s = shells[i];
+        s.px = s.x; s.py = s.y;
+        s.x += s.vx; s.y += s.vy; s.vy += 0.13;
+        ctx.globalAlpha = 0.95;
+        ctx.strokeStyle = s.c; ctx.lineWidth = 2.6;
+        ctx.beginPath(); ctx.moveTo(s.px, s.py); ctx.lineTo(s.x, s.y); ctx.stroke();
+        if(s.vy >= -0.6 || s.y <= s.stop){ burst(s); shells.splice(i, 1); }
+      }
+
+      for(i = parts.length - 1; i >= 0; i--){
+        p = parts[i];
+        p.px = p.x; p.py = p.y;
+        p.x += p.vx; p.y += p.vy;
+        p.vx *= 0.987; p.vy = p.vy * 0.987 + 0.048;
+        p.life -= p.decay;
+        if(p.life <= 0){ parts.splice(i, 1); continue; }
+        var l = p.life > 0 ? p.life : 0;
+        ctx.strokeStyle = p.c;
+        ctx.globalAlpha = l * (0.72 + Math.random() * 0.28);
+        ctx.lineWidth = 2.4 * l + 0.7;
+        ctx.beginPath(); ctx.moveTo(p.px, p.py); ctx.lineTo(p.x, p.y); ctx.stroke();
+      }
+
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+
+      if(live || shells.length || parts.length || flashes.length){ raf = requestAnimationFrame(frame); }
+      else { raf = null; ctx.clearRect(0, 0, W, H); }
+    }
+
+    function tick(){ if(!raf) raf = requestAnimationFrame(frame); }
+
+    function start(){
+      if(live) return;
+      live = true;
+      if(!W) resize();
+      tick();
+      idle = setInterval(function(){
+        if(!document.hidden && Math.random() < 0.75) launch();
+      }, 3000);
+    }
+    function stop(){
+      live = false;
+      if(idle){ clearInterval(idle); idle = null; }
+    }
+    function show(count){
+      if(!W) resize();
+      tick();
+      for(var i = 0; i < count; i++){
+        setTimeout(launch, i * (220 + Math.random() * 300));
+      }
+    }
+
+    window.addEventListener('resize', function(){
+      if(W !== canvas.clientWidth || H !== canvas.clientHeight) resize();
     });
+    document.addEventListener('visibilitychange', function(){ if(document.hidden) stop(); });
+
+    return {start:start, stop:stop, show:show, resize:resize};
   }
 
-  var btn = document.getElementById('restage');
-  if(btn) btn.addEventListener('click', run);
-  window.addEventListener('load', function(){ setTimeout(run, 420); });
+  var heroFx = fireworks(document.getElementById('fxHero'));
+  var rideFx = fireworks(document.getElementById('fxRide'));
 
+  window.addEventListener('load', function(){
+    if(heroFx){ heroFx.resize(); heroFx.show(6); heroFx.start(); }
+    if(rideFx){ rideFx.resize(); }
+  });
+
+  /* ---------- scroll behaviour ---------- */
   if('IntersectionObserver' in window && !reduce){
     var io = new IntersectionObserver(function(entries){
       entries.forEach(function(e){
@@ -462,6 +648,23 @@ a{color:inherit}
       });
     }, {rootMargin:'0px 0px -12% 0px', threshold:.08});
     Array.prototype.forEach.call(document.querySelectorAll('.rise'), function(el){ io.observe(el); });
+
+    var gate = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        var fx = e.target.id === 'hero' ? heroFx : rideFx;
+        if(!fx) return;
+        if(e.isIntersecting){
+          if(e.target.id === 'hello') fx.show(5);
+          fx.start();
+        } else {
+          fx.stop();
+        }
+      });
+    }, {threshold:.25});
+    ['hero','hello'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) gate.observe(el);
+    });
   } else {
     Array.prototype.forEach.call(document.querySelectorAll('.rise'), function(el){ el.classList.add('in'); });
   }
