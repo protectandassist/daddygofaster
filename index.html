@@ -98,7 +98,25 @@ a{color:inherit}
 /* ---- eagles (real photographs) ----------------------------- */
 .sky{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
 .eagle{position:absolute;left:0;will-change:transform}
-.eagle img{width:100%;height:auto}
+
+/* Wing-beat: a 14-frame sprite strip stepped with background-position
+   (jump-none lands on all 14, including the last).
+   Two stacked layers run the same steps one frame apart, and the top one fades
+   in across each frame slot -- so frames cross-dissolve instead of snapping. */
+.flap{position:relative;width:100%;aspect-ratio:430 / 279;--beat:1s}
+.flap::before,.flap::after{content:"";position:absolute;inset:0;
+  background-image:url(/assets/eagle-fly.webp);
+  background-size:auto 100%;background-repeat:no-repeat;background-position:0 0;
+  animation:flapstep var(--beat) steps(14,jump-none) infinite}
+.flap::after{
+  animation:flapstep var(--beat) steps(14,jump-none) infinite,
+            flapfade calc(var(--beat) / 14) linear infinite;
+  animation-delay:calc(var(--beat) / -14), 0s}
+@keyframes flapstep{from{background-position-x:0%}to{background-position-x:100%}}
+@keyframes flapfade{from{opacity:0}to{opacity:1}}
+.eagle--a .flap{--beat:1.05s}
+.eagle--b .flap{--beat:.86s}
+.eagle--c .flap{--beat:.72s}
 .eagle--a{width:clamp(200px,29vw,500px);top:5%;animation:glideA 24s linear infinite}
 .eagle--b{width:clamp(130px,17vw,290px);top:15%;opacity:.95;animation:glideB 32s linear infinite 5s}
 .eagle--c{width:clamp(90px,11vw,185px);top:9%;opacity:.85;animation:glideC 40s linear infinite 13s}
@@ -185,7 +203,7 @@ a{color:inherit}
 .band__p{margin:18px 0 0;color:#D8CEC3;text-shadow:0 2px 14px rgba(18,14,12,.95)}
 .band__eagle{position:absolute;right:2%;top:50%;z-index:4;width:clamp(180px,32vw,560px);
   transform:translateY(-50%);pointer-events:none}
-.band__eagle img{width:100%;height:auto;filter:drop-shadow(0 22px 40px rgba(0,0,0,.6))}
+.band__eagle .flap{--beat:1.25s}
 @media(max-width:820px){
   .band__eagle{right:-6%;top:auto;bottom:-4%;transform:none;width:min(62%,320px);opacity:.85}
   .band__in{max-width:none}
@@ -243,7 +261,7 @@ a{color:inherit}
   background:radial-gradient(62% 70% at 50% 45%,rgba(18,14,12,.62),rgba(18,14,12,.93) 78%)}
 .ride__in{position:relative;z-index:6}
 .ride__eagle{width:clamp(190px,26vw,420px);margin:0 auto clamp(10px,2vw,26px)}
-.ride__eagle img{width:100%;height:auto;filter:drop-shadow(0 20px 36px rgba(0,0,0,.7))}
+.ride__eagle .flap{--beat:1.15s}
 .ride__h{margin:14px auto 0;font-family:var(--display);font-stretch:125%;font-weight:900;
   text-transform:uppercase;font-size:clamp(2.4rem,9vw,6.4rem);line-height:.86;letter-spacing:-.035em;max-width:16ch;
   text-shadow:0 8px 40px rgba(18,14,12,.9)}
@@ -277,6 +295,8 @@ a{color:inherit}
   .js .rise{opacity:1;transform:none}
   .eagle--a{transform:translate(58vw,-4vh)}
   .eagle--b,.eagle--c{display:none}
+  .flap::before,.flap::after{animation:none;background-position-x:15.38%}
+  .flap::after{opacity:0}
 }
 </style>
 </head>
@@ -312,18 +332,9 @@ a{color:inherit}
     <canvas class="fx" id="fxHero" aria-hidden="true"></canvas>
 
     <div class="sky" aria-hidden="true">
-      <div class="eagle eagle--a">
-        <picture><source srcset="/assets/eagle-a.webp" type="image/webp">
-          <img src="/assets/eagle-a.png" alt="" width="900" height="905" loading="lazy"></picture>
-      </div>
-      <div class="eagle eagle--b">
-        <picture><source srcset="/assets/eagle-b.webp" type="image/webp">
-          <img src="/assets/eagle-b.png" alt="" width="700" height="539" loading="lazy"></picture>
-      </div>
-      <div class="eagle eagle--c">
-        <picture><source srcset="/assets/eagle-c.webp" type="image/webp">
-          <img src="/assets/eagle-c.png" alt="" width="520" height="320" loading="lazy"></picture>
-      </div>
+      <div class="eagle eagle--a"><div class="flap"></div></div>
+      <div class="eagle eagle--b"><div class="flap"></div></div>
+      <div class="eagle eagle--c"><div class="flap"></div></div>
     </div>
 
     <div class="hero__copy">
@@ -364,10 +375,7 @@ a{color:inherit}
       <picture><source srcset="/assets/flag-tall.webp" type="image/webp">
         <img src="/assets/flag-tall.jpg" alt="" loading="lazy"></picture>
     </div>
-    <div class="band__eagle" aria-hidden="true">
-      <picture><source srcset="/assets/eagle-b.webp" type="image/webp">
-        <img src="/assets/eagle-b.png" alt="" width="700" height="539" loading="lazy"></picture>
-    </div>
+    <div class="band__eagle" aria-hidden="true"><div class="flap"></div></div>
     <div class="band__in rise">
       <p class="tag">Made loud in the USA</p>
       <h2 class="band__h">Louder is<br>a love language.</h2>
@@ -457,10 +465,7 @@ a{color:inherit}
     </div>
     <canvas class="fx" id="fxRide" aria-hidden="true"></canvas>
     <div class="ride__in">
-      <div class="ride__eagle rise" aria-hidden="true">
-        <picture><source srcset="/assets/eagle-d.webp" type="image/webp">
-          <img src="/assets/eagle-d.png" alt="" width="620" height="533" loading="lazy"></picture>
-      </div>
+      <div class="ride__eagle rise" aria-hidden="true"><div class="flap"></div></div>
       <p class="tag">Say hello</p>
       <h2 class="ride__h">Ride along.</h2>
       <p class="ride__p">Drop an address and we will send word when something new lands on the channel or in the shop. No noise you did not ask for.</p>
@@ -491,7 +496,7 @@ a{color:inherit}
   </nav>
   <span class="foot__meta">
     &copy; 2026 DaddyGoFaster &middot; Made loud in the USA<br>
-    Eagle photos: U.S. Fish &amp; Wildlife Service, public domain &middot; Flag photo: CC0
+    Flag photo: CC0
   </span>
 </footer>
 
