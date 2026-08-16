@@ -7,6 +7,7 @@
 <meta name="description" content="Three seats, one throttle, and a house rule about never lifting early. Builds, runs, and noise from the DaddyGoFaster garage.">
 <link rel="canonical" href="https://daddygofaster.com/">
 <meta name="theme-color" content="#120E0C">
+<script>document.documentElement.className="js"</script>
 
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://daddygofaster.com/">
@@ -235,14 +236,14 @@ a{color:inherit}
 @media(max-width:640px){.foot__meta{margin-left:0}}
 
 /* ---- reveal ------------------------------------------------ */
-.rise{opacity:0;transform:translateY(22px);
+.js .rise{opacity:0;transform:translateY(22px);
   transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
-.rise.in{opacity:1;transform:none}
+.js .rise.in{opacity:1;transform:none}
 
 @media(prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
-  .rise{opacity:1;transform:none}
+  .js .rise{opacity:1;transform:none}
 }
 </style>
 </head>
