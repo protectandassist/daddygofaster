@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DaddyGoFaster</title>
-<meta name="description" content="DaddyGoFaster — the name two kids gave the guy driving. Watch on YouTube, shop on Etsy.">
+<title>DaddyGoFaster — Bid on my tomorrow</title>
+<meta name="description" content="Every day the highest bid decides what I do tomorrow. Bids start at one cent. The money is public and the job stays sealed until the video.">
 <link rel="canonical" href="https://daddygofaster.com/">
 <meta name="theme-color" content="#120E0C">
 <script>document.documentElement.className="js"</script>
 
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://daddygofaster.com/">
-<meta property="og:title" content="DaddyGoFaster">
-<meta property="og:description" content="The name two kids gave the guy driving. Watch on YouTube, shop on Etsy.">
-<meta property="og:image" content="https://daddygofaster.com/assets/og.jpg">
+<meta property="og:title" content="DaddyGoFaster — Bid on my tomorrow">
+<meta property="og:description" content="The highest bid decides what I do tomorrow. Bids start at one cent. The job stays sealed until the video.">
+<meta property="og:image" content="https://daddygofaster.com/assets/og-bid.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://daddygofaster.com/assets/og.jpg">
+<meta name="twitter:image" content="https://daddygofaster.com/assets/og-bid.jpg">
 
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
@@ -56,9 +56,11 @@ img{max-width:100%;display:block}
 a{color:inherit}
 ::selection{background:var(--afterburn);color:#120E0C}
 :focus-visible{outline:2px solid var(--nitro);outline-offset:3px;border-radius:2px}
+[id]{scroll-margin-top:72px}
+[hidden]{display:none!important}
 
 /* ---- shared ------------------------------------------------ */
-.tag{font-family:var(--data);font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--dust)}
+.tag{font-family:var(--data);font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--dust);margin:0}
 .stripe{display:inline-block;width:7px;height:1em;vertical-align:-.12em;flex:0 0 auto;
   background:linear-gradient(to bottom,var(--flag-r) 0 33.3%,var(--bone) 33.3% 66.6%,var(--flag-b) 66.6% 100%)}
 .flagrule{height:3px;opacity:.9;
@@ -70,8 +72,9 @@ a{color:inherit}
 .btn svg{width:16px;height:16px;flex:0 0 auto}
 .btn--fire{background:var(--afterburn);color:#120E0C;font-weight:700}
 .btn--fire:hover{background:var(--nitro);transform:translateY(-2px)}
-.btn--gold{background:var(--nitro);color:#120E0C;font-weight:700}
-.btn--gold:hover{background:var(--bone);transform:translateY(-2px)}
+.btn--line{border-color:var(--grit);color:var(--bone);background:rgba(11,8,7,.55)}
+.btn--line:hover{border-color:var(--nitro);color:var(--nitro)}
+.btn[disabled]{background:var(--grit);color:var(--dust);cursor:not-allowed;transform:none}
 
 .chip{font-family:var(--data);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;text-decoration:none;
   border:1px solid var(--grit);color:var(--bone);padding:8px 13px;transition:.18s;white-space:nowrap;
@@ -80,6 +83,17 @@ a{color:inherit}
 .chip:hover{border-color:var(--nitro);color:var(--nitro)}
 .chip--fire{background:var(--afterburn);border-color:var(--afterburn);color:#120E0C;font-weight:700}
 .chip--fire:hover{background:var(--nitro);border-color:var(--nitro);color:#120E0C}
+
+.sec{padding:clamp(56px,8vw,120px) var(--gut);border-bottom:var(--rule);position:relative}
+.sec--slick{background:var(--slick)}
+.sec__h{margin:12px 0 0;font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;
+  font-size:clamp(1.9rem,5.4vw,4rem);line-height:.9;letter-spacing:-.03em}
+.sec__h em{font-style:normal;color:var(--afterburn)}
+.sec__h--gold em{color:var(--nitro)}
+.sec__p{max-width:54ch;margin:20px 0 0;color:var(--dust)}
+.sec__p b{color:var(--bone);font-weight:600}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:clamp(28px,5vw,80px);align-items:start}
+@media(max-width:880px){.split{grid-template-columns:1fr}}
 
 /* ---- top bar ----------------------------------------------- */
 .bar{position:sticky;top:0;z-index:80;display:flex;align-items:center;gap:clamp(10px,2vw,24px);
@@ -92,187 +106,185 @@ a{color:inherit}
 .bar__nav a:hover{color:var(--nitro)}
 .bar__links{display:flex;gap:8px;margin-left:auto}
 .bar__nav ~ .bar__links{margin-left:clamp(12px,2vw,28px)}
-@media(max-width:880px){.bar__nav{display:none}}
-@media(max-width:520px){.chip span{display:none}.chip{padding:9px 11px}}
-
-/* ---- eagles (real photographs) ----------------------------- */
-.sky{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
-.eagle{position:absolute;left:0;will-change:transform}
-
-/* Wing-beat: a 14-frame sprite strip. Frame 0 is the soaring pose and the bird
-   holds it most of the time, flapping only in short bursts -- see the script.
-   Two stacked layers sit one frame apart and --mix dissolves between them, so
-   the beat blends rather than snaps. JS drives --f0 / --f1 / --mix. */
-.flap{position:relative;width:100%;aspect-ratio:430 / 333;--f0:0%;--f1:0%;--mix:0}
-.flap::before,.flap::after{content:"";position:absolute;inset:0;
-  background-image:url(/assets/eagle-fly.webp);
-  background-size:auto 100%;background-repeat:no-repeat;background-position-y:0}
-.flap::before{background-position-x:var(--f0)}
-.flap::after{background-position-x:var(--f1);opacity:var(--mix)}
-.eagle--a{width:clamp(200px,29vw,500px);top:5%;animation:glideA 24s linear infinite}
-.eagle--b{width:clamp(130px,17vw,290px);top:15%;opacity:.95;animation:glideB 32s linear infinite 5s}
-.eagle--c{width:clamp(90px,11vw,185px);top:9%;opacity:.85;animation:glideC 40s linear infinite 13s}
-@keyframes glideA{
-  0%{transform:translate(-34vw,2vh) rotate(-3deg) scale(.92)}
-  50%{transform:translate(48vw,-5vh) rotate(2deg) scale(1)}
-  100%{transform:translate(138vw,4vh) rotate(-2deg) scale(.94)}}
-@keyframes glideB{
-  0%{transform:translate(-30vw,6vh) rotate(2deg)}
-  55%{transform:translate(55vw,-3vh) rotate(-3deg)}
-  100%{transform:translate(136vw,7vh) rotate(1deg)}}
-@keyframes glideC{
-  0%{transform:translate(-24vw,0) rotate(-1deg)}
-  100%{transform:translate(132vw,9vh) rotate(3deg)}}
-
-/* ---- fireworks canvas -------------------------------------- */
-.fx{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none;display:block}
+@media(max-width:940px){.bar__nav{display:none}}
+@media(max-width:520px){.chip--icon span{display:none}.chip--icon{padding:9px 11px}}
+@media(max-width:380px){.bar__mark{font-size:.82rem}.chip--icon{display:none}}
 
 /* ---- hero -------------------------------------------------- */
-.hero{position:relative;display:flex;align-items:center;
-  padding:clamp(40px,5vw,74px) var(--gut) clamp(44px,5vw,80px);
-  min-height:min(88vh,860px);overflow:hidden}
-
-/* waving flag behind the type */
-.hero__flag{position:absolute;inset:0 auto 0 0;width:min(78%,1250px);z-index:1;pointer-events:none;overflow:hidden}
-.hero__flag img{width:100%;height:100%;object-fit:cover;object-position:18% 50%;opacity:.42;
-  -webkit-mask-image:linear-gradient(90deg,#000 0,#000 30%,transparent 92%);
-  mask-image:linear-gradient(90deg,#000 0,#000 30%,transparent 92%)}
+.hero{position:relative;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,420px);
+  gap:clamp(28px,5vw,80px);align-items:center;
+  padding:clamp(48px,6vw,90px) var(--gut) clamp(52px,6vw,96px);overflow:hidden;border-bottom:var(--rule)}
+.hero__flag{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.hero__flag img{width:100%;height:100%;object-fit:cover;object-position:18% 50%;opacity:.22;
+  -webkit-mask-image:linear-gradient(90deg,#000 0,#000 25%,transparent 85%);
+  mask-image:linear-gradient(90deg,#000 0,#000 25%,transparent 85%)}
 .hero::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
-  background:linear-gradient(90deg,rgba(18,14,12,.74) 0%,rgba(18,14,12,.56) 40%,rgba(18,14,12,0) 72%),
-             linear-gradient(0deg,rgba(18,14,12,.9) 0%,rgba(18,14,12,0) 45%)}
-
-.hero__art{position:absolute;inset:0 0 0 auto;width:min(52%,860px);z-index:2;pointer-events:none}
-.hero__art img{width:100%;height:100%;object-fit:cover;object-position:50% 44%;
-  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 42%),linear-gradient(0deg,transparent 0,#000 14%,#000 88%,transparent 100%);
-  mask-image:linear-gradient(90deg,transparent 0,#000 42%),linear-gradient(0deg,transparent 0,#000 14%,#000 88%,transparent 100%);
-  -webkit-mask-composite:source-in;mask-composite:intersect}
-
-.hero__copy{position:relative;z-index:6;width:100%;max-width:min(68vw,1060px)}
-.hero__eyebrow{margin:0 0 clamp(14px,2vw,22px);color:var(--bone)}
-.hero__h1{margin:0;font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;
-  font-size:clamp(2rem,10.4vw,10rem);line-height:.82;letter-spacing:-.035em;
+  background:linear-gradient(0deg,rgba(18,14,12,.95) 0%,rgba(18,14,12,.25) 55%),
+             radial-gradient(50% 70% at 88% 40%,rgba(255,90,31,.14),transparent 70%)}
+.hero__copy,.hero .slip{position:relative;z-index:5}
+.hero__eyebrow{color:var(--bone)}
+.hero__h1{margin:clamp(14px,2vw,22px) 0 0;font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;
+  font-size:clamp(2.2rem,7.4vw,8.6rem);line-height:.84;letter-spacing:-.035em;
   text-shadow:0 8px 46px rgba(18,14,12,.85)}
 .hero__h1 span{display:block}
 .hero__h1 .go{color:var(--dust);font-stretch:100%;font-weight:800;font-size:.52em;letter-spacing:.02em;margin:.12em 0 .04em}
-.hero__h1 .faster{background:linear-gradient(96deg,var(--nitro),var(--afterburn) 62%,var(--afterburn));
-  -webkit-background-clip:text;background-clip:text;color:transparent}
-.hero__sub{max-width:44ch;margin:clamp(20px,2.6vw,30px) 0 0;color:var(--dust);font-size:1.06rem;
+.hero__h1 .fill{display:inline-block;min-width:min(4.6em,100%);padding-bottom:.05em;
+  border-bottom:.075em solid var(--afterburn);border-image:linear-gradient(96deg,var(--nitro),var(--afterburn) 62%) 1}
+.hero__h1 .fill__w{background:linear-gradient(96deg,var(--nitro),var(--afterburn) 62%,var(--afterburn));
+  -webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap;
+  transition:opacity .28s ease,transform .28s ease}
+.hero__h1 .fill__w.out{opacity:0;transform:translateY(.12em)}
+.hero__sub{max-width:46ch;margin:clamp(20px,2.6vw,30px) 0 0;color:#CFC4B9;font-size:1.06rem;
   text-shadow:0 2px 18px rgba(18,14,12,.95)}
 .hero__sub b{color:var(--bone);font-weight:600}
 .hero__actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:clamp(24px,3vw,34px)}
-
-@media(max-width:1000px){
-  .hero{flex-direction:column;align-items:stretch;min-height:auto;padding-top:0;gap:clamp(18px,4vw,32px)}
-  .hero__art{position:static;width:auto;order:-1;margin:0 calc(var(--pad) * -1)}
-  .hero__art .shot{aspect-ratio:16/10}
-  .hero__art img{height:100%;object-position:50% 40%;
-    -webkit-mask-image:linear-gradient(0deg,transparent 0,rgba(0,0,0,.55) 16%,#000 40%);
-    mask-image:linear-gradient(0deg,transparent 0,rgba(0,0,0,.55) 16%,#000 40%);
-    -webkit-mask-composite:source-over;mask-composite:add}
-  .hero__flag{width:100%}
-  .hero__flag img{opacity:.3}
-  .hero::after{background:linear-gradient(0deg,rgba(18,14,12,.92) 30%,rgba(18,14,12,.3) 70%,rgba(18,14,12,.6) 100%)}
-  .hero__copy{max-width:none}
-  .hero__h1{font-size:clamp(2rem,15.5vw,9.5rem)}
-  .sky{bottom:auto;height:62vw;max-height:430px}
-  .eagle--a{top:1%;width:clamp(120px,30vw,210px)}
-  .eagle--b{display:none}
-  .eagle--c{top:22%;width:clamp(66px,15vw,110px)}
+@media(max-width:940px){
+  .hero{grid-template-columns:1fr}
+  .hero__h1{font-size:clamp(2.2rem,13.2vw,7rem)}
 }
-.hero__art .shot{position:relative;height:100%;overflow:hidden}
-
-/* ---- flag band --------------------------------------------- */
-.band{position:relative;min-height:clamp(330px,48vw,560px);display:flex;align-items:center;
-  padding:clamp(44px,6vw,90px) var(--gut);overflow:hidden;border-top:var(--rule);border-bottom:var(--rule)}
-.band__bg{position:absolute;inset:0;z-index:1}
-.band__bg img{width:100%;height:100%;object-fit:cover;object-position:50% 46%}
-.band::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
-  background:linear-gradient(90deg,rgba(18,14,12,.94) 0%,rgba(18,14,12,.72) 38%,rgba(18,14,12,.25) 70%,rgba(18,14,12,.55) 100%),
-             linear-gradient(0deg,rgba(18,14,12,.8),rgba(18,14,12,0) 40%,rgba(18,14,12,.55))}
-.band__in{position:relative;z-index:5;max-width:34ch}
-.band__h{margin:12px 0 0;font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;
-  font-size:clamp(1.9rem,5.4vw,4rem);line-height:.9;letter-spacing:-.03em;text-shadow:0 6px 30px rgba(18,14,12,.9)}
-.band__p{margin:18px 0 0;color:#D8CEC3;text-shadow:0 2px 14px rgba(18,14,12,.95)}
-.band__eagle{position:absolute;right:2%;top:50%;z-index:4;width:clamp(180px,32vw,560px);
-  transform:translateY(-50%);pointer-events:none}
-
-@media(max-width:820px){
-  .band__eagle{right:-6%;top:auto;bottom:-4%;transform:none;width:min(62%,320px);opacity:.85}
-  .band__in{max-width:none}
+/* size the headline off its own column so the longest fill-in word always fits */
+@supports (font-size:1cqi){
+  .hero__copy{container-type:inline-size}
+  .hero__h1{font-size:clamp(2.2rem,15.5cqi,8.6rem)}
 }
 
-/* ---- prose section ----------------------------------------- */
-.name{padding:clamp(56px,8vw,120px) var(--gut);border-bottom:var(--rule);
-  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:clamp(28px,5vw,80px)}
-@media(max-width:840px){.name{grid-template-columns:1fr}}
-.name__h{margin:12px 0 0;font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;
-  font-size:clamp(1.9rem,5vw,3.6rem);line-height:.9;letter-spacing:-.03em}
-.name__h em{font-style:normal;color:var(--nitro)}
-.name__body p{margin:0 0 18px;color:var(--dust);font-size:1.04rem}
-.name__body p:last-child{margin-bottom:0}
-.name__body b{color:var(--bone);font-weight:600}
-.name__pull{margin:26px 0 0;padding:20px 24px;border-left:3px solid var(--afterburn);background:var(--slick);
-  font-family:var(--display);font-stretch:110%;font-weight:800;text-transform:uppercase;
-  font-size:clamp(1.05rem,2.2vw,1.5rem);line-height:1.1;letter-spacing:-.01em;color:var(--bone)}
+/* ---- timing slip ------------------------------------------- */
+.slip{background:#0B0807;border:var(--rule);font-family:var(--data);box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.slip__head{display:flex;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:var(--rule);
+  font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dust)}
+.slip__head b{color:var(--afterburn);font-weight:700}
+.slip__rows{margin:0;padding:6px 18px}
+.slip__row{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:13px 0;border-bottom:1px dashed var(--grit)}
+.slip__row:last-child{border-bottom:0}
+.slip__row dt{font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dust)}
+.slip__row dd{margin:0;font-size:1.02rem;font-weight:700;text-align:right;color:var(--bone)}
+.slip__row dd.hot{color:var(--nitro)}
+.sealed{display:inline-block;border:2px solid var(--afterburn);color:var(--afterburn);padding:2px 10px;
+  font-size:.74rem;letter-spacing:.24em;text-transform:uppercase;transform:rotate(-3deg)}
+.slip__foot{margin:0;padding:12px 18px;border-top:var(--rule);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:#6B5D54}
 
-/* ---- storefront panels ------------------------------------- */
-.shop{position:relative;padding:clamp(56px,8vw,120px) var(--gut);border-bottom:var(--rule);overflow:hidden}
-.shop__glow{position:absolute;inset:0;z-index:1;pointer-events:none;
-  background:radial-gradient(46% 62% at 78% 50%,rgba(255,90,31,.16),transparent 70%)}
-.shop--gold .shop__glow{background:radial-gradient(46% 62% at 22% 50%,rgba(255,194,61,.15),transparent 70%)}
-.shop__grid{position:relative;z-index:2;display:grid;
-  grid-template-columns:minmax(0,1fr) minmax(250px,380px);
-  gap:clamp(28px,5vw,80px);align-items:center}
-.shop--flip .shop__grid{grid-template-columns:minmax(250px,380px) minmax(0,1fr)}
-.shop__h{margin:14px 0 0;font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;
-  font-size:clamp(2.1rem,6.2vw,4.4rem);line-height:.88;letter-spacing:-.03em}
-.shop__h em{font-style:normal;color:var(--afterburn)}
-.shop--gold .shop__h em{color:var(--nitro)}
-.shop__p{max-width:46ch;margin:20px 0 0;color:var(--dust)}
-.shop__cta{margin-top:clamp(24px,3vw,34px);display:flex;flex-wrap:wrap;gap:14px;align-items:center}
-.shop__handle{font-family:var(--data);font-size:.72rem;letter-spacing:.16em;color:var(--dust);text-transform:uppercase}
-@media(max-width:880px){
-  .shop__grid,.shop--flip .shop__grid{grid-template-columns:1fr}
-  .shop--flip .shop__art{order:-1}
+/* ---- how it works ------------------------------------------ */
+.steps{list-style:none;margin:clamp(30px,4vw,54px) 0 0;padding:0;display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--grit);border:var(--rule)}
+.step{background:var(--tarmac);padding:clamp(20px,2.4vw,32px)}
+.step__n{font-family:var(--data);font-size:.72rem;letter-spacing:.24em;color:var(--afterburn)}
+.step__h{margin:14px 0 8px;font-family:var(--display);font-stretch:110%;font-weight:800;text-transform:uppercase;
+  font-size:1.15rem;line-height:1.05}
+.step p{margin:0;color:var(--dust);font-size:.98rem}
+@media(max-width:1000px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.steps{grid-template-columns:1fr}}
+
+.reply{margin:clamp(28px,4vw,48px) 0 0;max-width:780px;border-left:3px solid var(--afterburn);background:var(--slick);
+  padding:20px 24px;font-family:var(--data);font-size:.94rem}
+.reply__tag{font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dust);margin:0 0 12px}
+.reply p{margin:0 0 10px}
+.reply p:last-child{margin-bottom:0}
+.reply .q{color:var(--dust)}
+.reply b{color:var(--nitro);font-weight:700}
+
+/* ---- board ------------------------------------------------- */
+.board{list-style:none;margin:clamp(28px,4vw,48px) 0 0;padding:0;border:var(--rule);background:#0B0807}
+.board__row{display:grid;grid-template-columns:3ch minmax(0,1fr) minmax(0,1.3fr) 9ch 8ch;
+  gap:clamp(10px,2vw,24px);align-items:center;padding:15px clamp(14px,2vw,24px);border-top:var(--rule);
+  font-family:var(--data);font-size:.92rem}
+.board__row:first-child{border-top:0}
+.board__rank{color:var(--dust)}
+.board__name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board__job{height:12px;opacity:.9;
+  background:repeating-linear-gradient(90deg,var(--grit) 0 22px,transparent 22px 28px)}
+.board__amt{font-weight:700;color:var(--bone);text-align:right}
+.board__age{color:var(--dust);text-align:right;font-size:.74rem;letter-spacing:.06em}
+.board__row--lead .board__amt{color:var(--nitro)}
+.board__row--lead .board__rank{color:var(--afterburn)}
+@media(max-width:620px){
+  .board__row{grid-template-columns:3ch minmax(0,1fr) auto}
+  .board__job,.board__age{display:none}
 }
-.tile{position:relative;aspect-ratio:1;border:var(--rule);overflow:hidden;background:#0B0807;display:grid;place-items:center}
-.tile__flag{position:absolute;inset:0}
-.tile__flag img{width:100%;height:100%;object-fit:cover;opacity:.26}
-.tile__mark{position:relative;z-index:2;width:52%;color:var(--afterburn);
-  filter:drop-shadow(0 8px 20px rgba(0,0,0,.7))}
-.shop--gold .tile__mark{color:var(--nitro)}
-.tile__cap{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:10px 14px;background:rgba(11,8,7,.92);
-  border-top:var(--rule);font-family:var(--data);font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--dust);display:flex;justify-content:space-between;gap:12px}
+.board__note{margin:16px 0 0;font-family:var(--data);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--dust)}
+.board__note--demo{color:var(--nitro)}
+.board__empty{margin:clamp(28px,4vw,48px) 0 0;padding:clamp(24px,4vw,44px);border:1px dashed var(--grit);
+  color:var(--dust);max-width:none}
+.board__empty b{color:var(--bone);font-weight:600}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---- bid form ---------------------------------------------- */
+.form{display:grid;gap:18px}
+.field label{display:block;font-family:var(--data);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--dust);margin-bottom:8px}
+.field input,.field textarea{width:100%;background:rgba(11,8,7,.85);border:1px solid var(--grit);color:var(--bone);
+  font-family:var(--data);font-size:1rem;padding:14px 16px;border-radius:0}
+.field textarea{min-height:128px;resize:vertical;line-height:1.5}
+.field input::placeholder,.field textarea::placeholder{color:#6B5D54}
+.field input:focus,.field textarea:focus{border-color:var(--nitro);outline:none}
+.field__hint{margin:8px 0 0;font-size:.86rem;color:var(--dust)}
+.form__pair{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:520px){.form__pair{grid-template-columns:1fr}}
+.calc{margin:0;padding:16px 18px;border-left:3px solid var(--nitro);background:var(--slick);
+  font-family:var(--data);font-size:.94rem;color:var(--bone);min-height:3.4em}
+.form__go{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.form__msg{margin:0;padding:16px 18px;border-left:3px solid var(--afterburn);background:var(--slick);
+  font-family:var(--data);font-size:.94rem}
+.form__msg--ok{border-left-color:#2BE06A}
+.form__soon{margin:0;font-size:.92rem;color:var(--dust)}
+.form__soon a{color:var(--nitro)}
+
+/* ---- the rate ---------------------------------------------- */
+.rates{width:100%;border-collapse:collapse;font-family:var(--data);font-size:.98rem}
+.rates caption{text-align:left;font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dust);padding-bottom:10px}
+.rates th,.rates td{padding:13px 0;border-bottom:var(--rule);text-align:left;font-weight:400}
+.rates th{color:var(--nitro);font-weight:700;width:9ch}
+.rates td{color:var(--bone)}
+.rates td span{color:var(--dust)}
+
+/* ---- rules ------------------------------------------------- */
+.rules{margin:clamp(30px,4vw,54px) 0 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(16px,2vw,28px)}
+@media(max-width:1000px){.rules{grid-template-columns:1fr}}
+.rulebox{border:var(--rule);background:#0B0807}
+.rulebox__h{margin:0;padding:14px 20px;border-bottom:var(--rule);font-family:var(--data);font-size:.72rem;
+  letter-spacing:.2em;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.rulebox__h i{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.rulebox--yes .rulebox__h i{background:#2BE06A}
+.rulebox--no .rulebox__h i{background:var(--flag-r)}
+.rulebox--cash .rulebox__h i{background:var(--nitro)}
+.rulebox ul{list-style:none;margin:0;padding:6px 20px}
+.rulebox li{padding:13px 0;border-bottom:1px dashed var(--grit);color:#D8CEC3;font-size:.98rem}
+.rulebox li:last-child{border-bottom:0}
+.rulebox li b{color:var(--bone);font-weight:600}
+
+/* ---- sponsor spots ----------------------------------------- */
+.spots{margin:clamp(30px,4vw,54px) 0 0;display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:clamp(16px,2vw,28px)}
+@media(max-width:1000px){.spots{grid-template-columns:1fr}}
+.spot{border:var(--rule);background:#0B0807;padding:clamp(22px,2.6vw,34px);display:flex;flex-direction:column;gap:12px;
+  text-decoration:none;min-height:230px;transition:border-color .18s}
+a.spot:hover{border-color:var(--nitro)}
+.spot__h{margin:0;font-family:var(--display);font-stretch:112%;font-weight:900;text-transform:uppercase;
+  font-size:clamp(1.3rem,2.3vw,1.9rem);line-height:1;letter-spacing:-.01em}
+.spot p{margin:0;color:var(--dust);font-size:.98rem}
+.spot__go{margin-top:auto;font-family:var(--data);font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--nitro)}
+.spot--open{border-style:dashed}
+.spot--open .spot__h{color:var(--dust)}
+.spot__own{font-size:.86rem!important;color:#8A7C72!important}
 
 /* ---- finale ------------------------------------------------ */
 .ride{position:relative;padding:clamp(70px,10vw,150px) var(--gut);text-align:center;overflow:hidden}
 .ride__bg{position:absolute;inset:0;z-index:1}
-.ride__bg img{width:100%;height:100%;object-fit:cover;object-position:50% 40%;opacity:.34}
+.ride__bg img{width:100%;height:100%;object-fit:cover;object-position:50% 40%;opacity:.3}
 .ride::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
   background:radial-gradient(62% 70% at 50% 45%,rgba(18,14,12,.62),rgba(18,14,12,.93) 78%)}
 .ride__in{position:relative;z-index:6}
-.ride__eagle{width:clamp(190px,26vw,420px);margin:0 auto clamp(10px,2vw,26px)}
-
 .ride__h{margin:14px auto 0;font-family:var(--display);font-stretch:125%;font-weight:900;
   text-transform:uppercase;font-size:clamp(2.4rem,9vw,6.4rem);line-height:.86;letter-spacing:-.035em;max-width:16ch;
   text-shadow:0 8px 40px rgba(18,14,12,.9)}
 .ride__p{max-width:46ch;margin:22px auto 0;color:#CFC4B9;text-shadow:0 2px 14px rgba(18,14,12,.9)}
-.ride__form{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:34px auto 0;max-width:520px}
-.ride__form input{flex:1 1 260px;background:rgba(11,8,7,.85);border:1px solid var(--grit);color:var(--bone);
-  font-family:var(--data);font-size:.85rem;padding:15px 16px}
-.ride__form input::placeholder{color:#6B5D54}
-.ride__form input:focus{border-color:var(--nitro);outline:none}
-.ride__links{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:26px auto 0}
-.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.ride__links{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:30px auto 0}
 
 /* ---- footer ------------------------------------------------ */
 .foot{border-top:var(--rule);padding:34px var(--gut);display:flex;flex-wrap:wrap;gap:16px 24px;align-items:center}
 .foot__mark{font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;display:flex;align-items:center;gap:9px}
-.foot__links{display:flex;gap:18px}
+.foot__links{display:flex;flex-wrap:wrap;gap:18px}
 .foot__links a{font-family:var(--data);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--dust);text-decoration:none}
 .foot__links a:hover{color:var(--nitro)}
-.foot__meta{margin-left:auto;font-family:var(--data);font-size:.66rem;letter-spacing:.14em;color:#5E534B;
+.foot__meta{margin-left:auto;font-family:var(--data);font-size:.66rem;letter-spacing:.14em;color:#7A6D64;
   text-transform:uppercase;text-align:right;line-height:1.9}
 @media(max-width:760px){.foot__meta{margin-left:0;text-align:left}}
 
@@ -285,9 +297,6 @@ a{color:inherit}
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
   .js .rise{opacity:1;transform:none}
-  .eagle--a{transform:translate(58vw,-4vh)}
-  .eagle--b,.eagle--c{display:none}
-  .flap::after{opacity:0}
 }
 </style>
 </head>
@@ -296,15 +305,13 @@ a{color:inherit}
 <header class="bar">
   <a class="bar__mark" href="#top"><i class="stripe"></i>DaddyGoFaster</a>
   <nav class="bar__nav" aria-label="Sections">
-    <a href="#name">The name</a><a href="#watch">Watch</a><a href="#shop">Shop</a><a href="#hello">Say hello</a>
+    <a href="#how">How it works</a><a href="#board">The board</a><a href="#rate">The rate</a><a href="#rules">Rules</a><a href="#sponsors">Sponsors</a>
   </nav>
   <div class="bar__links">
-    <a class="chip" href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">
+    <a class="chip chip--icon" href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
       <span>Watch</span></a>
-    <a class="chip chip--fire" href="https://www.etsy.com/shop/DaddyGoFaster" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 3h11l.6 4.2h-1.2C16.9 5.4 16 4.6 14 4.6h-3.4c-.5 0-.6.1-.6.5v5.4h2.5c1.6 0 2.2-.6 2.5-2.1h1.2v5.6h-1.2c-.3-1.6-.9-2.1-2.5-2.1H10v4.9c0 1.4.4 1.9 2 1.9h2.7c2.2 0 3.2-.8 4-3h1.1L19 21H7v-1.2c1.6-.1 2-.4 2-1.6V5.8c0-1.2-.4-1.5-2-1.6V3z"/></svg>
-      <span>Shop</span></a>
+    <a class="chip chip--fire" href="#bid">Bid</a>
   </div>
 </header>
 
@@ -312,7 +319,6 @@ a{color:inherit}
 
   <!-- ===== HERO ============================================ -->
   <section class="hero" id="hero">
-
     <div class="hero__flag" aria-hidden="true">
       <picture>
         <source srcset="/assets/flag.webp" type="image/webp">
@@ -320,158 +326,241 @@ a{color:inherit}
       </picture>
     </div>
 
-    <canvas class="fx" id="fxHero" aria-hidden="true"></canvas>
-
-    <div class="sky" aria-hidden="true">
-      <div class="eagle eagle--a"><div class="flap"></div></div>
-      <div class="eagle eagle--b"><div class="flap"></div></div>
-      <div class="eagle eagle--c"><div class="flap"></div></div>
-    </div>
-
     <div class="hero__copy">
-      <p class="tag hero__eyebrow">Red, white, and wide open</p>
-      <h1 class="hero__h1">
-        <span>Daddy,</span>
-        <span class="go">go</span>
-        <span class="faster">Faster.</span>
+      <p class="tag hero__eyebrow">Bids start at one cent</p>
+      <h1 class="hero__h1" aria-label="Daddy, go blank. You finish the sentence.">
+        <span aria-hidden="true">Daddy,</span>
+        <span class="go" aria-hidden="true">go</span>
+        <span class="fill" aria-hidden="true"><span class="fill__w" id="fill">&nbsp;</span></span>
       </h1>
-      <p class="hero__sub">Three words hollered from the back seat, and now the name on <b>everything we make</b>. Come watch it, or wear it.</p>
+      <p class="hero__sub">Two kids named this place by hollering from the back seat. Now <b>you finish the sentence</b>. Every day the highest bid picks what I do tomorrow, and the camera comes along.</p>
       <div class="hero__actions">
-        <a class="btn btn--fire" href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">
+        <a class="btn btn--fire" id="heroCta" href="#how">See how it works</a>
+        <a class="btn btn--line" href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
           Watch on YouTube</a>
-        <a class="btn btn--gold" href="https://www.etsy.com/shop/DaddyGoFaster" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 3h11l.6 4.2h-1.2C16.9 5.4 16 4.6 14 4.6h-3.4c-.5 0-.6.1-.6.5v5.4h2.5c1.6 0 2.2-.6 2.5-2.1h1.2v5.6h-1.2c-.3-1.6-.9-2.1-2.5-2.1H10v4.9c0 1.4.4 1.9 2 1.9h2.7c2.2 0 3.2-.8 4-3h1.1L19 21H7v-1.2c1.6-.1 2-.4 2-1.6V5.8c0-1.2-.4-1.5-2-1.6V3z"/></svg>
-          Shop on Etsy</a>
       </div>
     </div>
 
-    <div class="hero__art">
-      <div class="shot">
-        <picture>
-          <source media="(max-width:700px)" type="image/webp" srcset="/assets/hero-sm.webp">
-          <source type="image/webp" srcset="/assets/hero.webp">
-          <img src="/assets/hero.jpg" width="1254" height="1254" fetchpriority="high"
-               alt="A dad and his two kids strapped into a jet-powered rail, flames off the back, sunset behind them.">
-        </picture>
-      </div>
-    </div>
+    <aside class="slip" aria-label="Tomorrow's job at a glance">
+      <div class="slip__head"><span>Tomorrow's job</span><b id="slipFlag">Not open yet</b></div>
+      <dl class="slip__rows">
+        <div class="slip__row"><dt id="slipClockLabel">Bidding</dt><dd id="slipClock">Opens soon</dd></div>
+        <div class="slip__row"><dt>High bid</dt><dd class="hot" id="slipHigh">&mdash;</dd></div>
+        <div class="slip__row"><dt>Bids in</dt><dd id="slipCount">&mdash;</dd></div>
+        <div class="slip__row"><dt>The job</dt><dd><span class="sealed">Sealed</span></dd></div>
+      </dl>
+      <p class="slip__foot">Opened on camera. Not before.</p>
+    </aside>
   </section>
 
   <div class="flagrule"></div>
 
-  <!-- ===== FLAG BAND ======================================= -->
-  <section class="band" id="creed">
-    <div class="band__bg" aria-hidden="true">
-      <picture><source srcset="/assets/flag-tall.webp" type="image/webp">
-        <img src="/assets/flag-tall.jpg" alt="" loading="lazy"></picture>
-    </div>
-    <div class="band__eagle" aria-hidden="true"><div class="flap"></div></div>
-    <div class="band__in rise">
-      <p class="tag">Made loud in the USA</p>
-      <h2 class="band__h">Louder is<br>a love language.</h2>
-      <p class="band__p">Everything here gets made in the same country it gets used in, by people who think the fun part is the whole point.</p>
-    </div>
-  </section>
-
-  <!-- ===== THE NAME ======================================== -->
-  <section class="name" id="name">
+  <!-- ===== HOW IT WORKS ==================================== -->
+  <section class="sec" id="how">
     <div class="rise">
-      <p class="tag">Where it came from</p>
-      <h2 class="name__h">It started as<br><em>a request.</em></h2>
+      <p class="tag">How it works</p>
+      <h2 class="sec__h">Your money.<br><em>My tomorrow.</em></h2>
+      <p class="sec__p">Somebody might send me to do something kind. Somebody might set my alarm for 4 a.m. <b>Nobody watching knows which</b> until the video goes up.</p>
     </div>
-    <div class="name__body rise">
-      <p>There is a moment every parent knows. You are pulling out of the driveway, two small people are buckled in behind you, and one of them decides the current speed is a personal insult.</p>
-      <p><b>DaddyGoFaster</b> is that moment, kept. It is not a team or a series or a sponsorship deal. It is a name — the one that got yelled first, then laughed about, then printed on a shirt, and now sits on the front of a channel, a shop, and this page.</p>
-      <p>If you have ever been the one driving, or the one yelling, you already get it.</p>
-      <p class="name__pull">Two kids. One gas pedal. One very American request.</p>
-    </div>
-  </section>
-
-  <!-- ===== WATCH =========================================== -->
-  <section class="shop" id="watch">
-    <div class="shop__glow" aria-hidden="true"></div>
-    <div class="shop__grid">
-      <div class="rise">
-        <p class="tag">On YouTube</p>
-        <h2 class="shop__h">See what<br><em>we get up to.</em></h2>
-        <p class="shop__p">The stuff we build, the places we take it, and the parts that did not survive the trip. New video whenever something is worth pointing a camera at.</p>
-        <div class="shop__cta">
-          <a class="btn btn--fire" href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
-            Watch on YouTube</a>
-          <span class="shop__handle">@DaddyGoFaster</span>
-        </div>
-      </div>
-      <div class="shop__art rise">
-        <div class="tile">
-          <div class="tile__flag" aria-hidden="true">
-            <picture><source srcset="/assets/flag.webp" type="image/webp"><img src="/assets/flag.jpg" alt="" loading="lazy"></picture>
-          </div>
-          <svg class="tile__mark" viewBox="0 0 120 120" fill="none" aria-hidden="true">
-            <circle cx="60" cy="60" r="46" stroke="currentColor" stroke-width="6"/>
-            <path d="M50 39l34 21-34 21z" fill="currentColor"/>
-          </svg>
-          <span class="tile__cap"><span>YouTube</span><span>@DaddyGoFaster</span></span>
-        </div>
-      </div>
+    <ol class="steps rise">
+      <li class="step">
+        <span class="step__n">01</span>
+        <h3 class="step__h">Name the job</h3>
+        <p>Write what you want me to do tomorrow and what you will pay for it. A penny gets you in.</p>
+      </li>
+      <li class="step">
+        <span class="step__n">02</span>
+        <h3 class="step__h">The screen reads it</h3>
+        <p>An AI checks every bid against the house rules, works out how long the job takes, and tells you on the spot whether your bid covers it.</p>
+      </li>
+      <li class="step">
+        <span class="step__n">03</span>
+        <h3 class="step__h">High bid takes the day</h3>
+        <p>Bidding closes the night before. The highest bid that covers its job wins. Only the winner pays.</p>
+      </li>
+      <li class="step">
+        <span class="step__n">04</span>
+        <h3 class="step__h">I do it on camera</h3>
+        <p>The crowd sees the money, never the job. The job gets opened in the video, and the video goes up after it is done.</p>
+      </li>
+    </ol>
+    <div class="reply rise">
+      <p class="reply__tag">Example &middot; what the screen sends back</p>
+      <p class="q">$20.00 &mdash; &ldquo;Ride the city bus downtown and back.&rdquo;</p>
+      <p>That is about 50 minutes door to door, so it needs <b>$166.67</b>, plus about $4 in fares. Your $20.00 covers 6 minutes. Raise the bid or shrink the job.</p>
     </div>
   </section>
 
-  <!-- ===== SHOP ============================================ -->
-  <section class="shop shop--flip shop--gold" id="shop">
-    <div class="shop__glow" aria-hidden="true"></div>
-    <div class="shop__grid">
-      <div class="shop__art rise">
-        <div class="tile">
-          <div class="tile__flag" aria-hidden="true">
-            <picture><source srcset="/assets/flag.webp" type="image/webp"><img src="/assets/flag.jpg" alt="" loading="lazy"></picture>
-          </div>
-          <svg class="tile__mark" viewBox="0 0 120 120" fill="none" aria-hidden="true">
-            <path d="M26 24h68M26 24v72M26 96h68M26 60h36" stroke="currentColor" stroke-width="6" stroke-linecap="square"/>
-            <circle cx="86" cy="60" r="11" fill="currentColor"/>
-          </svg>
-          <span class="tile__cap"><span>Etsy</span><span>DaddyGoFaster</span></span>
+  <!-- ===== THE BOARD ======================================= -->
+  <section class="sec sec--slick" id="board">
+    <div class="rise">
+      <p class="tag">The board</p>
+      <h2 class="sec__h sec__h--gold">The money is public.<br><em>The job is sealed.</em></h2>
+      <p class="sec__p">Every bid that clears the screen lands here with a name and an amount. What they asked for stays shut until the video.</p>
+    </div>
+    <ol class="board rise" id="boardList" hidden></ol>
+    <p class="board__note rise" id="boardNote" hidden></p>
+    <p class="board__empty rise" id="boardEmpty"><b>Bidding is not open yet.</b> When it is, this is where the bids stack up: name, amount, and a job nobody gets to read.</p>
+  </section>
+
+  <!-- ===== BID ============================================= -->
+  <section class="sec" id="bid">
+    <div class="split">
+      <div class="rise">
+        <p class="tag">Place a bid</p>
+        <h2 class="sec__h">Finish the<br><em>sentence.</em></h2>
+        <p class="sec__p">Say what the job is and what it is worth to you. The readout shows how big a job your number covers, so you know where you stand before you send it.</p>
+        <p class="sec__p">Read the <a href="#rules">house rules</a> first. They are short, and they decide what gets through.</p>
+      </div>
+      <form class="form rise" id="bidForm" novalidate>
+        <div class="field">
+          <label for="task">Daddy, go&hellip;</label>
+          <textarea id="task" name="task" maxlength="280" required
+            placeholder="&hellip;walk the two miles to the hardware store instead of driving."></textarea>
+          <p class="field__hint">One job, 280 characters. Be specific: a vague job gets sent back.</p>
         </div>
+        <div class="form__pair">
+          <div class="field">
+            <label for="who">Name on the board</label>
+            <input id="who" name="name" type="text" maxlength="24" required autocomplete="nickname" placeholder="backseat_driver">
+          </div>
+          <div class="field">
+            <label for="amount">Your bid, in dollars</label>
+            <input id="amount" name="amount" type="text" inputmode="decimal" required autocomplete="off" placeholder="0.01">
+          </div>
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required autocomplete="email" placeholder="you@wherever.com">
+          <p class="field__hint">How I reach you if you win. It never goes on the board.</p>
+        </div>
+        <p class="calc" id="calc" aria-live="polite">Type a number. A penny counts.</p>
+        <div class="form__go">
+          <button class="btn btn--fire" id="bidBtn" type="submit" disabled>Bidding opens soon</button>
+          <p class="form__soon" id="bidSoon">Not open yet. <a href="mailto:hello@daddygofaster.com?subject=Tell%20me%20when%20bidding%20opens">Email me and I will tell you when it is.</a></p>
+        </div>
+        <p class="form__msg" id="bidMsg" role="status" hidden></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===== THE RATE ======================================== -->
+  <section class="sec sec--slick" id="rate">
+    <div class="split">
+      <div class="rise">
+        <p class="tag">The rate</p>
+        <h2 class="sec__h sec__h--gold">$200 an hour<br><em>is the yardstick.</em></h2>
+        <p class="sec__p">There is no meter and no stopwatch. It is a sanity check: <b>your bid has to cover the job</b>. Two dollars does not buy eight hours.</p>
+        <p class="sec__p">Costs are on top. Bus fare, gas, tickets, a flight: you cover them before I leave the driveway. Travel time counts both ways, and anything with a flight or a hotel gets a real quote first.</p>
       </div>
       <div class="rise">
-        <p class="tag">On Etsy</p>
-        <h2 class="shop__h">Wear it<br><em>loud.</em></h2>
-        <p class="shop__p">Shirts, stickers, and whatever else the crew talks me into printing. Small batches, shipped from the same address the fun happens at.</p>
-        <div class="shop__cta">
-          <a class="btn btn--gold" href="https://www.etsy.com/shop/DaddyGoFaster" target="_blank" rel="noopener">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 3h11l.6 4.2h-1.2C16.9 5.4 16 4.6 14 4.6h-3.4c-.5 0-.6.1-.6.5v5.4h2.5c1.6 0 2.2-.6 2.5-2.1h1.2v5.6h-1.2c-.3-1.6-.9-2.1-2.5-2.1H10v4.9c0 1.4.4 1.9 2 1.9h2.7c2.2 0 3.2-.8 4-3h1.1L19 21H7v-1.2c1.6-.1 2-.4 2-1.6V5.8c0-1.2-.4-1.5-2-1.6V3z"/></svg>
-            Shop on Etsy</a>
-          <span class="shop__handle">etsy.com/shop/DaddyGoFaster</span>
-        </div>
+        <table class="rates">
+          <caption>What a bid covers</caption>
+          <tbody>
+            <tr><th scope="row">1&cent;</th><td>0.18 seconds. <span>A blink.</span></td></tr>
+            <tr><th scope="row">$1</th><td>18 seconds</td></tr>
+            <tr><th scope="row">$10</th><td>3 minutes</td></tr>
+            <tr><th scope="row">$50</th><td>15 minutes</td></tr>
+            <tr><th scope="row">$200</th><td>1 hour</td></tr>
+            <tr><th scope="row">$400</th><td>2 hours. <span>And so on up.</span></td></tr>
+          </tbody>
+        </table>
       </div>
+    </div>
+  </section>
+
+  <!-- ===== RULES =========================================== -->
+  <section class="sec" id="rules">
+    <div class="rise">
+      <p class="tag">House rules</p>
+      <h2 class="sec__h">Hard is fine.<br><em>Humiliating is not.</em></h2>
+      <p class="sec__p">Make it early, cold, boring, or a long way on foot. Do not try to make me a joke. The test is simple: would I be fine with a ten-second clip of it going around with no explanation?</p>
+    </div>
+    <div class="rules rise">
+      <div class="rulebox rulebox--yes">
+        <h3 class="rulebox__h"><i></i>Go ahead</h3>
+        <ul>
+          <li><b>Hard, boring, early, cold, inconvenient.</b> That is the game.</li>
+          <li><b>Kind.</b> Send me to do something good for somebody.</li>
+          <li><b>Out of my way.</b> The long route, the bus, the stairs.</li>
+          <li><b>Far.</b> If the bid covers the trip and you cover the ticket.</li>
+        </ul>
+      </div>
+      <div class="rulebox rulebox--no">
+        <h3 class="rulebox__h"><i></i>Not happening</h3>
+        <ul>
+          <li><b>Illegal, dangerous, or sexual.</b></li>
+          <li><b>Costumes,</b> or anything that changes how I look.</li>
+          <li><b>Scripts.</b> You buy what I do, not what I say. Shout-outs are in my own words.</li>
+          <li><b>Politics, religion, or plugging a product.</b> Sponsor spots exist for that last one.</li>
+          <li><b>Anything aimed at a person,</b> or at a private address.</li>
+          <li><b>Making a scene,</b> or bothering people who are just at work.</li>
+          <li><b>My kids, my family,</b> or anybody else who did not sign up.</li>
+          <li><b>Live locations.</b> I pick the time, and the video goes up after.</li>
+        </ul>
+      </div>
+      <div class="rulebox rulebox--cash">
+        <h3 class="rulebox__h"><i></i>Money and fair play</h3>
+        <ul>
+          <li><b>Bids start at 1&cent;.</b> Only the winner pays, and pays before the job.</li>
+          <li><b>A bid has to cover its job</b> at about $200 an hour, plus costs.</li>
+          <li><b>Wins under 50&cent; are on the house.</b> Cards cannot go that low.</li>
+          <li><b>One win per person per week,</b> and a daily limit on bids.</li>
+          <li><b>A bid in the last five minutes</b> adds five minutes to the clock.</li>
+          <li><b>If the winner does not pay in time,</b> the next bid wins.</li>
+          <li><b>Names get screened too.</b> When the screen is not sure, a person decides.</li>
+          <li><b>I can turn down any job.</b> If I turn down a winner, nobody is charged.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SPONSORS ======================================== -->
+  <section class="sec sec--slick" id="sponsors">
+    <div class="rise">
+      <p class="tag">Sponsor spots</p>
+      <h2 class="sec__h sec__h--gold">Put your name<br><em>on the day.</em></h2>
+      <p class="sec__p">A spot on this page and a mention in the video. These are not sold by bid. Ask.</p>
+    </div>
+    <div class="spots rise">
+      <a class="spot" href="https://protectandassist.com/" target="_blank" rel="noopener sponsored">
+        <p class="tag">Spot 01 &middot; The day job</p>
+        <h3 class="spot__h">Protect &amp; Assist</h3>
+        <p>Help look out for an older parent with AI call screening, family alerts and care reminders.</p>
+        <p class="spot__own">House ad. Protect &amp; Assist is my company.</p>
+        <span class="spot__go">protectandassist.com &rarr;</span>
+      </a>
+      <a class="spot spot--open" href="mailto:hello@daddygofaster.com?subject=Sponsor%20spot">
+        <p class="tag">Spot 02 &middot; Open</p>
+        <h3 class="spot__h">Your name here</h3>
+        <p>Family-friendly businesses only.</p>
+        <span class="spot__go">Ask about it &rarr;</span>
+      </a>
+      <a class="spot spot--open" href="mailto:hello@daddygofaster.com?subject=Sponsor%20spot">
+        <p class="tag">Spot 03 &middot; Open</p>
+        <h3 class="spot__h">Your name here</h3>
+        <p>Family-friendly businesses only.</p>
+        <span class="spot__go">Ask about it &rarr;</span>
+      </a>
     </div>
   </section>
 
   <!-- ===== FINALE ========================================== -->
-  <section class="ride" id="hello">
+  <section class="ride" id="watch">
     <div class="ride__bg" aria-hidden="true">
       <picture><source srcset="/assets/flag.webp" type="image/webp">
         <img src="/assets/flag.jpg" alt="" loading="lazy"></picture>
     </div>
-    <canvas class="fx" id="fxRide" aria-hidden="true"></canvas>
     <div class="ride__in">
-      <div class="ride__eagle rise" aria-hidden="true"><div class="flap"></div></div>
-      <p class="tag">Say hello</p>
-      <h2 class="ride__h">Ride along.</h2>
-      <p class="ride__p">Drop an address and we will send word when something new lands on the channel or in the shop. No noise you did not ask for.</p>
-      <form class="ride__form" action="mailto:hello@daddygofaster.com" method="post" enctype="text/plain">
-        <label class="visually-hidden" for="email">Email address</label>
-        <input id="email" name="email" type="email" required placeholder="you@wherever.com" autocomplete="email">
-        <button class="btn btn--fire" type="submit">Send it</button>
-      </form>
+      <p class="tag">Ride along</p>
+      <h2 class="ride__h rise">See how it went.</h2>
+      <p class="ride__p">Every job ends up on the channel. Subscribe and find out what somebody paid for.</p>
       <div class="ride__links">
-        <a class="chip" href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">
+        <a class="btn btn--fire" href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
-          <span>YouTube &middot; @DaddyGoFaster</span></a>
-        <a class="chip" href="https://www.etsy.com/shop/DaddyGoFaster" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 3h11l.6 4.2h-1.2C16.9 5.4 16 4.6 14 4.6h-3.4c-.5 0-.6.1-.6.5v5.4h2.5c1.6 0 2.2-.6 2.5-2.1h1.2v5.6h-1.2c-.3-1.6-.9-2.1-2.5-2.1H10v4.9c0 1.4.4 1.9 2 1.9h2.7c2.2 0 3.2-.8 4-3h1.1L19 21H7v-1.2c1.6-.1 2-.4 2-1.6V5.8c0-1.2-.4-1.5-2-1.6V3z"/></svg>
-          <span>Etsy &middot; DaddyGoFaster</span></a>
+          Watch on YouTube</a>
+        <a class="btn btn--line" href="#bid">Place a bid</a>
       </div>
     </div>
   </section>
@@ -482,8 +571,10 @@ a{color:inherit}
 <footer class="foot">
   <span class="foot__mark"><i class="stripe"></i>DaddyGoFaster</span>
   <nav class="foot__links" aria-label="Elsewhere">
+    <a href="#rules">Rules</a>
     <a href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">YouTube</a>
     <a href="https://www.etsy.com/shop/DaddyGoFaster" target="_blank" rel="noopener">Etsy</a>
+    <a href="mailto:hello@daddygofaster.com">Say hello</a>
   </nav>
   <span class="foot__meta">
     &copy; 2026 DaddyGoFaster &middot; Made loud in the USA<br>
@@ -493,245 +584,214 @@ a{color:inherit}
 
 <script>
 (function(){
+  /* ---------- settings ----------------------------------------
+     api   Base URL of the bid service, no trailing slash. While it is
+           empty the site says bidding is not open and sends nothing.
+     rate  Dollars per hour a bid has to cover.                     */
+  var CONFIG = { api: "", rate: 200, freeUnderCents: 50 };
+
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var demo = /[?&]demo\b/.test(location.search);
+  var $ = function(id){ return document.getElementById(id); };
 
-  /* ---------- eagles: soar, then flap in bursts ---------- */
-  (function(){
-    var flaps = Array.prototype.slice.call(document.querySelectorAll('.flap'));
-    if(!flaps.length) return;
-
-    var N = 14;                      /* frames in the strip; frame 0 is the soar pose */
-    var STEP = 100 / (N - 1);        /* background-position-x per frame, in %        */
-
-    function paint(el, f0, f1, mix){
-      el.style.setProperty('--f0', (f0 * STEP).toFixed(3) + '%');
-      el.style.setProperty('--f1', (f1 * STEP).toFixed(3) + '%');
-      el.style.setProperty('--mix', mix.toFixed(3));
-    }
-
-    /* reduced motion: a still, soaring bird */
-    if(reduce){ flaps.forEach(function(el){ paint(el, 0, 0, 0); }); return; }
-
-    var birds = flaps.map(function(el, i){
-      return {
-        el: el,
-        beat: 580 + i * 55 + Math.random() * 120,   /* ms per wing-beat */
-        soaring: true,
-        until: 900 + Math.random() * 2600,          /* stagger the first burst */
-        left: 0,
-        t: 0
-      };
-    });
-    birds.forEach(function(b){ paint(b.el, 0, 0, 0); });
-
-    var last = null;
-    function tick(now){
-      if(last === null) last = now;
-      var dt = Math.min(now - last, 100);           /* ignore tab-switch gaps */
-      last = now;
-
-      for(var i = 0; i < birds.length; i++){
-        var b = birds[i];
-        b.t += dt;
-
-        if(b.soaring){
-          if(b.t >= b.until){                       /* break into a burst */
-            b.soaring = false;
-            b.t = 0;
-            b.left = 1 + (Math.random() * 3 | 0);   /* 1-3 beats */
-          }
-          continue;                                 /* held on frame 0, nothing to paint */
-        }
-
-        var p = b.t / b.beat;
-        if(p >= 1){
-          b.t -= b.beat;
-          p = b.t / b.beat;
-          if(--b.left <= 0){                        /* back to soaring */
-            b.soaring = true;
-            b.t = 0;
-            b.until = 3400 + Math.random() * 3600;  /* ~80% of the time, wings out */
-            paint(b.el, 0, 0, 0);
-            continue;
-          }
-        }
-        var f = p * N;
-        var k = f | 0;
-        paint(b.el, k % N, (k + 1) % N, f - k);
-      }
-      requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-  })();
-
-  /* ---------- fireworks ---------- */
-  var COLORS = ['#FF5A1F','#FFC23D','#F2EBE1','#E0333B','#5A8CF0','#2BE06A'];
-
-  function fireworks(canvas){
-    if(!canvas || reduce) return null;
-    var ctx = canvas.getContext('2d');
-    if(!ctx) return null;
-
-    var W = 0, H = 0, shells = [], parts = [], flashes = [], raf = null, live = false, idle = null;
-
-    /* one pre-rendered glow sprite beats createRadialGradient() every frame */
-    var glow = document.createElement('canvas');
-    glow.width = glow.height = 128;
-    var gx = glow.getContext('2d');
-    var gg = gx.createRadialGradient(64, 64, 0, 64, 64, 64);
-    gg.addColorStop(0, 'rgba(255,247,236,1)');
-    gg.addColorStop(1, 'rgba(255,247,236,0)');
-    gx.fillStyle = gg; gx.fillRect(0, 0, 128, 128);
-
-    function resize(){
-      var dpr = Math.min(window.devicePixelRatio || 1, 2);
-      W = canvas.clientWidth; H = canvas.clientHeight;
-      canvas.width  = Math.max(1, Math.round(W * dpr));
-      canvas.height = Math.max(1, Math.round(H * dpr));
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-
-    function launch(){
-      if(!W || !H || shells.length > 3) return;
-      shells.push({
-        x: W * (0.10 + Math.random() * 0.80), y: H + 6, px: 0, py: 0,
-        vx: (Math.random() - 0.5) * 0.9,
-        vy: -(6.4 + Math.random() * 3.6),
-        c: COLORS[(Math.random() * COLORS.length) | 0],
-        stop: H * (0.08 + Math.random() * 0.34)
-      });
-    }
-
-    function burst(s){
-      flashes.push({x:s.x, y:s.y, life:1});
-      if(parts.length > 620) return;
-      var n = 54 + ((Math.random() * 40) | 0);
-      var base = 1.9 + Math.random() * 2.1;
-      var two = Math.random() < 0.45 ? COLORS[(Math.random() * COLORS.length) | 0] : s.c;
-      for(var i = 0; i < n; i++){
-        var a = (i / n) * Math.PI * 2 + Math.random() * 0.16;
-        var sp = base * (0.45 + Math.random() * 0.9);
-        parts.push({
-          x: s.x, y: s.y, px: s.x, py: s.y,
-          vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-          c: i % 3 === 0 ? two : s.c,
-          life: 1, decay: 0.006 + Math.random() * 0.010
-        });
-      }
-    }
-
-    function frame(){
-      ctx.clearRect(0, 0, W, H);
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.lineCap = 'round';
-
-      var i, s, p, f;
-
-      for(i = flashes.length - 1; i >= 0; i--){
-        f = flashes[i]; f.life -= 0.085;
-        if(f.life <= 0){ flashes.splice(i, 1); continue; }
-        var rad = 130 * (1.25 - f.life);
-        ctx.globalAlpha = f.life * 0.55;
-        ctx.drawImage(glow, f.x - rad, f.y - rad, rad * 2, rad * 2);
-      }
-
-      for(i = shells.length - 1; i >= 0; i--){
-        s = shells[i];
-        s.px = s.x; s.py = s.y;
-        s.x += s.vx; s.y += s.vy; s.vy += 0.13;
-        ctx.globalAlpha = 0.95;
-        ctx.strokeStyle = s.c; ctx.lineWidth = 2.6;
-        ctx.beginPath(); ctx.moveTo(s.px, s.py); ctx.lineTo(s.x, s.y); ctx.stroke();
-        if(s.vy >= -0.6 || s.y <= s.stop){ burst(s); shells.splice(i, 1); }
-      }
-
-      for(i = parts.length - 1; i >= 0; i--){
-        p = parts[i];
-        p.px = p.x; p.py = p.y;
-        p.x += p.vx; p.y += p.vy;
-        p.vx *= 0.987; p.vy = p.vy * 0.987 + 0.048;
-        p.life -= p.decay;
-        if(p.life <= 0){ parts.splice(i, 1); continue; }
-        var l = p.life > 0 ? p.life : 0;
-        ctx.strokeStyle = p.c;
-        ctx.globalAlpha = l * (0.72 + Math.random() * 0.28);
-        ctx.lineWidth = 2.4 * l + 0.7;
-        ctx.beginPath(); ctx.moveTo(p.px, p.py); ctx.lineTo(p.x, p.y); ctx.stroke();
-      }
-
-      ctx.globalAlpha = 1;
-      ctx.globalCompositeOperation = 'source-over';
-
-      if(live || shells.length || parts.length || flashes.length){ raf = requestAnimationFrame(frame); }
-      else { raf = null; ctx.clearRect(0, 0, W, H); }
-    }
-
-    function tick(){ if(!raf) raf = requestAnimationFrame(frame); }
-
-    function start(){
-      if(live) return;
-      live = true;
-      if(!W) resize();
-      tick();
-      idle = setInterval(function(){
-        if(!document.hidden && Math.random() < 0.75) launch();
-      }, 3000);
-    }
-    function stop(){
-      live = false;
-      if(idle){ clearInterval(idle); idle = null; }
-    }
-    function show(count){
-      if(!W) resize();
-      tick();
-      for(var i = 0; i < count; i++){
-        setTimeout(launch, i * (220 + Math.random() * 300));
-      }
-    }
-
-    window.addEventListener('resize', function(){
-      if(W !== canvas.clientWidth || H !== canvas.clientHeight) resize();
-    });
-    document.addEventListener('visibilitychange', function(){ if(document.hidden) stop(); });
-
-    return {start:start, stop:stop, show:show, resize:resize};
+  /* ---------- money and time ---------- */
+  function toCents(str){
+    var m = /^(\d{0,7})(?:\.(\d{0,2}))?$/.exec(String(str).replace(/[$,\s]/g, ''));
+    if(!m || (m[1] === '' && !m[2])) return null;
+    return parseInt(m[1] || '0', 10) * 100 + parseInt(((m[2] || '') + '00').slice(0, 2), 10);
+  }
+  function money(cents){
+    return '$' + (cents / 100).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }
+  function plural(n, word){ return n + ' ' + word + (n === 1 ? '' : 's'); }
+  function covers(cents){
+    var sec = cents / 100 / CONFIG.rate * 3600;
+    if(sec < 1) return sec.toFixed(2) + ' seconds';
+    if(sec < 90) return plural(Math.round(sec), 'second');
+    var min = Math.round(sec / 60);
+    if(min < 60) return 'about ' + plural(min, 'minute');
+    var h = Math.floor(min / 60), m = min % 60;
+    return 'about ' + plural(h, 'hour') + (m ? ' ' + plural(m, 'minute') : '');
+  }
+  function ago(iso){
+    var s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+    if(s < 60) return 'just now';
+    if(s < 3600) return Math.floor(s / 60) + 'm ago';
+    if(s < 86400) return Math.floor(s / 3600) + 'h ago';
+    return Math.floor(s / 86400) + 'd ago';
+  }
+  function clock(ms){
+    var s = Math.max(0, Math.floor(ms / 1000));
+    var p = function(n){ return (n < 10 ? '0' : '') + n; };
+    return p(Math.floor(s / 3600)) + ':' + p(Math.floor(s % 3600 / 60)) + ':' + p(s % 60);
   }
 
-  var heroFx = fireworks(document.getElementById('fxHero'));
-  var rideFx = fireworks(document.getElementById('fxRide'));
+  /* ---------- hero: finish the sentence ---------- */
+  (function(){
+    var el = $('fill');
+    if(!el || reduce) return;
+    var words = ['faster.', 'by bus.', 'on foot.', 'at 4 AM.', 'uphill.', '\u00a0'];
+    var i = 0;
+    setInterval(function(){
+      if(document.hidden) return;
+      el.classList.add('out');
+      setTimeout(function(){
+        el.textContent = words[i];
+        i = (i + 1) % words.length;
+        el.classList.remove('out');
+      }, 300);
+    }, 2600);
+  })();
 
-  window.addEventListener('load', function(){
-    if(heroFx){ heroFx.resize(); heroFx.show(6); heroFx.start(); }
-    if(rideFx){ rideFx.resize(); }
+  /* ---------- the readout under the bid ---------- */
+  var amount = $('amount'), calc = $('calc');
+  function readout(){
+    var raw = amount.value.trim();
+    if(raw === ''){ calc.textContent = 'Type a number. A penny counts.'; return; }
+    var c = toCents(raw);
+    if(c === null){ calc.textContent = 'Dollars and cents, like 12.50.'; return; }
+    if(c < 1){ calc.textContent = 'One cent is the floor.'; return; }
+    var line = money(c) + ' covers a job of ' + covers(c) + ' at $' + CONFIG.rate + ' an hour.';
+    if(c === 1) line += ' A blink, maybe.';
+    else if(c < CONFIG.freeUnderCents) line += ' Win with this and it is on the house.';
+    else line += ' Costs are on top.';
+    calc.textContent = line;
+  }
+  amount.addEventListener('input', readout);
+
+  /* ---------- the board ---------- */
+  var closesAt = null, timer = null;
+
+  function row(bid, i){
+    var li = document.createElement('li');
+    li.className = 'board__row' + (i === 0 ? ' board__row--lead' : '');
+    function cell(cls, text){
+      var s = document.createElement('span');
+      s.className = cls; s.textContent = text; li.appendChild(s); return s;
+    }
+    cell('board__rank', (i < 9 ? '0' : '') + (i + 1));
+    cell('board__name', bid.name);
+    var job = cell('board__job', '');
+    var sr = document.createElement('span');
+    sr.className = 'visually-hidden'; sr.textContent = 'Job sealed';
+    job.appendChild(sr);
+    cell('board__amt', money(bid.amountCents));
+    cell('board__age', ago(bid.placedAt));
+    return li;
+  }
+
+  function tick(){
+    if(!closesAt) return;
+    var left = closesAt - Date.now();
+    $('slipClock').textContent = left > 0 ? clock(left) : 'Closed';
+    if(left <= 0){ $('slipFlag').textContent = 'Closed'; clearInterval(timer); }
+  }
+
+  function paint(data, note){
+    var open = data.status === 'open';
+    var bids = (data.bids || []).slice().sort(function(a, b){ return b.amountCents - a.amountCents; });
+    var list = $('boardList');
+    list.textContent = '';
+    bids.forEach(function(b, i){ list.appendChild(row(b, i)); });
+    list.hidden = bids.length === 0;
+    $('boardEmpty').hidden = bids.length > 0;
+    if(bids.length === 0 && open){
+      $('boardEmpty').textContent = 'No bids yet. Right now a penny wins the day.';
+    }
+    var n = $('boardNote');
+    n.hidden = !note; n.textContent = note || '';
+    n.className = 'board__note rise in' + (demo ? ' board__note--demo' : '');
+
+    $('slipFlag').textContent = open ? 'Bidding open' : (data.status === 'closed' ? 'Closed' : 'Not open yet');
+    $('slipHigh').textContent = bids.length ? money(bids[0].amountCents) : '—';
+    $('slipCount').textContent = String(bids.length);
+    if(open && data.closesAt){
+      closesAt = new Date(data.closesAt).getTime();
+      $('slipClockLabel').textContent = 'Closes in';
+      tick();
+      clearInterval(timer);
+      timer = setInterval(tick, 1000);
+    }
+    if(open){
+      var b = $('bidBtn');
+      b.disabled = false; b.textContent = 'Send it';
+      $('bidSoon').hidden = true;
+      var cta = $('heroCta');
+      cta.textContent = 'Place a bid'; cta.setAttribute('href', '#bid');
+    }
+  }
+
+  function load(){
+    fetch(CONFIG.api + '/board', {headers: {'Accept': 'application/json'}})
+      .then(function(r){ if(!r.ok) throw new Error('board ' + r.status); return r.json(); })
+      .then(function(d){ paint(d, 'Jobs are sealed until the video.'); })
+      .catch(function(){ /* leave the page in its not-open state */ });
+  }
+
+  if(demo){
+    var now = Date.now(), min = 60000;
+    paint({
+      status: 'open',
+      closesAt: new Date(now + 193 * min + 12000).toISOString(),
+      bids: [
+        {name: 'backseat_driver', amountCents: 4200, placedAt: new Date(now - 14 * min).toISOString()},
+        {name: 'nitro_nan',       amountCents: 3500, placedAt: new Date(now - 52 * min).toISOString()},
+        {name: 'the_neighbor',    amountCents: 1250, placedAt: new Date(now - 131 * min).toISOString()},
+        {name: 'cold_start',      amountCents: 400,  placedAt: new Date(now - 190 * min).toISOString()},
+        {name: 'penny_pincher',   amountCents: 1,    placedAt: new Date(now - 305 * min).toISOString()}
+      ]
+    }, 'Sample data for preview. These are not real bids.');
+  } else if(CONFIG.api){
+    load();
+    setInterval(function(){ if(!document.hidden) load(); }, 60000);
+  }
+
+  /* ---------- sending a bid ---------- */
+  var form = $('bidForm'), msg = $('bidMsg'), btn = $('bidBtn');
+  function say(text, ok){
+    msg.hidden = false;
+    msg.textContent = text;
+    msg.className = 'form__msg' + (ok ? ' form__msg--ok' : '');
+  }
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    if(btn.disabled) return;
+    var task = $('task').value.trim(), name = $('who').value.trim(), email = $('email').value.trim();
+    var cents = toCents(amount.value.trim());
+    if(task.length < 10) return say('Say what the job is. A few more words.');
+    if(name.length < 2) return say('Pick a name for the board.');
+    if(cents === null || cents < 1) return say('Put in a bid. One cent is the floor.');
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return say('That email does not look right.');
+
+    if(demo) return say('Preview only. Nothing was sent. With bidding open, the screen answers right here.', true);
+
+    btn.disabled = true; btn.textContent = 'Sending';
+    fetch(CONFIG.api + '/bids', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      body: JSON.stringify({task: task, name: name, email: email, amountCents: cents})
+    })
+      .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, d: d}; }); })
+      .then(function(res){
+        var d = res.d || {};
+        say(d.message || (res.ok ? 'Bid received.' : 'That did not go through. Try again.'), d.verdict === 'qualified');
+        if(d.verdict === 'qualified'){ $('task').value = ''; load(); }
+      })
+      .catch(function(){ say('That did not go through. Check your connection and try again.'); })
+      .then(function(){ btn.disabled = false; btn.textContent = 'Send it'; });
   });
 
-  /* ---------- scroll behaviour ---------- */
+  /* ---------- reveal on scroll ---------- */
+  var risers = Array.prototype.slice.call(document.querySelectorAll('.rise'));
   if('IntersectionObserver' in window && !reduce){
     var io = new IntersectionObserver(function(entries){
-      entries.forEach(function(e){
-        if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+      entries.forEach(function(en){
+        if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); }
       });
-    }, {rootMargin:'0px 0px -12% 0px', threshold:.08});
-    Array.prototype.forEach.call(document.querySelectorAll('.rise'), function(el){ io.observe(el); });
-
-    var gate = new IntersectionObserver(function(entries){
-      entries.forEach(function(e){
-        var fx = e.target.id === 'hero' ? heroFx : rideFx;
-        if(!fx) return;
-        if(e.isIntersecting){
-          if(e.target.id === 'hello') fx.show(5);
-          fx.start();
-        } else {
-          fx.stop();
-        }
-      });
-    }, {threshold:.25});
-    ['hero','hello'].forEach(function(id){
-      var el = document.getElementById(id);
-      if(el) gate.observe(el);
-    });
+    }, {rootMargin: '0px 0px -10% 0px', threshold: .06});
+    risers.forEach(function(el){ io.observe(el); });
   } else {
-    Array.prototype.forEach.call(document.querySelectorAll('.rise'), function(el){ el.classList.add('in'); });
+    risers.forEach(function(el){ el.classList.add('in'); });
   }
 })();
 </script>

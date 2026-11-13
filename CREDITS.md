@@ -6,6 +6,7 @@
 |---|---|---|
 | `assets/hero.*`, `assets/og.jpg`, `assets/apple-touch-icon.png` | Supplied by the site owner | Owner's own |
 | `assets/eagle-fly.webp` | Supplied by the site owner (generated contact sheet) | Owner's own |
+| `assets/og-bid.jpg` | Share card for the bid site: type set over the CC0 flag photograph below | Owner's own (flag: CC0) |
 | `assets/flag.*`, `assets/flag-tall.*` | ["Flag of the United States waving in Kent, WA (2025) - 0154"](https://commons.wikimedia.org/wiki/File:Flag_of_the_United_States_waving_in_Kent,_WA_(2025)_-_0154.jpg) | CC0 (public domain dedication) |
 
 The flag photograph is released under CC0, so it requires no attribution and does not
