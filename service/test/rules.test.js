@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   money, minCentsFor, coveredMinutes, describeMinutes, validateBid, decide,
-  localParts, zonedToUtc, dayShift, nominalAuction, extendedClose, pickWinner, applyScreen, raiseVerdict, LIMITS, REFUSALS, HELD_MESSAGE,
+  localParts, zonedToUtc, dayShift, nominalAuction, extendedClose, pickWinner, applyScreen, raiseVerdict, resolveStandings, validateMax, validateRaise, LIMITS, REFUSALS, HELD_MESSAGE,
 } from '../src/rules.js';
 
 const TZ = 'America/Chicago';
@@ -47,7 +47,7 @@ test('a bid that covers its job qualifies, and costs are called out', () => {
 
 test('bids are validated and tidied', () => {
   const good = validateBid({ task: '  Walk to work   instead of driving. ', name: ' mike_r ', email: ' Mike@Example.COM ', amountCents: 1 });
-  assert.deepEqual(good, { ok: true, value: { task: 'Walk to work instead of driving.', name: 'mike_r', email: 'mike@example.com', amountCents: 1 } });
+  assert.deepEqual(good, { ok: true, value: { task: 'Walk to work instead of driving.', name: 'mike_r', email: 'mike@example.com', amountCents: 1, maxCents: null, notify: false } });
   const base = { task: 'Walk to work instead of driving.', name: 'mike_r', email: 'm@example.com', amountCents: 100 };
   assert.equal(validateBid({ ...base, task: 'too short' }).ok, false);
   assert.equal(validateBid({ ...base, task: 'x'.repeat(281) }).ok, false);
@@ -138,16 +138,77 @@ test('raising a bid: it must go up, and the same $200-an-hour check applies', ()
   const qualified = { amount_cents: 4200, status: 'qualified', est_minutes: 5, est_cost_cents: 0, min_cents: 1667 };
   assert.equal(raiseVerdict(qualified, 4200, 200).ok, false);
   assert.equal(raiseVerdict(qualified, 100, 200).ok, false);
-  assert.deepEqual(raiseVerdict(qualified, 5000, 200), { ok: true, status: 'qualified', message: 'Your bid is now $50.00.' });
+  assert.deepEqual(raiseVerdict(qualified, 5000, 200), { ok: true, amountCents: 5000, maxCents: null, status: 'qualified', message: 'Your bid is now $50.00.' });
 
   const short = { amount_cents: 2000, status: 'short', est_minutes: 50, est_cost_cents: 400, min_cents: 16667 };
   const still = raiseVerdict(short, 10000, 200);
   assert.equal(still.status, 'short');
   assert.match(still.message, /needs \$166\.67, plus about \$4\.00 in costs/);
-  assert.deepEqual(raiseVerdict(short, 16667, 200), { ok: true, status: 'qualified', message: 'Your bid is now $166.67, which covers the job.' });
+  assert.deepEqual(raiseVerdict(short, 16667, 200), { ok: true, amountCents: 16667, maxCents: null, status: 'qualified', message: 'Your bid is now $166.67, which covers the job.' });
 
   const held = { amount_cents: 900, status: 'held', est_minutes: null, est_cost_cents: null, min_cents: null };
   assert.equal(raiseVerdict(held, 1500, 200).status, 'held');
   const ownerApproved = { amount_cents: 900, status: 'qualified', est_minutes: null, est_cost_cents: null, min_cents: null };
   assert.equal(raiseVerdict(ownerApproved, 1500, 200).status, 'qualified');
+});
+
+test('a maximum is optional, at least the bid, and never below it', () => {
+  assert.deepEqual(validateMax(undefined, 500), { ok: true, value: null });
+  assert.deepEqual(validateMax(8000, 500), { ok: true, value: 8000 });
+  assert.deepEqual(validateMax(500, 500), { ok: true, value: null }); // same as the bid: no auto-bid
+  assert.equal(validateMax(400, 500).ok, false);
+  assert.equal(validateMax('80', 500).ok, false);
+  assert.equal(validateMax(LIMITS.maxCents + 1, 500).ok, false);
+  assert.deepEqual(validateRaise({ amountCents: 600, maxCents: 900 }), { ok: true, value: { amountCents: 600, maxCents: 900 } });
+  assert.equal(validateRaise({ amountCents: 0 }).ok, false);
+  const base = { task: 'Walk to work instead of driving.', name: 'mike_r', email: 'm@example.com', amountCents: 100 };
+  assert.equal(validateBid({ ...base, maxCents: 50 }).ok, false);
+  assert.deepEqual(validateBid({ ...base, maxCents: 900, notify: true }).value, { ...base, maxCents: 900, notify: true });
+});
+
+test('raising can lift the bid, the maximum, or both, and neither comes down', () => {
+  const mine = { amount_cents: 4200, max_cents: 6000, status: 'qualified', est_minutes: 5, est_cost_cents: 0, min_cents: 1667 };
+  assert.equal(raiseVerdict(mine, 4200, 200, 6000).ok, false); // nothing went up
+  assert.equal(raiseVerdict(mine, 3000, 200, 5000).ok, false);
+  const higherMax = raiseVerdict(mine, 4200, 200, 9000);
+  assert.deepEqual([higherMax.amountCents, higherMax.maxCents, higherMax.status], [4200, 9000, 'qualified']);
+  const higherBid = raiseVerdict(mine, 5000, 200);
+  assert.deepEqual([higherBid.amountCents, higherBid.maxCents], [5000, 6000]); // the old maximum still stands
+  const past = raiseVerdict(mine, 7000, 200);
+  assert.deepEqual([past.amountCents, past.maxCents], [7000, null]); // bid went past the maximum
+  const lowTyped = raiseVerdict(mine, 100, 200, 8000);
+  assert.deepEqual([lowTyped.amountCents, lowTyped.maxCents], [4200, 8000]); // the bid never drops
+});
+
+test('auto-bids answer each other: highest maximum leads at one cent over the next', () => {
+  const at = (id, amount, max, t) => ({ id, amount_cents: amount, max_cents: max, created_at: t });
+  const amounts = (bids) => { const r = resolveStandings(bids); return [r.leaderId, r.highCents, Object.fromEntries(r.amounts)]; };
+
+  assert.deepEqual(amounts([]), [null, 0, {}]);
+  assert.deepEqual(amounts([at(1, 4200, null, 1)]), [1, 4200, { 1: 4200 }]);                 // alone: nothing moves
+  assert.deepEqual(amounts([at(1, 1000, 8000, 1)]), [1, 1000, { 1: 1000 }]);                 // a maximum alone does not raise the bid
+  assert.deepEqual(amounts([at(1, 1000, 8000, 1), at(2, 2000, null, 2)]), [1, 2001, { 1: 2001, 2: 2000 }]); // defends at one cent over
+  assert.deepEqual(amounts([at(1, 1000, 8000, 1), at(2, 2000, 5000, 2)]), [1, 5001, { 1: 5001, 2: 5000 }]); // two maximums
+  assert.deepEqual(amounts([at(1, 1000, 8000, 1), at(2, 9000, null, 2)]), [2, 9000, { 1: 8000, 2: 9000 }]); // beaten: sits at its maximum
+  assert.deepEqual(amounts([at(1, 1000, 8000, 1), at(2, 1000, 8000, 2)]), [1, 8000, { 1: 8000, 2: 8000 }]); // tie: first one in leads
+  assert.deepEqual(amounts([at(1, 1000, 8000, 1), at(2, 7999, null, 2)]), [1, 8000, { 1: 8000, 2: 7999 }]); // capped at its own maximum
+  assert.deepEqual(amounts([at(1, 500, null, 1), at(2, 300, null, 2), at(3, 100, 400, 3)]), [1, 500, { 1: 500, 2: 300, 3: 400 }]);
+});
+
+test('a maximum lifts a bid that starts below what the job needs, and only that far', () => {
+  const allow = { decision: 'allow', category: 'none', name_ok: true, est_minutes: 50, est_cost_dollars: 0, needs_quote: false, reason: '' };
+  const lifted = applyScreen(allow, { amountCents: 2000, maxCents: 30000, ratePerHour: 200 });
+  assert.deepEqual([lifted.status, lifted.amountCents, lifted.minCents], ['qualified', 16667, 16667]);
+  assert.match(lifted.message, /raised it to \$166\.67 to cover the job/);
+  const tooLow = applyScreen(allow, { amountCents: 2000, maxCents: 10000, ratePerHour: 200 });
+  assert.deepEqual([tooLow.status, tooLow.amountCents], ['short', 2000]);
+  const noMax = applyScreen(allow, { amountCents: 2000, ratePerHour: 200 });
+  assert.deepEqual([noMax.status, noMax.amountCents], ['short', 2000]);
+  const enough = applyScreen(allow, { amountCents: 20000, maxCents: 30000, ratePerHour: 200 });
+  assert.deepEqual([enough.status, enough.amountCents], ['qualified', 20000]); // already covers it: untouched
+
+  const short = { amount_cents: 2000, max_cents: null, status: 'short', est_minutes: 50, est_cost_cents: 0, min_cents: 16667 };
+  const raised = raiseVerdict(short, 2000, 200, 30000);
+  assert.deepEqual([raised.status, raised.amountCents, raised.maxCents], ['qualified', 16667, 30000]);
+  assert.equal(raiseVerdict(short, 2000, 200, 9000).status, 'short');
 });

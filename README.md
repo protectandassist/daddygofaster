@@ -46,6 +46,10 @@ These came from the owner. Change the wording in `index.html` (sections `#how`, 
   costumes or appearance changes, scripted speech, politics, religion, product plugs,
   anything aimed at a person or private address, public scenes, family, live locations.
 - An AI screens every bid and name first. Anything it is unsure of goes to a person.
+- A bidder can set a hidden maximum, and their bid rises on its own, a cent at a time,
+  when someone outbids them. Nobody else sees the maximum, the owner included.
+- The page shows a bidder whether they are leading or outbid. They can also ask for an
+  email when they are outbid, once email is set up in the service.
 
 ## The bid service
 

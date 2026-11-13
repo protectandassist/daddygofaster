@@ -61,7 +61,28 @@ export function validateBid(body) {
   if (email.length > LIMITS.emailMax || !EMAIL_OK.test(email)) return { ok: false, error: 'Check the email address.' };
   if (!Number.isInteger(amountCents) || amountCents < 1) return { ok: false, error: 'Enter a bid of at least $0.01.' };
   if (amountCents > LIMITS.maxCents) return { ok: false, error: `The most you can bid here is ${money(LIMITS.maxCents)}.` };
-  return { ok: true, value: { task, name, email, amountCents } };
+  const max = validateMax(body.maxCents, amountCents);
+  if (!max.ok) return max;
+  return { ok: true, value: { task, name, email, amountCents, maxCents: max.value, notify: body.notify === true } };
+}
+
+// The optional auto-bid maximum. Returns null when none was given.
+export function validateMax(maxCents, amountCents) {
+  if (maxCents === undefined || maxCents === null || maxCents === '') return { ok: true, value: null };
+  if (!Number.isInteger(maxCents) || maxCents < 1) return { ok: false, error: 'Enter the maximum in dollars and cents.' };
+  if (maxCents > LIMITS.maxCents) return { ok: false, error: `The most you can bid here is ${money(LIMITS.maxCents)}.` };
+  if (maxCents < amountCents) return { ok: false, error: 'Your maximum has to be at least your bid.' };
+  return { ok: true, value: maxCents === amountCents ? null : maxCents };
+}
+
+// A raise sent with the bidder's private handle: only the money is checked.
+export function validateRaise(body) {
+  const amountCents = body?.amountCents;
+  if (!Number.isInteger(amountCents) || amountCents < 1) return { ok: false, error: 'Enter a bid of at least $0.01.' };
+  if (amountCents > LIMITS.maxCents) return { ok: false, error: `The most you can bid here is ${money(LIMITS.maxCents)}.` };
+  const max = validateMax(body.maxCents, amountCents);
+  if (!max.ok) return max;
+  return { ok: true, value: { amountCents, maxCents: max.value } };
 }
 
 // ---- does the bid cover the job? --------------------------------------------
@@ -93,18 +114,55 @@ export function decide({ amountCents, estMinutes, estCostCents = 0, ratePerHour 
 
 // The same person sending the same job again is raising their bid, not placing a
 // new one. `existing` is their current row for that job. The job was already
-// screened, so the only question is whether the new amount covers it.
-export function raiseVerdict(existing, amountCents, ratePerHour) {
-  if (amountCents <= existing.amount_cents) {
-    return { ok: false, message: `Your bid on this job is already ${money(existing.amount_cents)}. Enter a higher amount to raise it.` };
+// screened, so the only question is whether the new amount covers it. A raise
+// can lift the bid, the auto-bid maximum, or both. Neither can come down.
+export function raiseVerdict(existing, amountCents, ratePerHour, maxCents = null) {
+  const oldCeiling = Math.max(existing.amount_cents, existing.max_cents ?? 0);
+  const newCeiling = Math.max(amountCents, maxCents ?? 0);
+  if (amountCents <= existing.amount_cents && newCeiling <= oldCeiling) {
+    return {
+      ok: false,
+      message:
+        `Your bid on this job is already ${money(existing.amount_cents)}` +
+        (existing.max_cents ? `, with a maximum of ${money(existing.max_cents)}` : '') +
+        '. Enter a higher amount or a higher maximum to raise it.',
+    };
   }
-  const now = `Your bid is now ${money(amountCents)}`;
-  if (existing.status === 'held') return { ok: true, status: 'held', message: `${now}. It is still waiting for a person to check it.` };
-  if (existing.min_cents == null || amountCents >= existing.min_cents) {
-    return { ok: true, status: 'qualified', message: existing.status === 'short' ? `${now}, which covers the job.` : `${now}.` };
+  const amount = Math.max(existing.amount_cents, amountCents);
+  const ceiling = Math.max(oldCeiling, newCeiling);
+  const next = { ok: true, amountCents: amount, maxCents: ceiling > amount ? ceiling : null };
+  const now = `Your bid is now ${money(amount)}`;
+  if (existing.status === 'held') return { ...next, status: 'held', message: `${now}. It is still waiting for a person to check it.` };
+  if (existing.min_cents == null || amount >= existing.min_cents) {
+    return { ...next, status: 'qualified', message: existing.status === 'short' ? `${now}, which covers the job.` : `${now}.` };
   }
-  const short = decide({ amountCents, estMinutes: existing.est_minutes, estCostCents: existing.est_cost_cents || 0, ratePerHour });
-  return { ok: true, status: 'short', message: short.message };
+  if (ceiling >= existing.min_cents) {
+    return {
+      ok: true, amountCents: existing.min_cents, maxCents: ceiling > existing.min_cents ? ceiling : null, status: 'qualified',
+      message: `Your auto-bid raised your bid to ${money(existing.min_cents)} to cover the job.`,
+    };
+  }
+  const short = decide({ amountCents: amount, estMinutes: existing.est_minutes, estCostCents: existing.est_cost_cents || 0, ratePerHour });
+  return { ...next, status: 'short', message: short.message };
+}
+
+// ---- auto-bidding -------------------------------------------------------------
+
+// Each qualifying bid has an amount and, optionally, a hidden maximum it may rise
+// to. This returns where every bid stands once the auto-bids have answered each
+// other: the bid with the highest ceiling leads, at one step over the next
+// ceiling (never above its own), and every bid behind it has gone as far as it
+// can. Equal ceilings go to whoever set theirs first.
+export function resolveStandings(bids, step = 1) {
+  const ceiling = (b) => Math.max(b.amount_cents, b.max_cents ?? 0);
+  const order = [...bids].sort((a, b) => ceiling(b) - ceiling(a) || a.created_at - b.created_at || a.id - b.id);
+  const amounts = new Map();
+  if (!order.length) return { leaderId: null, highCents: 0, amounts };
+  const [lead, second] = order;
+  for (const b of order.slice(1)) amounts.set(b.id, ceiling(b));
+  const high = second ? Math.max(lead.amount_cents, Math.min(ceiling(lead), ceiling(second) + step)) : lead.amount_cents;
+  amounts.set(lead.id, high);
+  return { leaderId: lead.id, highCents: high, amounts };
 }
 
 // What a bidder is told when a job breaks a rule. Fixed wording: the screen
@@ -129,7 +187,7 @@ export const HELD_MESSAGE =
 
 // Turns the screen's answer into what happens to the bid. `out` is the object
 // the screen returns (see src/screen.js). Anything doubtful is held for a person.
-export function applyScreen(out, { amountCents, ratePerHour }) {
+export function applyScreen(out, { amountCents, maxCents = null, ratePerHour }) {
   if (!out || typeof out !== 'object') return { status: 'held', message: HELD_MESSAGE };
   if (out.name_ok === false) return { status: 'refused', category: 'name', message: REFUSALS.name };
   if (out.decision === 'refuse') {
@@ -147,7 +205,21 @@ export function applyScreen(out, { amountCents, ratePerHour }) {
     return { status: 'qualified', minCents: 1, estMinutes: minutes, estCostCents: cost, message: 'Your bid is in. It is a quick job, so any bid covers it.' };
   }
   const estMinutes = Math.ceil(minutes);
-  return { ...decide({ amountCents, estMinutes, estCostCents: cost, ratePerHour }), estMinutes, estCostCents: cost };
+  const verdict = { ...decide({ amountCents, estMinutes, estCostCents: cost, ratePerHour }), estMinutes, estCostCents: cost };
+  return liftToCover(verdict, amountCents, maxCents);
+}
+
+// An auto-bid maximum is permission to go that high. If the bid starts below
+// what the job needs and the maximum reaches it, the bid goes up to exactly
+// what the job needs, and no further.
+function liftToCover(verdict, amountCents, maxCents) {
+  if (verdict.status !== 'short' || !maxCents || maxCents < verdict.minCents) return { ...verdict, amountCents };
+  return {
+    ...verdict,
+    status: 'qualified',
+    amountCents: verdict.minCents,
+    message: `Your bid is in. Your auto-bid raised it to ${money(verdict.minCents)} to cover the job.`,
+  };
 }
 
 // ---- the auction clock ------------------------------------------------------

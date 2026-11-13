@@ -59,6 +59,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <div class="row">
         <span>Bidding: <b id="openState"></b></span>
         <span>Screen: <b id="screenState"></b></span>
+        <span>Outbid emails: <b id="emailState"></b></span>
         <span id="auctionLine"></span>
       </div>
       <div class="row" style="margin-top:12px">
@@ -144,6 +145,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   function render(d){
     $('openState').textContent = d.open ? 'open' : 'not open (the site says "opens soon")';
     $('screenState').textContent = d.screen === 'ai' ? 'AI' : 'manual, every bid waits for you';
+    $('emailState').textContent = d.email === 'on' ? 'on' : 'off';
     $('auctionLine').textContent = d.auction
       ? 'Job day ' + d.auction.day + (d.auction.status === 'open' ? ', closes ' + when(d.auction.closesAt) : ', closed')
       : 'No auction running.';

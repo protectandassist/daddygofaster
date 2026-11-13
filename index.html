@@ -131,7 +131,7 @@ p{margin:0}
 .stat__k{font-size:.8rem;font-weight:500;color:var(--muted)}
 .stat__v{margin-top:2px;font-family:var(--display);font-weight:700;font-size:clamp(1.1rem,2.2vw,1.35rem);white-space:nowrap}
 .stat__v--hot{color:var(--gold)}
-.bid__body{padding:clamp(18px,2.4vw,24px);display:grid;gap:16px}
+.bid__body{padding:clamp(18px,2.4vw,24px);display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
 .bid__more{display:grid;gap:16px}
 .field label{display:block;margin-bottom:7px;font-size:.9rem;font-weight:600}
 .field input,.field textarea{width:100%;background:var(--field);border:1px solid var(--line-2);border-radius:10px;
@@ -145,6 +145,7 @@ p{margin:0}
 .money span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:600;pointer-events:none}
 .money input{padding-left:28px;font-weight:600}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chips--flush{margin-top:-6px}
 .chipbtn{font:500 .85rem/1 var(--body);color:var(--muted);background:transparent;border:1px solid var(--line-2);
   border-radius:999px;padding:9px 13px;cursor:pointer;transition:color .15s,border-color .15s}
 .chipbtn:hover{color:var(--text);border-color:var(--muted)}
@@ -152,11 +153,25 @@ p{margin:0}
 .chipbtn--lead:hover{color:var(--gold);border-color:var(--gold)}
 .readout{font-size:.93rem;color:var(--muted);min-height:1.6em}
 .readout b{color:var(--text);font-weight:600}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-@media(max-width:480px){.row2{grid-template-columns:1fr}}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media(max-width:480px){.row2{grid-template-columns:minmax(0,1fr)}}
 .msg{padding:13px 15px;border-radius:10px;font-size:.95rem;background:rgba(242,109,114,.1);border:1px solid rgba(242,109,114,.4)}
 .msg--ok{background:rgba(61,214,140,.1);border-color:rgba(61,214,140,.4)}
 .fine{font-size:.86rem;color:var(--faint);text-align:center}
+.mine{display:grid;gap:8px}
+.mine__row{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:10px;border:1px solid var(--line-2);background:var(--field)}
+.mine__row > div{min-width:0;flex:1}
+.mine__row b{display:block;font-weight:600;font-size:.95rem}
+.mine__row span{display:block;color:var(--muted);font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mine__row.is-leading,.mine__row.is-won{border-color:rgba(61,214,140,.5)}
+.mine__row.is-leading b,.mine__row.is-won b{color:var(--good)}
+.mine__row.is-outbid,.mine__row.is-short{border-color:rgba(242,109,114,.55)}
+.mine__row.is-outbid b,.mine__row.is-short b{color:var(--bad)}
+.mine__row .chipbtn{flex:0 0 auto;color:var(--text)}
+.check{display:flex;align-items:center;gap:10px;font-size:.93rem;font-weight:500;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--accent);flex:0 0 auto;margin:0}
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent);text-decoration:underline;cursor:pointer}
+.raising{font-size:.9rem;color:var(--muted)}
 
 /* ---- sections ---------------------------------------------- */
 .sec{padding:clamp(56px,8vw,104px) 0;border-bottom:1px solid var(--line)}
@@ -327,6 +342,7 @@ a.spot:hover{border-color:var(--line-2)}
         </div>
         <div class="bid__body">
           <h2 class="visually-hidden">Place a bid</h2>
+          <div class="mine" id="mine" aria-live="polite" hidden></div>
           <div class="field">
             <label for="task">What should I do tomorrow?</label>
             <textarea id="task" name="task" rows="2" maxlength="280" required placeholder="Walk the two miles to the hardware store instead of driving."></textarea>
@@ -336,12 +352,19 @@ a.spot:hover{border-color:var(--line-2)}
               <button class="chipbtn" type="button" data-idea="Spend 30 minutes picking up litter at a park.">Pick up litter</button>
             </div>
           </div>
-          <div class="field">
-            <label for="amount">Your bid</label>
-            <div class="money"><span aria-hidden="true">$</span><input class="num" id="amount" name="amount" type="text" inputmode="decimal" required autocomplete="off" placeholder="0.01"></div>
-            <div class="chips" id="leadWrap" hidden>
-              <button class="chipbtn chipbtn--lead num" type="button" id="leadChip"></button>
+          <p class="raising" id="raiseBar" hidden>You are raising your bid on this job. <button type="button" class="linkbtn" id="raiseCancel">Place a different bid</button></p>
+          <div class="row2">
+            <div class="field">
+              <label for="amount">Your bid</label>
+              <div class="money"><span aria-hidden="true">$</span><input class="num" id="amount" name="amount" type="text" inputmode="decimal" required autocomplete="off" placeholder="0.01"></div>
             </div>
+            <div class="field">
+              <label for="max">Auto-bid up to (optional)</label>
+              <div class="money"><span aria-hidden="true">$</span><input class="num" id="max" name="max" type="text" inputmode="decimal" autocomplete="off" placeholder="No maximum"></div>
+            </div>
+          </div>
+          <div class="chips chips--flush" id="leadWrap" hidden>
+            <button class="chipbtn chipbtn--lead num" type="button" id="leadChip"></button>
           </div>
           <p class="readout" id="readout" aria-live="polite">Bids start at $0.01.</p>
           <div class="bid__more" id="more" hidden>
@@ -355,7 +378,8 @@ a.spot:hover{border-color:var(--line-2)}
                 <input id="email" name="email" type="email" autocomplete="email">
               </div>
             </div>
-            <p class="field__hint field__hint--tight">Your email is only used to reach you if you win. It is never shown.</p>
+            <p class="field__hint field__hint--tight">Your email is only used to reach you about your bid. It is never shown.</p>
+            <label class="check" id="notifyWrap" hidden><input type="checkbox" id="notify" checked>Email me if I am outbid</label>
           </div>
           <p class="msg" id="bidMsg" role="status" hidden></p>
           <button class="btn btn--primary btn--block" id="bidBtn" type="submit" hidden>Continue</button>
@@ -492,6 +516,7 @@ a.spot:hover{border-color:var(--line-2)}
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>One win per person per week, and up to five jobs a day each.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A new high bid in the last five minutes extends bidding by five minutes. While the bids keep climbing, bidding stays open.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>You can raise your bid as often as you like. Send the same job with a higher amount, and the same rules apply.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Set a maximum and your bid rises on its own, one cent at a time, only when someone outbids you. Nobody else sees your maximum, and that includes me.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>If the winner does not pay in time, the next highest bid wins.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Names are screened too. If the screen is not sure, a person decides.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>I can decline any job. If I decline the winning bid, nobody is charged.</span></li>
@@ -570,6 +595,7 @@ a.spot:hover{border-color:var(--line-2)}
   var demo = /[?&]demo\b/.test(location.search);
   var $ = function(id){ return document.getElementById(id); };
   var open = false, highCents = 0, closesAt = null, timer = null;
+  var alerts = false, roundDay = null, raising = null, baseTitle = document.title;
 
   /* ---------- money and time ---------- */
   function toCents(str){
@@ -620,9 +646,13 @@ a.spot:hover{border-color:var(--line-2)}
     if(open && highCents && c <= highCents) rest += ' The high bid is ' + money(highCents) + '.';
     else if(open && c > highCents) rest += ' That would take the lead.';
     else if(c < CONFIG.freeUnderCents) rest += ' A winning bid under 50¢ is free.';
+    var m = toCents($('max').value.trim());
+    if($('max').value.trim() !== '' && (m === null || m < c)) rest += ' Your maximum has to be at least your bid.';
+    else if(m !== null && m > c) rest += ' It can rise to ' + money(m) + ' on its own if someone outbids you.';
     setReadout(money(c), rest);
   }
   amount.addEventListener('input', refresh);
+  $('max').addEventListener('input', refresh);
 
   /* ---------- idea and lead buttons ---------- */
   Array.prototype.forEach.call(document.querySelectorAll('[data-idea]'), function(b){
@@ -634,7 +664,7 @@ a.spot:hover{border-color:var(--line-2)}
   $('leadChip').addEventListener('click', function(){
     amount.value = ((highCents + 1) / 100).toFixed(2);
     refresh();
-    ($('more').hidden ? $('bidBtn') : $('who')).focus();
+    ($('more').hidden || raising ? $('bidBtn') : $('who')).focus();
   });
 
   /* ---------- the board ---------- */
@@ -673,6 +703,9 @@ a.spot:hover{border-color:var(--line-2)}
 
   function paint(data, note){
     open = data.status === 'open';
+    alerts = Boolean(data.alerts);
+    roundDay = data.day || null;
+    $('notifyWrap').hidden = !alerts;
     var bids = (data.bids || []).slice().sort(function(a, b){ return b.amountCents - a.amountCents; });
     highCents = bids.length ? bids[0].amountCents : 0;
 
@@ -708,7 +741,7 @@ a.spot:hover{border-color:var(--line-2)}
     $('bidBtn').hidden = !open;
     $('notifyBtn').hidden = open || closed;
     $('bidFine').textContent = open
-      ? 'Free to bid. You only pay if you win. To raise a bid, send the same job with a higher amount.'
+      ? 'Free to bid. You only pay if you win.'
       : closed
         ? 'Bidding is closed for today. The next round opens this evening.'
         : 'Bidding is not open yet. This opens an email asking to be told when it is.';
@@ -724,7 +757,7 @@ a.spot:hover{border-color:var(--line-2)}
   function load(){
     fetch(CONFIG.api + '/board', {headers: {'Accept': 'application/json'}})
       .then(function(r){ if(!r.ok) throw new Error('board ' + r.status); return r.json(); })
-      .then(function(d){ paint(d); })
+      .then(function(d){ paint(d); loadMine(); })
       .catch(function(){ /* leave the page in its not-open state */ });
   }
 
@@ -743,8 +776,102 @@ a.spot:hover{border-color:var(--line-2)}
     }, 'Sample data for preview. These are not real bids.');
   } else if(CONFIG.api){
     load();
-    setInterval(function(){ if(!document.hidden) load(); }, 60000);
+    setInterval(function(){ if(!document.hidden) load(); }, 30000);
   }
+
+  /* ---------- the bids this browser has placed ----------
+     The service hands back a private handle for each bid. The browser keeps it,
+     with the job text, so the page can show how the bid stands and raise it. */
+  function saved(){
+    try { return JSON.parse(localStorage.getItem('dgfBids') || '[]').filter(function(b){ return b && b.token; }); }
+    catch (e) { return []; }
+  }
+  function keep(list){
+    try { localStorage.setItem('dgfBids', JSON.stringify(list.slice(-10))); } catch (e) {}
+  }
+  function remember(token, task){
+    var list = saved().filter(function(b){ return b.token !== token; });
+    list.push({token: token, task: task, day: roundDay});
+    keep(list);
+  }
+
+  var STANDING = {
+    leading: function(b){ return 'You are leading at ' + money(b.amountCents); },
+    outbid:  function(b){ return 'You have been outbid. The high bid is ' + money(b.highCents); },
+    waiting: function(b){ return 'Waiting for approval at ' + money(b.amountCents); },
+    short:   function(b){ return 'Too low for the job' + (b.minCents ? ': it needs ' + money(b.minCents) : ''); },
+    won:     function(b){ return 'You won with ' + money(b.amountCents) + '. Watch your email.'; }
+  };
+
+  function paintMine(bids){
+    var box = $('mine'), tasks = {};
+    saved().forEach(function(b){ tasks[b.token] = b.task; });
+    box.textContent = '';
+    var shown = bids.filter(function(b){ return STANDING[b.standing] && (b.open || b.standing === 'won'); });
+    shown.forEach(function(b){
+      var row = document.createElement('div'), text = document.createElement('div');
+      row.className = 'mine__row is-' + b.standing;
+      var head = document.createElement('b'); head.textContent = STANDING[b.standing](b);
+      var sub = document.createElement('span');
+      sub.textContent = (b.standing === 'outbid' || b.standing === 'short' ? 'Your bid: ' + money(b.amountCents) + '. ' : '') +
+        (b.maxCents ? 'Auto-bid up to ' + money(b.maxCents) + '. ' : '') + (tasks[b.token] || '');
+      text.appendChild(head); text.appendChild(sub); row.appendChild(text);
+      if(b.open){
+        var up = document.createElement('button');
+        up.type = 'button'; up.className = 'chipbtn'; up.textContent = 'Raise';
+        up.addEventListener('click', function(){ startRaise({token: b.token, task: tasks[b.token] || ''}, b); });
+        row.appendChild(up);
+      }
+      box.appendChild(row);
+    });
+    box.hidden = shown.length === 0;
+    document.title = (shown.some(function(b){ return b.standing === 'outbid'; }) ? 'Outbid: ' : '') + baseTitle;
+    /* forget bids from rounds that are over and not won */
+    var live = {};
+    bids.forEach(function(b){ if(b.open || b.standing === 'won') live[b.token] = true; });
+    keep(saved().filter(function(b){ return live[b.token]; }));
+  }
+
+  function loadMine(){
+    var list = saved();
+    if(demo || !CONFIG.api || !list.length){ $('mine').hidden = true; return; }
+    fetch(CONFIG.api + '/mine', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      body: JSON.stringify({tokens: list.map(function(b){ return b.token; })})
+    })
+      .then(function(r){ if(!r.ok) throw new Error('mine ' + r.status); return r.json(); })
+      .then(function(d){ paintMine(d.bids || []); })
+      .catch(function(){ /* the board still works without this */ });
+  }
+
+  /* ---------- raising one of them ---------- */
+  function startRaise(entry, standing){
+    raising = entry;
+    $('task').value = entry.task;
+    $('task').readOnly = true;
+    document.querySelector('#bid .chips[aria-label="Ideas"]').hidden = true;
+    $('raiseBar').hidden = false;
+    $('more').hidden = true;
+    amount.value = standing && standing.standing !== 'leading' && standing.highCents ? ((standing.highCents + 1) / 100).toFixed(2) : '';
+    $('max').value = '';
+    msg.hidden = true;
+    btn.textContent = 'Raise bid';
+    refresh();
+    amount.focus();
+  }
+  function stopRaise(){
+    raising = null;
+    $('task').value = '';
+    $('task').readOnly = false;
+    document.querySelector('#bid .chips[aria-label="Ideas"]').hidden = false;
+    $('raiseBar').hidden = true;
+    amount.value = ''; $('max').value = '';
+    msg.hidden = true;
+    btn.textContent = 'Continue';
+    refresh();
+  }
+  $('raiseCancel').addEventListener('click', function(){ stopRaise(); $('task').focus(); });
 
   /* ---------- sending a bid ---------- */
   var form = $('bid'), msg = $('bidMsg'), btn = $('bidBtn');
@@ -753,42 +880,63 @@ a.spot:hover{border-color:var(--line-2)}
     msg.textContent = text;
     msg.className = 'msg' + (ok ? ' msg--ok' : '');
   }
+  function buttonLabel(){ return raising ? 'Raise bid' : ($('more').hidden ? 'Continue' : 'Place bid'); }
+
   form.addEventListener('submit', function(e){
     e.preventDefault();
     if(!open || btn.disabled) return;
     var task = $('task').value.trim(), name = $('who').value.trim(), email = $('email').value.trim();
     var cents = toCents(amount.value.trim());
-    if(task.length < 10){ $('task').focus(); return say('Describe the job in a few more words.'); }
+    var maxRaw = $('max').value.trim(), maxCents = maxRaw === '' ? null : toCents(maxRaw);
+    if(!raising && task.length < 10){ $('task').focus(); return say('Describe the job in a few more words.'); }
     if(cents === null || cents < 1){ amount.focus(); return say('Enter a bid of at least $0.01.'); }
-    if($('more').hidden){                 /* step two: who is bidding */
+    if(maxRaw !== '' && (maxCents === null || maxCents < cents)){ $('max').focus(); return say('Your maximum has to be at least your bid.'); }
+    if(!raising && $('more').hidden){     /* step two: who is bidding */
       $('more').hidden = false;
       msg.hidden = true;
       btn.textContent = 'Place bid';
       $('who').focus();
       return;
     }
-    if(name.length < 2){ $('who').focus(); return say('Add a name to show on the board.'); }
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $('email').focus(); return say('Check the email address.'); }
+    if(!raising){
+      if(name.length < 2){ $('who').focus(); return say('Add a name to show on the board.'); }
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $('email').focus(); return say('Check the email address.'); }
+    }
 
     if(demo) return say('This is a preview, so nothing was sent. When bidding is open, your answer appears here.', true);
 
+    var body = raising
+      ? {token: raising.token, amountCents: cents, maxCents: maxCents}
+      : {task: task, name: name, email: email, amountCents: cents, maxCents: maxCents, notify: alerts && $('notify').checked};
     btn.disabled = true; btn.textContent = 'Sending';
     fetch(CONFIG.api + '/bids', {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-      body: JSON.stringify({task: task, name: name, email: email, amountCents: cents})
+      body: JSON.stringify(body)
     })
       .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, d: d}; }); })
       .then(function(res){
         var d = res.d || {};
         var landed = d.verdict === 'qualified' || d.verdict === 'held';
         say(d.message || (res.ok ? 'Your bid is in.' : 'That did not go through. Please try again.'), landed);
-        /* keep the job in the box so raising it later is one number and one click */
-        if(landed){ amount.value = ''; refresh(); load(); }
+        if(d.token) remember(d.token, task);
+        /* the job stays in the box, so raising it is one number and one click */
+        if(landed){ amount.value = ''; $('max').value = ''; refresh(); }
+        if(d.token && !raising && (landed || d.verdict === 'short')) startRaiseQuietly(d.token, task);
+        load();
       })
       .catch(function(){ say('That did not go through. Check your connection and try again.'); })
-      .then(function(){ btn.disabled = false; btn.textContent = 'Place bid'; });
+      .then(function(){ btn.disabled = false; btn.textContent = buttonLabel(); });
   });
+
+  /* after a bid lands, the form is already set up to raise that same bid */
+  function startRaiseQuietly(token, task){
+    raising = {token: token, task: task};
+    $('task').readOnly = true;
+    document.querySelector('#bid .chips[aria-label="Ideas"]').hidden = true;
+    $('raiseBar').hidden = false;
+    $('more').hidden = true;
+  }
 
   /* ---------- before bidding opens: the button writes the email for them ---------- */
   $('notifyBtn').addEventListener('click', function(){

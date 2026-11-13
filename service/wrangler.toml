@@ -21,10 +21,14 @@ EXTEND_MINUTES = "5"
 MAX_BIDS_PER_DAY = "5"
 # Sites allowed to call the public endpoints from a browser.
 ALLOWED_ORIGINS = "https://daddygofaster.com,https://www.daddygofaster.com"
-# Claude model that screens bids when the ANTHROPIC_API_KEY secret is set.
+# Claude model that screens bids once an AI key is set.
 SCREEN_MODEL = "claude-opus-5-5"
+# Where links in emails point.
+SITE_URL = "https://daddygofaster.com"
+# Who outbid emails come from. The domain has to be verified with the email provider (Resend).
+MAIL_FROM = "DaddyGoFaster <alerts@mail.daddygofaster.com>"
 
-# Secrets, set in the Cloudflare dashboard (Worker > Settings > Variables and Secrets),
-# never in this file:
-#   ADMIN_KEY          required for /admin. Any long random string.
-#   ANTHROPIC_API_KEY  optional. Without it every bid waits for a person to approve it.
+# Keys are not kept in this file.
+#   VAULT_KEY   a Worker secret, set once at random. It seals the keys below in the database.
+#   admin key, email key, AI key: handed to POST /admin/api/setup (see README.md). The
+#   admin key is stored as a salted hash; the other two are stored sealed.

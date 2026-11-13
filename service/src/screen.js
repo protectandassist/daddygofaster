@@ -55,10 +55,10 @@ reason: one short sentence for the owner explaining the decision. Do not quote t
 
 // Returns the screen's answer, or null when there is no key, the call fails, or
 // the model declines. Null means "hold the bid for a person", never "allow".
-export async function screenBid(env, { name, task, model }) {
-  if (!env.ANTHROPIC_API_KEY) return null;
+export async function screenBid(env, { name, task, model, apiKey }) {
+  if (!apiKey) return null;
   const client = new Anthropic({
-    apiKey: env.ANTHROPIC_API_KEY,
+    apiKey,
     baseURL: env.ANTHROPIC_BASE_URL || undefined, // only for pointing at a stand-in during local tests
     timeout: 20_000,
     maxRetries: 1,
@@ -79,7 +79,7 @@ export async function screenBid(env, { name, task, model }) {
     }
     return response.parsed_output;
   } catch (error) {
-    if (error instanceof Anthropic.AuthenticationError) console.error('[SCREEN] the ANTHROPIC_API_KEY secret was rejected');
+    if (error instanceof Anthropic.AuthenticationError) console.error('[SCREEN] the AI key was rejected');
     else if (error instanceof Anthropic.RateLimitError) console.warn('[SCREEN] rate limited');
     else if (error instanceof Anthropic.APIError) console.error('[SCREEN] API error', error.status, error.message);
     else console.error('[SCREEN] failed', String(error));
