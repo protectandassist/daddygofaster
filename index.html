@@ -152,6 +152,27 @@ p{margin:0}
 .hero__trail i::after{content:"";position:absolute;right:0;top:-2px;width:5px;height:5px;border-right:1px solid var(--line-2);border-top:1px solid var(--line-2);transform:rotate(45deg)}
 /* The photographs are illustrative possibilities, not completed jobs. */
 .inspiration{margin-top:26px}
+/* Two kinds of job: Entertaining (the rotating ideas) and Practical (real work). */
+.idea-tabs{display:inline-flex;gap:4px;padding:4px;margin-bottom:12px;border:1px solid var(--line-2);border-radius:11px;background:var(--bg-2)}
+.idea-tab{min-height:40px;padding:8px 18px;border:0;border-radius:8px;background:transparent;color:var(--muted);font:700 .82rem var(--body);cursor:pointer;transition:background .15s,color .15s}
+.idea-tab:hover{color:var(--text)}
+.idea-tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.idea-tab:focus-visible{outline:2px solid var(--accent-hi);outline-offset:2px}
+.work{min-height:360px;border:1px solid var(--line-2);border-radius:14px;background:var(--bg-2);padding:22px;display:grid;gap:16px;align-content:start}
+.work__lead{font-size:clamp(1.3rem,2.2vw,1.6rem);font-weight:800;line-height:1.15;letter-spacing:-.03em;text-wrap:balance}
+.work__label{font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-hi);margin-bottom:9px}
+.work__skills{display:flex;flex-wrap:wrap;gap:8px}
+.work__skill{min-height:40px;padding:8px 14px;border:1px solid var(--line-2);border-radius:999px;background:var(--card);color:var(--text);font:600 .82rem var(--body);cursor:pointer}
+.work__skill:hover{border-color:var(--accent)}
+.work__skill[aria-pressed="true"]{border-color:var(--accent);background:rgba(255,106,43,.14)}
+.work__options{display:grid;gap:10px}
+.work__option{display:grid;grid-template-columns:1fr auto;gap:4px 14px;align-items:center;width:100%;text-align:left;padding:14px 16px;border:1px solid var(--line-2);border-radius:12px;background:var(--card);color:var(--text);font:inherit;cursor:pointer;transition:border-color .15s,transform .15s}
+.work__option:hover{border-color:var(--accent);transform:translateY(-1px)}
+.work__option b{font-size:.95rem;font-weight:700}
+.work__option span{grid-column:1;font-size:.8rem;color:var(--muted)}
+.work__option em{grid-row:1 / span 2;grid-column:2;font-style:normal;font-size:.78rem;font-weight:700;color:var(--accent-hi);white-space:nowrap}
+@media(max-width:560px){.idea-tabs{display:flex}.idea-tab{flex:1;min-height:44px}.work{padding:18px;min-height:0}.work__skill{min-height:44px}
+  .work__option{grid-template-columns:1fr}.work__option em{grid-row:auto;grid-column:1}}
 .idea-scene{position:relative;isolation:isolate;min-height:360px;border:1px solid var(--line-2);border-radius:14px;overflow:hidden;background:var(--bg-2)}
 .idea-scene__images{position:absolute;inset:0;z-index:-2}
 .idea-scene__images img{position:absolute;width:100%;height:100%;object-fit:cover;object-position:56% 48%;opacity:0;transform:scale(1.035);
@@ -454,7 +475,12 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         <p class="eyebrow">Bid. Win. Watch.</p>
         <h1><span>Your idea.</span> <span class="hero__accent">My tomorrow.</span></h1>
         <p class="hero__sub">Each day, the highest bid sets a job for me to do the next day. I do it on camera and post the video. Any winning bid includes up to one hour.</p>
-        <div class="inspiration" id="inspiration" aria-label="Challenge inspiration">
+        <div class="inspiration" id="inspiration" aria-label="What to bid on">
+          <div class="idea-tabs" role="tablist" aria-label="Kind of job">
+            <button class="idea-tab" type="button" role="tab" id="tabFun" aria-selected="true" aria-controls="panelFun">Entertaining</button>
+            <button class="idea-tab" type="button" role="tab" id="tabWork" aria-selected="false" aria-controls="panelWork" tabindex="-1">Practical</button>
+          </div>
+          <div id="panelFun" role="tabpanel" aria-labelledby="tabFun">
           <div class="idea-scene">
             <div class="idea-scene__images" aria-hidden="true">
               <img class="is-active" id="scene-sunrise" src="/assets/idea-sunrise.webp" width="1672" height="941" alt="" fetchpriority="high">
@@ -479,6 +505,21 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
             <button class="idea-control idea-control--pause" id="ideaPause" type="button" aria-label="Pause changing ideas" title="Pause changing ideas"><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M5 4h3v12H5zM12 4h3v12h-3z"/></svg></button>
           </div>
           <p class="idea-note">Pick a challenge. Add a twist. Make tomorrow worth watching.</p>
+          </div>
+          <div id="panelWork" role="tabpanel" aria-labelledby="tabWork" hidden>
+            <div class="work">
+              <p class="work__lead">Put me to work on something real.</p>
+              <div>
+                <p class="work__label">What do you need?</p>
+                <div class="work__skills" id="workSkills" role="group" aria-label="What I can help with"></div>
+              </div>
+              <div>
+                <p class="work__label" id="workLabel">Two ways to bid</p>
+                <div class="work__options" id="workOptions"></div>
+              </div>
+            </div>
+            <p class="idea-note">Practical jobs go through the same bidding and the same rules. Any winning bid includes up to one hour, and each full $200 adds an hour.</p>
+          </div>
           <span class="visually-hidden" id="ideaAnnouncement" role="status" aria-live="polite"></span>
         </div>
         <ul class="ticks">
@@ -876,7 +917,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   ];
   var sceneNames = {sunrise:'Take the long way', workshop:'Make it ridiculous', cleanup:'Chores with a catch'};
   var inspiration = $('inspiration'), category = 'all', deck = [], ideaIndex = -1;
-  var ideaTimer = null, ideaPaused = reduce, ideaHovered = false, ideaVisible = true;
+  var ideaTimer = null, ideaPaused = reduce, ideaHovered = false, ideaVisible = true, workOpen = false;
   try { ideaIndex = Number(localStorage.getItem('dgfIdeaLast') || -1); } catch(e) {}
   function shuffleDeck(){
     deck = ideas.map(function(_, i){ return i; }).filter(function(i){ return category === 'all' || ideas[i].scene === category; });
@@ -888,7 +929,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   function scheduleIdea(){
     clearTimeout(ideaTimer);
     var focused = inspiration.contains(document.activeElement) || $('bid').contains(document.activeElement);
-    if(!ideaPaused && !ideaHovered && !focused && ideaVisible && !document.hidden){
+    if(!ideaPaused && !ideaHovered && !focused && ideaVisible && !workOpen && !document.hidden){
       ideaTimer = setTimeout(function(){ nextIdea(false); }, 9000);
     }
   }
@@ -946,6 +987,86 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     ideaObserver.observe(inspiration);
   }
   paintPause(); nextIdea(false);
+
+  /* ---------- Entertaining and Practical ----------
+     Practical lists what I am good at. Each one can be bid on two ways: an hour
+     of my time, or a whole project. Both go into the same bid form. `hours` is
+     how long a project is expected to take; under the time rule a job longer
+     than an hour needs a bid of $200 for each extra hour before it is reviewed. */
+  var skills = [
+    {id:'web', name:'Websites',
+      time:'Up to one hour of your help with my website: fixes, changes or advice. I will send the details.',
+      projects:[{title:'Build a simple website', note:'Up to five pages from your text and pictures.', hours:6,
+        task:'Build me a simple website of up to five pages from the text and pictures I send you.'}]},
+    {id:'email', name:'Email setup',
+      time:'Up to one hour of your help with my email: setup, delivery problems or advice. I will send the details.',
+      projects:[{title:'Set up email on your domain', note:'Mailboxes on your own domain, set up so mail gets delivered.', hours:2,
+        task:'Set up email on my own domain, with the records that keep it out of spam. I will send the domain and the mailboxes I need.'}]},
+    {id:'cad', name:'3D design',
+      time:'Up to one hour of your help with a 3D design: a fix, a change or advice. I will send the details.',
+      projects:[{title:'Design a 3D part', note:'A printable part from your sketch and measurements.', hours:3,
+        task:'Design a 3D-printable part from the sketch and measurements I send you, and send me the file.'}]},
+    {id:'other', name:'Something else',
+      time:'Up to one hour of your time on something practical. I will describe exactly what I need.',
+      projects:[]}
+  ];
+  var skill = skills[0];
+  function projectFloor(hours){ return Math.max(0, Math.ceil(hours) - 1) * 20000; }   /* matches the service's time rule */
+  function useJob(task, cents){
+    if(raising) stopRaise();
+    $('task').value = task;
+    if(cents){ amount.value = (cents / 100).toFixed(2); refresh(); }
+    $('ideaAnnouncement').textContent = 'Job added to the bid form. You can edit it before bidding.';
+    $('bid').scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'start'});
+    (cents ? $('task') : amount).focus({preventScroll: true});
+  }
+  function option(title, note, tag, onUse){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'work__option';
+    var t = document.createElement('b'); t.textContent = title;
+    var g = document.createElement('em'); g.textContent = tag;
+    var n = document.createElement('span'); n.textContent = note;
+    b.appendChild(t); b.appendChild(g); b.appendChild(n);
+    b.addEventListener('click', onUse);
+    return b;
+  }
+  function paintWork(){
+    var list = $('workSkills'), box = $('workOptions');
+    list.textContent = ''; box.textContent = '';
+    skills.forEach(function(s){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'work__skill'; b.textContent = s.name;
+      b.setAttribute('aria-pressed', String(s === skill));
+      b.addEventListener('click', function(){ skill = s; paintWork(); });
+      list.appendChild(b);
+    });
+    $('workLabel').textContent = skill.projects.length ? 'Two ways to bid' : 'How to bid';
+    box.appendChild(option('Bid for my time', 'One hour with any winning bid. Each full $200 adds an hour.', 'Any bid',
+      function(){ useJob(skill.time, 0); }));
+    skill.projects.forEach(function(p){
+      var floor = projectFloor(p.hours);
+      box.appendChild(option(p.title, p.note + ' About ' + p.hours + ' hours.', floor ? 'From ' + money(floor).replace('.00', '') : 'Any bid',
+        function(){ useJob(p.task, floor); }));
+    });
+  }
+  function showTab(work, focus){
+    workOpen = work;
+    $('tabFun').setAttribute('aria-selected', String(!work)); $('tabFun').tabIndex = work ? -1 : 0;
+    $('tabWork').setAttribute('aria-selected', String(work)); $('tabWork').tabIndex = work ? 0 : -1;
+    $('panelFun').hidden = work; $('panelWork').hidden = !work;
+    if(work) paintWork();
+    if(focus) (work ? $('tabWork') : $('tabFun')).focus();
+    try { sessionStorage.setItem('dgfTab', work ? 'work' : 'fun'); } catch(e) {}
+    scheduleIdea();
+  }
+  $('tabFun').addEventListener('click', function(){ showTab(false); });
+  $('tabWork').addEventListener('click', function(){ showTab(true); });
+  [$('tabFun'), $('tabWork')].forEach(function(tab){
+    tab.addEventListener('keydown', function(e){
+      if(e.key === 'ArrowLeft' || e.key === 'ArrowRight'){ e.preventDefault(); showTab(tab === $('tabFun'), true); }
+    });
+  });
+  try { if(sessionStorage.getItem('dgfTab') === 'work' || location.hash === '#practical') showTab(true); } catch(e) {}
 
   /* ---------- the board ---------- */
   var LOCK = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="9" width="12" height="8" rx="2"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9"/></svg>';
