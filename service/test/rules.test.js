@@ -1,22 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  money, minCentsFor, coveredMinutes, describeMinutes, validateBid, decide,
+  money, minCentsFor, coveredMinutes, timeAllowance, approveDuration, describeMinutes, validateBid, decide,
   localParts, zonedToUtc, dayShift, nominalAuction, extendedClose, pickWinner, applyScreen, raiseVerdict, resolveStandings, validateMax, validateRaise, LIMITS, REFUSALS, HELD_MESSAGE,
 } from '../src/rules.js';
 
 const TZ = 'America/Chicago';
 const at = (iso) => new Date(iso).getTime();
 
-test('the $200-an-hour maths matches the table on the site', () => {
-  assert.equal(minCentsFor(60, 200), 20000);
-  assert.equal(minCentsFor(15, 200), 5000);
-  assert.equal(minCentsFor(3, 200), 1000);
-  assert.equal(minCentsFor(50, 200), 16667); // $166.67, the example on the page
-  assert.equal(coveredMinutes(2000, 200), 6);
-  assert.equal(coveredMinutes(40000, 200), 120);
-  assert.equal(money(16667), '$166.67');
-  assert.equal(money(160000), '$1,600.00');
+test('winning bids include the first hour and add whole hours at each $200 boundary', () => {
+  for (const cents of [1, 1000, 19900, 19999]) assert.equal(coveredMinutes(cents), 60);
+  for (const cents of [20000, 20500, 21000, 29900, 39900, 39999]) assert.equal(coveredMinutes(cents), 120);
+  for (const cents of [40000, 40001, 59999]) assert.equal(coveredMinutes(cents), 180);
+  assert.equal(coveredMinutes(60000), 240);
+  for (const minutes of [0.1, 1, 50, 60]) assert.equal(minCentsFor(minutes), 1);
+  for (const minutes of [60.01, 90, 120]) assert.equal(minCentsFor(minutes), 20000);
+  for (const minutes of [120.01, 150, 180]) assert.equal(minCentsFor(minutes), 40000);
+  assert.equal(timeAllowance(19900), 'Up to 1 hour');
+  assert.equal(timeAllowance(21000), 'Up to 2 hours');
+  assert.equal(money(21000), '$210.00');
+});
+
+test('the owner chooses duration within the current bid cap', () => {
+  assert.equal(approveDuration(1000, 60).ok, true);
+  assert.equal(approveDuration(19900, 60).ok, true);
+  assert.equal(approveDuration(19900, 60.01).ok, false);
+  for (const amount of [20000, 20500, 21000, 29900, 39900, 39999]) {
+    assert.equal(approveDuration(amount, 90).ok, true);
+    assert.equal(approveDuration(amount, 120).ok, true);
+    assert.equal(approveDuration(amount, 120.01).ok, false);
+  }
+  assert.equal(approveDuration(40000, 180).ok, true);
+  assert.equal(approveDuration(40000, 181).ok, false);
+  for (const invalid of [0, -1, NaN, Infinity]) assert.equal(approveDuration(21000, invalid).ok, false);
 });
 
 test('durations read naturally', () => {
@@ -27,22 +43,27 @@ test('durations read naturally', () => {
   assert.equal(describeMinutes(150), 'about 2 hours 30 minutes');
 });
 
-test('two dollars does not buy eight hours', () => {
-  const r = decide({ amountCents: 200, estMinutes: 480, ratePerHour: 200 });
+test('a low bid cannot authorize a job above its one-hour cap', () => {
+  const r = decide({ amountCents: 200, estMinutes: 480 });
   assert.equal(r.status, 'short');
-  assert.equal(r.minCents, 160000);
-  assert.match(r.message, /needs \$1,600\.00/);
+  assert.equal(r.minCents, 140000);
+  assert.match(r.message, /Up to 1 hour/);
+  assert.match(r.message, /\$1,400\.00/);
 });
 
-test('a bid that covers its job qualifies, and costs are called out', () => {
-  const ok = decide({ amountCents: 20000, estMinutes: 50, estCostCents: 400, ratePerHour: 200 });
+test('one-hour jobs qualify at any bid; longer jobs require owner review and costs stay separate', () => {
+  const ok = decide({ amountCents: 1, estMinutes: 50, estCostCents: 400 });
   assert.equal(ok.status, 'qualified');
+  assert.equal(ok.minCents, 1);
   assert.match(ok.message, /Costs of about \$4\.00 are extra/);
-  const exact = decide({ amountCents: 16667, estMinutes: 50, ratePerHour: 200 });
-  assert.equal(exact.status, 'qualified');
-  const oneShort = decide({ amountCents: 16666, estMinutes: 50, estCostCents: 400, ratePerHour: 200 });
-  assert.equal(oneShort.status, 'short');
-  assert.match(oneShort.message, /needs \$166\.67, plus about \$4\.00 in costs/);
+  const review = decide({ amountCents: 21000, estMinutes: 120, estCostCents: 400 });
+  assert.equal(review.status, 'held');
+  assert.equal(review.minCents, 20000);
+  assert.match(review.message, /actual time/);
+  assert.match(review.message, /Costs of about \$4\.00 are extra/);
+  const short = decide({ amountCents: 39999, estMinutes: 121 });
+  assert.equal(short.status, 'short');
+  assert.equal(short.minCents, 40000);
 });
 
 test('bids are validated and tidied', () => {
@@ -112,10 +133,11 @@ test('highest bid wins, earlier bid wins a tie, and last week\'s winner sits out
 });
 
 test('the screen\'s answer becomes a verdict, and doubt goes to a person', () => {
-  const ctx = { amountCents: 2000, ratePerHour: 200 };
+  const ctx = { amountCents: 2000,  };
   const allow = { decision: 'allow', category: 'none', name_ok: true, est_minutes: 5, est_cost_dollars: 0, needs_quote: false, reason: '' };
-  assert.equal(applyScreen(allow, ctx).status, 'qualified'); // $20 covers 6 minutes
-  assert.equal(applyScreen({ ...allow, est_minutes: 50, est_cost_dollars: 4 }, ctx).status, 'short');
+  assert.equal(applyScreen(allow, ctx).status, 'qualified'); // any bid includes up to 60 minutes
+  assert.equal(applyScreen({ ...allow, est_minutes: 50, est_cost_dollars: 4 }, ctx).status, 'qualified');
+  assert.equal(applyScreen({ ...allow, est_minutes: 90 }, ctx).status, 'short');
   assert.equal(applyScreen({ ...allow, est_minutes: 5.2 }, ctx).estMinutes, 6); // rounded up, on the high side
   assert.deepEqual(applyScreen({ ...allow, decision: 'refuse', category: 'appearance' }, ctx),
     { status: 'refused', category: 'appearance', message: REFUSALS.appearance });
@@ -128,28 +150,35 @@ test('the screen\'s answer becomes a verdict, and doubt goes to a person', () =>
   ]) assert.deepEqual(applyScreen(doubtful, ctx), { status: 'held', message: HELD_MESSAGE });
 });
 
-test('a one-cent bid can win a job that takes seconds, and nothing bigger', () => {
-  const wave = { decision: 'allow', category: 'none', name_ok: true, est_minutes: 0.1, est_cost_dollars: 0, needs_quote: false, reason: '' };
-  assert.equal(applyScreen(wave, { amountCents: 1, ratePerHour: 200 }).status, 'qualified');
-  assert.equal(applyScreen({ ...wave, est_minutes: 1 }, { amountCents: 1, ratePerHour: 200 }).status, 'short');
+test('a one-cent bid can qualify through exactly sixty minutes', () => {
+  const job = { decision: 'allow', category: 'none', name_ok: true, est_cost_dollars: 0, needs_quote: false, reason: '' };
+  for (const minutes of [0.1, 1, 30, 59.9, 60]) {
+    const r = applyScreen({ ...job, est_minutes: minutes }, { amountCents: 1 });
+    assert.equal(r.status, 'qualified');
+    assert.equal(r.minCents, 1);
+  }
+  assert.equal(applyScreen({ ...job, est_minutes: 60.01 }, { amountCents: 1 }).status, 'short');
+  assert.equal(applyScreen({ ...job, est_minutes: 120 }, { amountCents: 21000 }).status, 'held');
 });
 
-test('raising a bid: it must go up, and the same $200-an-hour check applies', () => {
+test('raises preserve owner approval and apply the new caps instead of stale hourly prices', () => {
   const qualified = { amount_cents: 4200, status: 'qualified', est_minutes: 5, est_cost_cents: 0, min_cents: 1667 };
-  assert.equal(raiseVerdict(qualified, 4200, 200).ok, false);
-  assert.equal(raiseVerdict(qualified, 100, 200).ok, false);
-  assert.deepEqual(raiseVerdict(qualified, 5000, 200), { ok: true, amountCents: 5000, maxCents: null, status: 'qualified', message: 'Your bid is now $50.00.' });
-
-  const short = { amount_cents: 2000, status: 'short', est_minutes: 50, est_cost_cents: 400, min_cents: 16667 };
-  const still = raiseVerdict(short, 10000, 200);
-  assert.equal(still.status, 'short');
-  assert.match(still.message, /needs \$166\.67, plus about \$4\.00 in costs/);
-  assert.deepEqual(raiseVerdict(short, 16667, 200), { ok: true, amountCents: 16667, maxCents: null, status: 'qualified', message: 'Your bid is now $166.67, which covers the job.' });
-
-  const held = { amount_cents: 900, status: 'held', est_minutes: null, est_cost_cents: null, min_cents: null };
-  assert.equal(raiseVerdict(held, 1500, 200).status, 'held');
-  const ownerApproved = { amount_cents: 900, status: 'qualified', est_minutes: null, est_cost_cents: null, min_cents: null };
-  assert.equal(raiseVerdict(ownerApproved, 1500, 200).status, 'qualified');
+  assert.equal(raiseVerdict(qualified, 4200).ok, false);
+  assert.equal(raiseVerdict(qualified, 100).ok, false);
+  assert.equal(raiseVerdict(qualified, 5000).status, 'qualified');
+  const oldShort = { amount_cents: 2000, status: 'short', est_minutes: 50, est_cost_cents: 400, min_cents: 16667 };
+  const reevaluated = raiseVerdict(oldShort, 2100);
+  assert.equal(reevaluated.status, 'qualified');
+  assert.equal(reevaluated.minCents, 1);
+  const long = { amount_cents: 19900, status: 'short', est_minutes: 120, est_cost_cents: 0, min_cents: 20000 };
+  assert.equal(raiseVerdict(long, 21000).status, 'held');
+  const approved = { ...long, amount_cents: 21000, status: 'qualified', screened_by: 'owner' };
+  assert.equal(raiseVerdict(approved, 22000).status, 'qualified');
+  assert.match(raiseVerdict(approved, 22000).message, /agreed time stays the same/);
+  const held = { amount_cents: 900, status: 'held', est_minutes: null, min_cents: null };
+  assert.equal(raiseVerdict(held, 1500).status, 'held');
+  const legacyOwner = { ...held, status: 'qualified', screened_by: 'owner' };
+  assert.equal(raiseVerdict(legacyOwner, 1500).status, 'qualified');
 });
 
 test('a maximum is optional, at least the bid, and never below it', () => {
@@ -168,15 +197,15 @@ test('a maximum is optional, at least the bid, and never below it', () => {
 
 test('raising can lift the bid, the maximum, or both, and neither comes down', () => {
   const mine = { amount_cents: 4200, max_cents: 6000, status: 'qualified', est_minutes: 5, est_cost_cents: 0, min_cents: 1667 };
-  assert.equal(raiseVerdict(mine, 4200, 200, 6000).ok, false); // nothing went up
-  assert.equal(raiseVerdict(mine, 3000, 200, 5000).ok, false);
-  const higherMax = raiseVerdict(mine, 4200, 200, 9000);
+  assert.equal(raiseVerdict(mine, 4200, 6000).ok, false); // nothing went up
+  assert.equal(raiseVerdict(mine, 3000, 5000).ok, false);
+  const higherMax = raiseVerdict(mine, 4200, 9000);
   assert.deepEqual([higherMax.amountCents, higherMax.maxCents, higherMax.status], [4200, 9000, 'qualified']);
-  const higherBid = raiseVerdict(mine, 5000, 200);
+  const higherBid = raiseVerdict(mine, 5000);
   assert.deepEqual([higherBid.amountCents, higherBid.maxCents], [5000, 6000]); // the old maximum still stands
-  const past = raiseVerdict(mine, 7000, 200);
+  const past = raiseVerdict(mine, 7000);
   assert.deepEqual([past.amountCents, past.maxCents], [7000, null]); // bid went past the maximum
-  const lowTyped = raiseVerdict(mine, 100, 200, 8000);
+  const lowTyped = raiseVerdict(mine, 100, 8000);
   assert.deepEqual([lowTyped.amountCents, lowTyped.maxCents], [4200, 8000]); // the bid never drops
 });
 
@@ -195,20 +224,20 @@ test('auto-bids answer each other: highest maximum leads at one cent over the ne
   assert.deepEqual(amounts([at(1, 500, null, 1), at(2, 300, null, 2), at(3, 100, 400, 3)]), [1, 500, { 1: 500, 2: 300, 3: 400 }]);
 });
 
-test('a maximum lifts a bid that starts below what the job needs, and only that far', () => {
-  const allow = { decision: 'allow', category: 'none', name_ok: true, est_minutes: 50, est_cost_dollars: 0, needs_quote: false, reason: '' };
-  const lifted = applyScreen(allow, { amountCents: 2000, maxCents: 30000, ratePerHour: 200 });
-  assert.deepEqual([lifted.status, lifted.amountCents, lifted.minCents], ['qualified', 16667, 16667]);
-  assert.match(lifted.message, /raised it to \$166\.67 to cover the job/);
-  const tooLow = applyScreen(allow, { amountCents: 2000, maxCents: 10000, ratePerHour: 200 });
+test('auto-bids can reach a time tier but never bypass owner duration approval', () => {
+  const job = { decision: 'allow', category: 'none', name_ok: true, est_minutes: 90, est_cost_dollars: 0, needs_quote: false, reason: '' };
+  const lifted = applyScreen(job, { amountCents: 2000, maxCents: 30000 });
+  assert.deepEqual([lifted.status, lifted.amountCents, lifted.minCents], ['held', 20000, 20000]);
+  assert.match(lifted.message, /actual time before approving/);
+  const tooLow = applyScreen(job, { amountCents: 2000, maxCents: 19999 });
   assert.deepEqual([tooLow.status, tooLow.amountCents], ['short', 2000]);
-  const noMax = applyScreen(allow, { amountCents: 2000, ratePerHour: 200 });
-  assert.deepEqual([noMax.status, noMax.amountCents], ['short', 2000]);
-  const enough = applyScreen(allow, { amountCents: 20000, maxCents: 30000, ratePerHour: 200 });
-  assert.deepEqual([enough.status, enough.amountCents], ['qualified', 20000]); // already covers it: untouched
-
-  const short = { amount_cents: 2000, max_cents: null, status: 'short', est_minutes: 50, est_cost_cents: 0, min_cents: 16667 };
-  const raised = raiseVerdict(short, 2000, 200, 30000);
-  assert.deepEqual([raised.status, raised.amountCents, raised.maxCents], ['qualified', 16667, 30000]);
-  assert.equal(raiseVerdict(short, 2000, 200, 9000).status, 'short');
+  assert.equal(applyScreen(job, { amountCents: 21000 }).status, 'held');
+  const included = applyScreen({ ...job, est_minutes: 60 }, { amountCents: 1, maxCents: 30000 });
+  assert.deepEqual([included.status, included.amountCents, included.minCents], ['qualified', 1, 1]);
+  const short = { amount_cents: 2000, max_cents: null, status: 'short', est_minutes: 90, est_cost_cents: 0, min_cents: 20000 };
+  const raised = raiseVerdict(short, 2000, 30000);
+  assert.deepEqual([raised.status, raised.amountCents, raised.maxCents], ['held', 20000, 30000]);
+  assert.equal(raiseVerdict(short, 2000, 19999).status, 'short');
+  const thirdHour = applyScreen({ ...job, est_minutes: 121 }, { amountCents: 21000, maxCents: 40000 });
+  assert.deepEqual([thirdHour.status, thirdHour.amountCents, thirdHour.minCents], ['held', 40000, 40000]);
 });

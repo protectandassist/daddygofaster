@@ -31,12 +31,13 @@ These came from the owner. Change the wording in `index.html` (sections `#how`, 
 `#rules`) if a rule changes; the bid service has to enforce the same thing.
 
 - A bid is a job plus an amount. The floor is 1¢.
-- A bid only qualifies if it covers the job at about **$200 an hour**, with travel counted
-  both ways. This is a sanity check, not a meter: there is no clock on the job. A job
-  that takes seconds is covered by any bid.
+- Every winning bid includes **up to one hour**, with travel counted both ways.
+  Each full $200 adds one hour to the cap: $0.01–$199.99 = 1 hour,
+  $200–$399.99 = 2 hours, $400–$599.99 = 3 hours, and so on. The owner sets the
+  actual time within the cap. Longer jobs wait for owner approval of their duration.
 - Costs (fares, tickets, flights) are on top and paid up front. Flights and hotels need a
   real quote.
-- Highest qualifying bid wins. Only the winner pays. A win under 50¢ is free.
+- Highest approved bid wins. Only the winner pays. A win under 50¢ is free.
 - One win per person per week, and up to five jobs a day per person. A bidder can raise
   their own bid as often as they like: the same job sent again with a higher amount.
 - Bidding closes the night before. A new high bid in the last five minutes adds five
@@ -60,7 +61,7 @@ screened, the owner's page, the two secrets the owner sets, and how to open bidd
 The page finds it through one line near the top of the `<script>` in `index.html`:
 
 ```js
-var CONFIG = { api: "https://dgf-bids.trevor-c2b.workers.dev", rate: 200, freeUnderCents: 50 };
+var CONFIG = { api: "https://dgf-bids.trevor-c2b.workers.dev", hourBlockCents: 20000, freeUnderCents: 50 };
 ```
 
 `GET {api}/board` tells the page whether bidding is `open`, `closed` or `soon`, when it

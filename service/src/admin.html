@@ -71,7 +71,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 
     <section class="card" id="heldCard" hidden>
       <h2>Waiting for a person</h2>
-      <p class="muted small">These do not show on the board until approved. Approve only before bidding closes.</p>
+      <p class="muted small">These do not show on the board until approved. Set the time you agree to spend within the bid's cap. Approve only before bidding closes.</p>
       <div id="held"></div>
     </section>
 
@@ -79,7 +79,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <h2>All bids in this auction</h2>
       <p class="muted" id="noBids">No bids yet.</p>
       <table id="bidsTable" hidden>
-        <thead><tr><th>#</th><th>Name</th><th>Status</th><th>Covers</th><th>Estimate</th><th>Note</th><th class="num">Bid</th></tr></thead>
+        <thead><tr><th>#</th><th>Name</th><th>Status</th><th>Time allowance</th><th>Time / costs</th><th>Note</th><th class="num">Bid</th></tr></thead>
         <tbody id="bids"></tbody>
       </table>
     </section>
@@ -104,7 +104,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   function estimate(b){
     if(b.estMinutes === null || b.estMinutes === undefined) return '—';
     var t = b.estMinutes < 1 ? 'seconds' : Math.round(b.estMinutes) + ' min';
-    return t + (b.estCostCents ? ' + ' + money(b.estCostCents) + ' costs' : '');
+    return (b.approvedMinutes ? 'Agreed: ' : 'Estimate: ') + t + (b.estCostCents ? ' + ' + money(b.estCostCents) + ' costs' : '');
   }
 
   function api(path, options){
@@ -126,18 +126,20 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     var top = el('div', 'row');
     top.appendChild(el('b', null, b.name));
     top.appendChild(el('span', null, money(b.amountCents)));
-    top.appendChild(el('span', 'muted small', 'covers ' + b.covers));
+    top.appendChild(el('span', 'muted small', b.covers));
     box.appendChild(top);
     if(b.task !== null) box.appendChild(el('div', 'job', b.task));
     if(b.note) box.appendChild(el('div', 'muted small', 'Screen: ' + b.note));
     var row = el('div', 'row');
-    var mins = el('input'); mins.type = 'number'; mins.min = '0'; mins.step = 'any'; mins.placeholder = 'Minutes';
+    var mins = el('input'); mins.type = 'number'; mins.min = '0.01'; mins.max = String(b.maxMinutes); mins.step = 'any'; mins.placeholder = 'Minutes'; mins.required = true;
     var cost = el('input'); cost.type = 'number'; cost.min = '0'; cost.step = 'any'; cost.placeholder = 'Costs $';
     var ok = el('button', null, 'Approve');
     var no = el('button', 'bad', 'Refuse');
-    ok.addEventListener('click', function(){ act('/admin/api/bids/' + b.id + '/decide', {decision: 'approve', estMinutes: mins.value, costDollars: cost.value}); });
+    ok.addEventListener('click', function(){ if(!mins.reportValidity()) return; act('/admin/api/bids/' + b.id + '/decide', {decision: 'approve', estMinutes: mins.value, costDollars: cost.value}); });
     no.addEventListener('click', function(){ act('/admin/api/bids/' + b.id + '/decide', {decision: 'refuse'}); });
-    row.appendChild(mins); row.appendChild(cost); row.appendChild(ok); row.appendChild(no);
+    var timeLabel = el('label', 'small', 'Time I agree to (minutes) '); timeLabel.appendChild(mins);
+    var costLabel = el('label', 'small', 'Extra costs $ '); costLabel.appendChild(cost);
+    row.appendChild(timeLabel); row.appendChild(costLabel); row.appendChild(ok); row.appendChild(no);
     box.appendChild(row);
     return box;
   }
@@ -183,7 +185,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       var w = p.winner, row = el('div', 'row');
       row.appendChild(el('b', null, 'Winner: ' + w.name));
       row.appendChild(el('span', null, w.free ? money(w.amountCents) + ' (free, under 50¢)' : money(w.amountCents)));
-      row.appendChild(el('span', 'muted small', 'estimate ' + estimate(w)));
+      row.appendChild(el('span', 'muted small', estimate(w)));
       box.appendChild(row);
       var mail = el('p'); mail.appendChild(document.createTextNode('Reach them at '));
       var a = el('a', null, w.email); a.href = 'mailto:' + w.email; a.style.color = 'var(--gold)'; mail.appendChild(a);

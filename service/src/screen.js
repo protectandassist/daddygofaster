@@ -42,6 +42,7 @@ Not allowed, with the category to use:
 The display name is shown on a public board. Set name_ok to false if it is offensive, sexual, hateful, pretends to be a real person or organization, or advertises something.
 
 Estimates, for a job that is allowed:
+- Any winning bid includes up to one hour. Each full $200 in the bid adds one hour to the cap: below $200 is one hour, $200-$399.99 is two, $400-$599.99 is three. The owner chooses the actual time within that cap. Your estimate is planning information, never a promise. Do not refuse an otherwise allowed job just because it takes longer than an hour; return its estimate for the time rules to handle.
 - est_minutes: his total time door to door, including travel both ways and any waiting. Estimate on the high side. Use a fraction below 1 for something that takes seconds, such as a wave.
 - est_cost_dollars: what he would have to spend on fares, fuel, tickets, entry fees or things he must buy. Use 0 if there is nothing.
 - needs_quote: true if the cost depends on a real price you cannot know, such as a flight, a hotel or event tickets.

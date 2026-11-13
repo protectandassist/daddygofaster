@@ -10,7 +10,7 @@
 // There is no scheduler. A round that has run past its close is settled the
 // next time anyone reads the board, bids, or opens the admin page.
 import {
-  LIMITS, money, describeMinutes, coveredMinutes, minCentsFor, validateBid, validateRaise, applyScreen, raiseVerdict,
+  LIMITS, TIME_POLICY, money, describeMinutes, coveredMinutes, timeAllowance, approveDuration, validateBid, validateRaise, applyScreen, raiseVerdict,
   resolveStandings, HELD_MESSAGE, nominalAuction, extendedClose, dayShift, pickWinner,
 } from './rules.js';
 import { screenBid } from './screen.js';
@@ -33,7 +33,6 @@ function int(value, fallback) {
 function settings(env) {
   return {
     open: env.OPEN === 'true',
-    rate: int(env.RATE_PER_HOUR, 200),
     tz: env.TIME_ZONE || 'America/Chicago',
     closeHour: int(env.CLOSE_HOUR, 20),
     extend: int(env.EXTEND_MINUTES, 5),
@@ -208,15 +207,15 @@ async function getBoard(env, s, now) {
 // count against the daily limit. The bid and the maximum can only go up.
 async function raiseBid(request, env, s, ctx, a, mine, { amountCents, maxCents, notify }, now) {
   if (mine.raises >= MAX_RAISES) return [429, { verdict: 'limit', message: 'That bid cannot be raised any more today.' }];
-  const v = raiseVerdict(mine, amountCents, s.rate, maxCents);
+  const v = raiseVerdict(mine, amountCents, maxCents);
   if (!v.ok) return [400, { verdict: 'invalid', message: v.message }];
   const before = await topBid(env, a.day);
   const r = await env.DB.prepare(
-    `UPDATE bids SET amount_cents = ?, max_cents = ?, status = ?, created_at = ?, raises = raises + 1, notify = MAX(notify, ?)
+    `UPDATE bids SET amount_cents = ?, max_cents = ?, status = ?, min_cents = ?, created_at = ?, raises = raises + 1, notify = MAX(notify, ?)
      WHERE id = ? AND amount_cents = ? AND status = ?`,
-  ).bind(v.amountCents, v.maxCents, v.status, now, notify ? 1 : 0, mine.id, mine.amount_cents, mine.status).run();
+  ).bind(v.amountCents, v.maxCents, v.status, v.minCents === undefined ? mine.min_cents : v.minCents, now, notify ? 1 : 0, mine.id, mine.amount_cents, mine.status).run();
   if (!r.meta.changes) return [409, { verdict: 'invalid', message: 'That bid changed while you were raising it. Try again.' }];
-  const row = { ...mine, amount_cents: v.amountCents, max_cents: v.maxCents };
+  const row = { ...mine, amount_cents: v.amountCents, max_cents: v.maxCents, min_cents: v.minCents === undefined ? mine.min_cents : v.minCents };
   if (v.status !== 'qualified') return bidReply(row, v.status, v.message, null);
   const standing = await settleStandings(request, env, s, ctx, a, before, now);
   return bidReply(row, 'qualified', v.message + standingMessage(mine.id, v.amountCents, before, standing), standing);
@@ -275,7 +274,7 @@ async function postBid(request, env, s, ctx, now) {
   // The screen. With no key, or any failure, the bid waits for a person.
   const answer = await screenBid(env, { name: bid.name, task: bid.task, model: s.model, apiKey: await aiKey(env) });
   const verdict = answer
-    ? applyScreen(answer, { amountCents: bid.amountCents, maxCents: bid.maxCents, ratePerHour: s.rate })
+    ? applyScreen(answer, { amountCents: bid.amountCents, maxCents: bid.maxCents })
     : { status: 'held', message: HELD_MESSAGE };
 
   // The screen takes a few seconds; make sure the round did not close meanwhile.
@@ -324,6 +323,7 @@ async function postMine(request, env) {
     out.push({
       token, day: bid.day, open, standing,
       amountCents: bid.amount_cents, maxCents: bid.max_cents ?? null, minCents: bid.min_cents ?? null,
+      approvedMinutes: bid.screened_by === 'owner' ? bid.est_minutes : null,
       highCents: top ? top.amount_cents : 0,
       closesAt: new Date(a.closes_at).toISOString(),
     });
@@ -347,7 +347,9 @@ function adminBid(b, s, showJobs) {
   // No maximum here on purpose: the owner should not know how high a bidder will go.
   return {
     id: b.id, name: b.name, amountCents: b.amount_cents, status: b.status, winState: b.win_state,
-    covers: describeMinutes(coveredMinutes(b.amount_cents, s.rate)),
+    covers: b.screened_by === 'owner' && b.est_minutes > 0 ? 'Agreed: ' + describeMinutes(b.est_minutes) : timeAllowance(b.amount_cents),
+    approvedMinutes: b.screened_by === 'owner' ? b.est_minutes : null,
+    maxMinutes: coveredMinutes(b.amount_cents),
     estMinutes: b.est_minutes, estCostCents: b.est_cost_cents, minCents: b.min_cents,
     note: b.screen_note, screenedBy: b.screened_by, placedAt: new Date(b.created_at).toISOString(),
     task: showJobs ? b.task : null,
@@ -379,7 +381,7 @@ async function adminState(env, s, now, showJobs) {
     open: s.open,
     screen: (await aiKey(env)) ? 'ai' : 'manual',
     email: s.mailFrom && (await mailKey(env)) ? 'on' : 'off',
-    settings: { ratePerHour: s.rate, timeZone: s.tz, closeHour: s.closeHour, maxBidsPerDay: s.maxPerDay },
+    settings: { ...TIME_POLICY, timeZone: s.tz, closeHour: s.closeHour, maxBidsPerDay: s.maxPerDay },
     auction: auction ? { day: auction.day, status: auction.status, closesAt: new Date(auction.closes_at).toISOString() } : null,
     bids: bids.map((b) => adminBid(b, s, showJobs)),
     previous,
@@ -400,12 +402,13 @@ async function adminDecide(request, env, s, ctx, id, now) {
   }
   if (body.decision !== 'approve') return [400, { message: 'Send decision: approve or refuse.' }];
   const minutes = Number(body.estMinutes);
-  const hasEstimate = Number.isFinite(minutes) && minutes > 0;
+  const approval = approveDuration(bid.amount_cents, minutes);
+  if (!approval.ok) return [400, { message: approval.message }];
   const costCents = Number.isFinite(Number(body.costDollars)) ? Math.max(0, Math.round(Number(body.costDollars) * 100)) : null;
   const before = await topBid(env, a.day);
   await env.DB.prepare(
     "UPDATE bids SET status = 'qualified', screened_by = 'owner', decided_at = ?, est_minutes = ?, est_cost_cents = ?, min_cents = ? WHERE id = ? AND status = 'held'",
-  ).bind(now, hasEstimate ? minutes : null, costCents, hasEstimate ? minCentsFor(minutes, s.rate) : null, id).run();
+  ).bind(now, approval.minutes, costCents, approval.minCents, id).run();
   await settleStandings(request, env, s, ctx, a, before, now);
   return [200, { status: 'qualified' }];
 }

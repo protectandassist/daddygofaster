@@ -11,20 +11,36 @@ export const LIMITS = {
   freeUnderCents: 50, // card minimum: a win below this is free
 };
 
+export const TIME_POLICY = { includedMinutes: 60, additionalHourCents: 20000 };
+
 // ---- money and time ---------------------------------------------------------
 
 export function money(cents) {
   return '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Smallest bid that covers a job of `minutes` at `ratePerHour` dollars.
-export function minCentsFor(minutes, ratePerHour) {
-  return Math.ceil((minutes / 60) * ratePerHour * 100);
+// This threshold opens a longer job for review; it does not buy hours.
+export function minCentsFor(minutes) {
+  return Math.max(1, (Math.ceil(minutes / 60) - 1) * TIME_POLICY.additionalHourCents);
 }
 
-// How many minutes of work a bid covers.
-export function coveredMinutes(cents, ratePerHour) {
-  return (cents / 100 / ratePerHour) * 60;
+export function coveredMinutes(cents) {
+  return (1 + Math.floor(cents / TIME_POLICY.additionalHourCents)) * 60;
+}
+
+export function timeAllowance(cents) {
+  const hours = coveredMinutes(cents) / 60;
+  return `Up to ${hours} hour${hours === 1 ? '' : 's'}`;
+}
+
+export function approveDuration(amountCents, minutes) {
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    return { ok: false, message: 'Enter the time you agree to spend, in minutes.' };
+  }
+  if (minutes > coveredMinutes(amountCents)) {
+    return { ok: false, message: `This bid is capped at ${coveredMinutes(amountCents)} minutes. Approve time within that cap.` };
+  }
+  return { ok: true, minutes, minCents: minCentsFor(minutes) };
 }
 
 function plural(n, word) {
@@ -85,30 +101,26 @@ export function validateRaise(body) {
   return { ok: true, value: { amountCents, maxCents: max.value } };
 }
 
-// ---- does the bid cover the job? --------------------------------------------
-
-// The $200-an-hour sense check. `estMinutes` already includes travel both ways.
-export function decide({ amountCents, estMinutes, estCostCents = 0, ratePerHour }) {
-  const minCents = minCentsFor(estMinutes, ratePerHour);
-  const size = describeMinutes(estMinutes);
+// ---- time allowance and owner review ----------------------------------------
+// Estimates include travel. Only the owner can approve more than one hour.
+export function decide({ amountCents, estMinutes, estCostCents = 0 }) {
+  const minCents = minCentsFor(estMinutes);
   const costs = estCostCents > 0 ? money(estCostCents) : null;
-  if (amountCents >= minCents) {
+  const costNote = costs ? ` Costs of about ${costs} are extra and are paid before the job if you win.` : '';
+  if (estMinutes <= TIME_POLICY.includedMinutes) {
     return {
       status: 'qualified',
       minCents,
-      message:
-        `Your bid is in. It covers the job, which is ${size} of my time.` +
-        (costs ? ` Costs of about ${costs} are extra and are paid before the job if you win.` : ''),
+      message: 'Your bid is in. Any winning bid includes up to one hour of my time.' + costNote,
     };
   }
+  if (amountCents >= minCents) {
+    return { status: 'held', minCents,
+      message: `Your bid is in for review. ${timeAllowance(amountCents)} is the limit at this bid. I will set the actual time before approving the job.` + costNote };
+  }
   return {
-    status: 'short',
-    minCents,
-    message:
-      `That is ${size} including travel, so it needs ${money(minCents)}` +
-      (costs ? `, plus about ${costs} in costs` : '') +
-      `. Your ${money(amountCents)} covers ${describeMinutes(coveredMinutes(amountCents, ratePerHour))}.` +
-      ' Raise the bid or pick a smaller job.',
+    status: 'short', minCents,
+    message: `${timeAllowance(amountCents)} is the limit at this bid. This job looks longer. Limit the job to that time or bid at least ${money(minCents)} for me to review the longer duration.` + costNote,
   };
 }
 
@@ -116,7 +128,7 @@ export function decide({ amountCents, estMinutes, estCostCents = 0, ratePerHour 
 // new one. `existing` is their current row for that job. The job was already
 // screened, so the only question is whether the new amount covers it. A raise
 // can lift the bid, the auto-bid maximum, or both. Neither can come down.
-export function raiseVerdict(existing, amountCents, ratePerHour, maxCents = null) {
+export function raiseVerdict(existing, amountCents, maxCents = null) {
   const oldCeiling = Math.max(existing.amount_cents, existing.max_cents ?? 0);
   const newCeiling = Math.max(amountCents, maxCents ?? 0);
   if (amountCents <= existing.amount_cents && newCeiling <= oldCeiling) {
@@ -133,17 +145,17 @@ export function raiseVerdict(existing, amountCents, ratePerHour, maxCents = null
   const next = { ok: true, amountCents: amount, maxCents: ceiling > amount ? ceiling : null };
   const now = `Your bid is now ${money(amount)}`;
   if (existing.status === 'held') return { ...next, status: 'held', message: `${now}. It is still waiting for a person to check it.` };
-  if (existing.min_cents == null || amount >= existing.min_cents) {
-    return { ...next, status: 'qualified', message: existing.status === 'short' ? `${now}, which covers the job.` : `${now}.` };
+  if (existing.screened_by === 'owner' && existing.status === 'qualified' &&
+      (existing.est_minutes == null || approveDuration(amount, existing.est_minutes).ok)) {
+    return { ...next, status: 'qualified', message: `${now}. The agreed time stays the same.` };
   }
-  if (ceiling >= existing.min_cents) {
-    return {
-      ok: true, amountCents: existing.min_cents, maxCents: ceiling > existing.min_cents ? ceiling : null, status: 'qualified',
-      message: `Your auto-bid raised your bid to ${money(existing.min_cents)} to cover the job.`,
-    };
+  if (!Number.isFinite(existing.est_minutes) || existing.est_minutes <= 0) {
+    return { ...next, status: 'held', minCents: null, message: `${now}. The time needs owner review.` };
   }
-  const short = decide({ amountCents: amount, estMinutes: existing.est_minutes, estCostCents: existing.est_cost_cents || 0, ratePerHour });
-  return { ...next, status: 'short', message: short.message };
+  const decision = decide({ amountCents: amount, estMinutes: existing.est_minutes, estCostCents: existing.est_cost_cents || 0 });
+  const verdict = liftForReview(decision, amount, ceiling);
+  return { ...next, ...verdict, maxCents: ceiling > verdict.amountCents ? ceiling : null,
+    message: verdict.status === 'qualified' ? `${now}. Any winning bid includes up to one hour.` : verdict.message };
 }
 
 // ---- auto-bidding -------------------------------------------------------------
@@ -187,7 +199,7 @@ export const HELD_MESSAGE =
 
 // Turns the screen's answer into what happens to the bid. `out` is the object
 // the screen returns (see src/screen.js). Anything doubtful is held for a person.
-export function applyScreen(out, { amountCents, maxCents = null, ratePerHour }) {
+export function applyScreen(out, { amountCents, maxCents = null }) {
   if (!out || typeof out !== 'object') return { status: 'held', message: HELD_MESSAGE };
   if (out.name_ok === false) return { status: 'refused', category: 'name', message: REFUSALS.name };
   if (out.decision === 'refuse') {
@@ -196,29 +208,24 @@ export function applyScreen(out, { amountCents, maxCents = null, ratePerHour }) 
   }
   const minutes = Number(out.est_minutes);
   const cost = Math.round(Number(out.est_cost_dollars) * 100);
-  const sane = Number.isFinite(minutes) && minutes > 0 && minutes <= 14 * 24 * 60 && Number.isFinite(cost) && cost >= 0;
+  const sane = Number.isFinite(minutes) && minutes > 0 && minutes <= coveredMinutes(LIMITS.maxCents) && Number.isFinite(cost) && cost >= 0;
   if (out.decision !== 'allow' || out.needs_quote || !sane) return { status: 'held', message: HELD_MESSAGE };
 
-  // A job that takes seconds (a wave, a thumbs-up) is covered by any bid. This
-  // is what lets a one-cent bid win something.
-  if (minutes < 1) {
-    return { status: 'qualified', minCents: 1, estMinutes: minutes, estCostCents: cost, message: 'Your bid is in. It is a quick job, so any bid covers it.' };
-  }
-  const estMinutes = Math.ceil(minutes);
-  const verdict = { ...decide({ amountCents, estMinutes, estCostCents: cost, ratePerHour }), estMinutes, estCostCents: cost };
-  return liftToCover(verdict, amountCents, maxCents);
+  const estMinutes = minutes < 1 ? minutes : Math.ceil(minutes);
+  const verdict = { ...decide({ amountCents, estMinutes, estCostCents: cost }), estMinutes, estCostCents: cost };
+  return liftForReview(verdict, amountCents, maxCents);
 }
 
 // An auto-bid maximum is permission to go that high. If the bid starts below
 // what the job needs and the maximum reaches it, the bid goes up to exactly
 // what the job needs, and no further.
-function liftToCover(verdict, amountCents, maxCents) {
+function liftForReview(verdict, amountCents, maxCents) {
   if (verdict.status !== 'short' || !maxCents || maxCents < verdict.minCents) return { ...verdict, amountCents };
   return {
     ...verdict,
-    status: 'qualified',
+    status: 'held',
     amountCents: verdict.minCents,
-    message: `Your bid is in. Your auto-bid raised it to ${money(verdict.minCents)} to cover the job.`,
+    message: `Your auto-bid raised it to ${money(verdict.minCents)} for a longer job to be considered. ${timeAllowance(verdict.minCents)} is the cap. I will set the actual time before approving it.`,
   };
 }
 

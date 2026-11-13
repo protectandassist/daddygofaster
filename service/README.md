@@ -24,17 +24,21 @@ The site's page (`../index.html`) calls two public endpoints. The owner uses `/a
    - **refused**: the job or the name breaks a house rule.
    - **held**: the screen was unsure, the job needs a real quote (flights, hotels), the
      screen failed, or there is no AI key. A person approves or refuses it in `/admin`.
-   - **short**: the bid does not cover the job at $200 an hour. The reply says what would.
+   - **short**: the estimated job exceeds the bid's time cap. The reply gives the
+     bid needed for that time to be considered, or asks for a shorter job.
    - **qualified**: it goes on the board.
-   A job that takes under a minute is covered by any bid. That is what lets one cent win.
+   Any winning bid includes up to 60 minutes. Each full $200 adds 60 minutes:
+   $10 and $199 each cap at 60; $205 and $399 each cap at 120; $400 caps at 180.
+   A longer job within the bid's cap is **held** until the owner explicitly approves
+   the actual duration. The estimate never becomes a promise automatically.
 4. A new high bid in the last five minutes moves the close back five minutes. There is
    no cap: while people keep outbidding each other, the round stays open.
 
 **Raising a bid.** The same email sending the same job again raises that bid, and so
 does the page sending the bid's private handle. The bid or its maximum has to go up, and
 neither can come down. There is no new screen and no new row, it does not count against the daily
-limit, and the same $200-an-hour check applies, so a bid that fell short qualifies once
-it is raised far enough.
+limit. The same time caps apply. A raise that makes a longer job eligible moves it to
+owner review; it does not bypass approval or automatically extend an agreed duration.
 
 Bidding for a job day closes at 8 p.m. Central the evening before, and the next round
 opens straight away. There is no scheduler: a round that has run past its close is
@@ -46,7 +50,9 @@ qualifying bid wins and the earlier bid wins a tie.
 A bid can carry a hidden maximum. The bid then rises on its own, one cent over the next
 bid, whenever someone outbids it, and stops at the maximum. Two maximums answer each
 other at once: the higher one leads at one cent over the lower. If a bid starts below what
-its job needs and its maximum reaches that amount, it goes up to exactly that amount.
+its job's time tier and its maximum reaches that amount, it goes up to exactly that
+amount and waits for owner approval. For example, a 90-minute job can lift to $200
+when the maximum permits it, but stays held until its actual time is agreed.
 The maximum is never shown: not on the board, and not on the owner's page.
 
 ## Telling a bidder they were outbid
@@ -79,7 +85,8 @@ that stores something. A Worker secret named `ADMIN_KEY`, `RESEND_API_KEY` or
 `ANTHROPIC_API_KEY` is used instead of the stored copy if one exists. Deploying keeps
 existing Worker secrets.
 
-Everything else is a plain setting in `wrangler.toml`: the rate, the close hour and time
+The time policy is defined in `src/rules.js` (`TIME_POLICY`) and mirrored in the page's
+readout and pricing table. The remaining settings are in `wrangler.toml`: the close hour and time
 zone, the daily limit, the sites allowed to call the service, the model, and who email
 comes from.
 
@@ -103,6 +110,11 @@ doing the job. "Winner did not pay" in `/admin` passes the day to the next bid.
 `/admin` shows bids waiting for a person, every bid in the current round, and the last
 winner. Jobs are hidden unless "Show the jobs" is ticked, so the owner can stay
 surprised. Someone should still read the winning job before it is done.
+
+Approval requires the owner to enter the time they agree to spend. The server rejects
+durations above the current bid's cap, regardless of a hidden auto-bid maximum. A $210
+bid can be approved for 120 minutes; a $199 bid cannot. The agreed time is shown in the
+bidder's standing and owner view. Extra costs remain separate.
 
 ## Working on it
 

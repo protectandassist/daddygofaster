@@ -10,8 +10,8 @@ database_id = "7689b940-06a7-432a-a0a4-be60e2c4ac8e"
 [vars]
 # "true" opens bidding. Anything else and the site shows "Bidding opens soon".
 OPEN = "false"
-# Dollars per hour a bid has to cover.
-RATE_PER_HOUR = "200"
+# Time policy lives in src/rules.js: any winning bid includes up to 60 minutes;
+# each full $200 adds another hour to the cap. The owner approves actual duration.
 # Bidding for a job day closes at CLOSE_HOUR (24-hour clock) in TIME_ZONE the evening before.
 TIME_ZONE = "America/Chicago"
 CLOSE_HOUR = "20"

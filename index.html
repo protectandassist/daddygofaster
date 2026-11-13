@@ -329,10 +329,9 @@ p{margin:0}
 /* ---- what a bid covers ------------------------------------- */
 .tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:clamp(10px,1.4vw,16px)}
 .tile{padding:24px 18px;text-align:left;background:var(--bg-2);border-radius:10px}
-.tile:nth-child(4){border-color:rgba(255,106,43,.5);background:rgba(255,106,43,.06)}
-.tile::after{content:"";display:block;height:3px;width:var(--meter,.25%);min-width:2px;margin-top:20px;background:var(--accent);border-radius:2px;opacity:.5}
-.tile:nth-child(2){--meter:2.5%}.tile:nth-child(3){--meter:12.5%}.tile:nth-child(4){--meter:50%}.tile:nth-child(5){--meter:100%}
-.tile b{display:block;font-family:var(--display);font-weight:800;font-size:clamp(1.4rem,2.6vw,1.9rem);color:var(--accent)}
+.tile:first-child{border-color:rgba(255,106,43,.5);background:rgba(255,106,43,.06)}
+.tile::after{content:"";display:block;height:3px;width:30px;margin-top:20px;background:var(--accent);border-radius:2px;opacity:.5}
+.tile b{display:block;font-family:var(--display);font-weight:800;font-size:clamp(1.05rem,1.35vw,1.2rem);color:var(--accent);white-space:nowrap}
 .tile span{display:block;margin-top:4px;color:var(--muted);font-size:.95rem}
 @media(max-width:820px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.tile:last-child{grid-column:1 / -1}}
 .notes{margin-top:clamp(14px,2vw,22px);display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,2vw,22px)}
@@ -450,7 +449,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       <div class="hero__copy">
         <p class="eyebrow">Bid. Win. Watch.</p>
         <h1><span>Your idea.</span> <span class="hero__accent">My tomorrow.</span></h1>
-        <p class="hero__sub">Each day, the highest bid sets a job for me to do the next day. I do it on camera and post the video.</p>
+        <p class="hero__sub">Each day, the highest bid sets a job for me to do the next day. I do it on camera and post the video. Any winning bid includes up to one hour.</p>
         <div class="inspiration" id="inspiration" aria-label="Challenge inspiration">
           <div class="idea-scene">
             <div class="idea-scene__images" aria-hidden="true">
@@ -494,7 +493,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       <form class="card bid" id="bid" novalidate aria-label="Place a bid">
         <div class="bid__heading">
           <span class="bid__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m14 4 6 6-4 4-6-6 4-4ZM8 10l6 6-4 4-6-6 4-4ZM12 12l-8 8M15 21h7"/></svg></span>
-          <div><h2>Place a bid</h2><p>The next move is yours.</p></div>
+          <div><h2>Place a bid</h2><p>Any winning bid includes up to one hour.</p></div>
         </div>
         <div class="bid__stats">
           <div class="stat"><div class="stat__k">High bid</div><div class="stat__v stat__v--hot num" id="statHigh">&mdash;</div></div>
@@ -526,7 +525,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <div class="chips chips--flush" id="leadWrap" hidden>
             <button class="chipbtn chipbtn--lead num" type="button" id="leadChip"></button>
           </div>
-          <p class="readout" id="readout" aria-live="polite">Bids start at $0.01.</p>
+          <p class="readout" id="readout" aria-live="polite">Even a 1¢ winning bid includes up to one hour.</p>
           <div class="bid__more" id="more" hidden>
             <div class="row2">
               <div class="field">
@@ -570,7 +569,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <span class="step__n" aria-hidden="true">02 / THE BID</span>
           <svg class="step__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8v7a4 4 0 0 1-8 0V3ZM8 5H4v3a4 4 0 0 0 4 4M16 5h4v3a4 4 0 0 1-4 4M12 14v6M8 21h8"/></svg>
           <h3>The highest bid wins</h3>
-          <p>Bidding closes each evening. The highest bid that covers its job wins, and only the winner pays.</p>
+          <p>Bidding closes each evening. The highest approved bid wins, and only the winner pays.</p>
         </li>
         <li class="card step">
           <span class="step__n" aria-hidden="true">03 / THE VIDEO</span>
@@ -581,13 +580,13 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       </ol>
       <div class="card answer rise">
         <div>
-          <h3>You get an answer right away</h3>
-          <p>Every bid is checked against the rules and sized up for time and cost. If your bid is too low for the job, you see what it would take.</p>
+          <h3>I set the time. You set the challenge.</h3>
+          <p>Every winning bid includes up to one hour. Each full $200 adds another hour to the cap. Longer jobs come to me to confirm the actual time before approval.</p>
         </div>
         <div class="chat">
           <span class="chat__label">Example</span>
-          <p class="chat__you">$20.00 &mdash; Ride the city bus downtown and back.</p>
-          <p class="chat__reply">That is about 50 minutes door to door, so it needs <b>$166.67</b>, plus about $4 in fares. Your $20.00 covers about 6 minutes. Raise the bid or pick a smaller job.</p>
+          <p class="chat__you">$210.00 &mdash; Turn a cardboard box into an arcade.</p>
+          <p class="chat__reply">That bid allows <b>up to two hours</b>. I decide the actual time I will spend and confirm it before approving the job. Any extra costs are separate.</p>
         </div>
       </div>
     </div>
@@ -623,14 +622,14 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       <div class="sec__head rise">
         <p class="eyebrow">A little perspective</p>
         <h2>What a bid covers</h2>
-        <p class="lead">I price my time at about $200 an hour, and your bid has to be in line with the job you ask for. It is a sense check, not a timer: two dollars does not buy eight hours of work.</p>
+        <p class="lead">The first hour is included with any winning bid. Each full $200 in your bid adds one hour to the limit. I set the actual time spent within that limit, and confirm longer jobs before approval.</p>
       </div>
       <ul class="tiles rise">
-        <li class="card tile"><b class="num">$1</b><span>18 seconds</span></li>
-        <li class="card tile"><b class="num">$10</b><span>3 minutes</span></li>
-        <li class="card tile"><b class="num">$50</b><span>15 minutes</span></li>
-        <li class="card tile"><b class="num">$200</b><span>1 hour</span></li>
-        <li class="card tile"><b class="num">$400</b><span>2 hours</span></li>
+        <li class="card tile"><b class="num">1¢–$199.99</b><span>Up to 1 hour</span></li>
+        <li class="card tile"><b class="num">$200–$399.99</b><span>Up to 2 hours</span></li>
+        <li class="card tile"><b class="num">$400–$599.99</b><span>Up to 3 hours</span></li>
+        <li class="card tile"><b class="num">$600–$799.99</b><span>Up to 4 hours</span></li>
+        <li class="card tile"><b class="num">$800–$999.99</b><span>Up to 5 hours</span></li>
       </ul>
       <div class="notes rise">
         <div class="card note">
@@ -639,7 +638,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         </div>
         <div class="card note">
           <h3>Travel counts</h3>
-          <p>The time it takes me to get there and back is part of the job, so it is part of what the bid has to cover.</p>
+          <p>The time it takes me to get there and back is part of the job and counts toward its time limit.</p>
         </div>
       </div>
     </div>
@@ -680,7 +679,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <h3>Payment and fairness</h3>
           <ul class="list list--dot list--2">
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Bids start at 1&cent;. Only the winner pays, and pays before the job.</span></li>
-            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A bid must cover its job at about $200 an hour, plus costs. A job that takes seconds is covered by any bid.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Any winning bid includes up to one hour. Bids below $200 stop at one hour. $200–$399.99 allows up to two hours, $400–$599.99 up to three, and so on. I set the actual time within the cap; costs are extra.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A winning bid under 50&cent; is free, because cards cannot charge less.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>One win per person per week, and up to five jobs a day each.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A new high bid in the last five minutes extends bidding by five minutes. While the bids keep climbing, bidding stays open.</span></li>
@@ -761,8 +760,8 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
      api   Base URL of the bid service (see service/), no trailing slash.
            The service decides whether bidding is open. If it cannot be
            reached, the page stays in its not-open state and sends nothing.
-     rate  Dollars per hour a bid has to cover.                     */
-  var CONFIG = { api: "https://dgf-bids.trevor-c2b.workers.dev", rate: 200, freeUnderCents: 50 };
+     hourBlockCents  Each full block adds one hour to the included first hour. */
+  var CONFIG = { api: "https://dgf-bids.trevor-c2b.workers.dev", hourBlockCents: 20000, freeUnderCents: 50 };
 
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var demo = /[?&]demo\b/.test(location.search);
@@ -781,13 +780,14 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   }
   function plural(n, word){ return n + ' ' + word + (n === 1 ? '' : 's'); }
   function covers(cents){
-    var sec = cents / 100 / CONFIG.rate * 3600;
-    if(sec < 1) return 'under a second';
-    if(sec < 90) return plural(Math.round(sec), 'second');
-    var min = Math.round(sec / 60);
-    if(min < 60) return 'about ' + plural(min, 'minute');
+    return 'up to ' + plural(1 + Math.floor(cents / CONFIG.hourBlockCents), 'hour');
+  }
+  function duration(min){
+    if(min < 1) return 'under a minute';
+    min = Math.round(min);
+    if(min < 60) return plural(min, 'minute');
     var h = Math.floor(min / 60), m = min % 60;
-    return 'about ' + plural(h, 'hour') + (m ? ' ' + plural(m, 'minute') : '');
+    return plural(h, 'hour') + (m ? ' ' + plural(m, 'minute') : '');
   }
   function ago(iso){
     var s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
@@ -811,11 +811,11 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   }
   function refresh(){
     var raw = amount.value.trim();
-    if(raw === '') return setReadout('', 'Bids start at $0.01.');
+    if(raw === '') return setReadout('', 'Even a 1¢ winning bid includes up to one hour.');
     var c = toCents(raw);
     if(c === null) return setReadout('', 'Enter dollars and cents, like 12.50.');
     if(c < 1) return setReadout('', 'The lowest bid is $0.01.');
-    var rest = ' covers a job of ' + covers(c) + '.';
+    var rest = ' allows ' + covers(c) + '. I set the actual time spent.';
     if(open && highCents && c <= highCents) rest += ' The high bid is ' + money(highCents) + '.';
     else if(open && c > highCents) rest += ' That would take the lead.';
     else if(c < CONFIG.freeUnderCents) rest += ' A winning bid under 50¢ is free.';
@@ -1010,7 +1010,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     $('bidBtn').hidden = !open;
     $('notifyBtn').hidden = open || closed;
     $('bidFine').textContent = open
-      ? 'Free to bid. You only pay if you win.'
+      ? 'Free to bid. The first hour is included with any winning bid. You only pay if you win.'
       : closed
         ? 'Bidding is closed for today. The next round opens this evening.'
         : 'Bidding is not open yet. This opens an email asking to be told when it is.';
@@ -1083,7 +1083,8 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       var head = document.createElement('b'); head.textContent = STANDING[b.standing](b);
       var sub = document.createElement('span');
       sub.textContent = (b.standing === 'outbid' || b.standing === 'short' ? 'Your bid: ' + money(b.amountCents) + '. ' : '') +
-        (b.maxCents ? 'Auto-bid up to ' + money(b.maxCents) + '. ' : '') + (tasks[b.token] || '');
+        (b.maxCents ? 'Auto-bid up to ' + money(b.maxCents) + '. ' : '') +
+        (b.approvedMinutes ? 'Agreed time: ' + duration(b.approvedMinutes) + '. ' : '') + (tasks[b.token] || '');
       text.appendChild(head); text.appendChild(sub); row.appendChild(text);
       if(b.open){
         var up = document.createElement('button');
