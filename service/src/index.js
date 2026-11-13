@@ -424,13 +424,16 @@ async function adminSetup(request, env, now) {
   }
   const stored = [];
   const refused = [];
-  const admin = request.headers.get('X-Admin-Key');
+  // Whatever put the header on may have added a "Bearer " in front; the key is what follows.
+  const header = (name) => (request.headers.get(name) || '').replace(/^Bearer\s+/i, '').trim();
+  const admin = header('X-Admin-Key');
   if (admin) {
     if (admin.length < 16) refused.push('admin key (use at least 16 characters)');
-    else { await storeAdminKey(env, admin, now); stored.push('admin key'); }
+    // The length is reported so the owner can check it against their copy.
+    else { await storeAdminKey(env, admin, now); stored.push(`admin key (${admin.length} characters)`); }
   }
-  for (const [header, setting, label] of [['X-Mail-Key', 'mail_key', 'email key'], ['X-Ai-Key', 'ai_key', 'AI key']]) {
-    const value = request.headers.get(header);
+  for (const [name, setting, label] of [['X-Mail-Key', 'mail_key', 'email key'], ['X-Ai-Key', 'ai_key', 'AI key']]) {
+    const value = header(name);
     if (!value) continue;
     const sealed = await seal(env, value);
     if (!sealed) refused.push(label + ' (the vault key is not set)');
