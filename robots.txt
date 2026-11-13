@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /legacy/
+Disallow: /service/
 
 Sitemap: https://daddygofaster.com/sitemap.xml

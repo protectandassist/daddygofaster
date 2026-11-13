@@ -1,0 +1,30 @@
+name = "dgf-bids"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dgf-bids"
+database_id = "7689b940-06a7-432a-a0a4-be60e2c4ac8e"
+
+[vars]
+# "true" opens bidding. Anything else and the site shows "Bidding opens soon".
+OPEN = "false"
+# Dollars per hour a bid has to cover.
+RATE_PER_HOUR = "200"
+# Bidding for a job day closes at CLOSE_HOUR (24-hour clock) in TIME_ZONE the evening before.
+TIME_ZONE = "America/Chicago"
+CLOSE_HOUR = "20"
+# A bid in the last EXTEND_MINUTES adds EXTEND_MINUTES to the clock.
+EXTEND_MINUTES = "5"
+# Bids one email address may land per job day (tries that fall short or break a rule are capped at four times this).
+MAX_BIDS_PER_DAY = "5"
+# Sites allowed to call the public endpoints from a browser.
+ALLOWED_ORIGINS = "https://daddygofaster.com,https://www.daddygofaster.com"
+# Claude model that screens bids when the ANTHROPIC_API_KEY secret is set.
+SCREEN_MODEL = "claude-opus-5-5"
+
+# Secrets, set in the Cloudflare dashboard (Worker > Settings > Variables and Secrets),
+# never in this file:
+#   ADMIN_KEY          required for /admin. Any long random string.
+#   ANTHROPIC_API_KEY  optional. Without it every bid waits for a person to approve it.

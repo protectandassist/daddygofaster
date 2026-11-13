@@ -1,0 +1,20 @@
+{
+  "name": "dgf-bids",
+  "private": true,
+  "type": "module",
+  "description": "The bid service behind daddygofaster.com (Cloudflare Worker + D1).",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "migrate:local": "wrangler d1 migrations apply dgf-bids --local",
+    "migrate:remote": "wrangler d1 migrations apply dgf-bids --remote"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "wrangler": "^4.161.0"
+  }
+}

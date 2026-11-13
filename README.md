@@ -8,10 +8,9 @@ job wins, and only the winner pays.
 
 ## Status
 
-The page is built. **Bidding is not switched on.** Until a bid service exists and its
-address is set in `index.html`, the page says "Bidding opens soon" and the form's only
-button opens an email asking to be told when it does. Nothing a visitor types is sent to a
-server.
+The page and the bid service are both built. **Bidding is switched off** in the service
+(`OPEN = "false"` in `service/wrangler.toml`), so the page says "Bidding opens soon" and
+the form's only button opens an email asking to be told when it does.
 
 ## Files
 
@@ -23,6 +22,7 @@ server.
 | `CNAME` | Maps the site to `daddygofaster.com`. **Do not delete.** |
 | `.nojekyll` | Tells Pages to serve files as-is instead of running Jekyll. |
 | `assets/` | Favicons, share card (`og-bid.jpg`), and the images the legacy page uses. |
+| `service/` | The bid service: a Cloudflare Worker and its database schema. See `service/README.md`. |
 | `robots.txt`, `sitemap.xml` | Search engine basics. |
 
 ## The rules the page states
@@ -32,51 +32,39 @@ These came from the owner. Change the wording in `index.html` (sections `#how`, 
 
 - A bid is a job plus an amount. The floor is 1¢.
 - A bid only qualifies if it covers the job at about **$200 an hour**, with travel counted
-  both ways. This is a sanity check, not a meter: there is no clock on the job.
+  both ways. This is a sanity check, not a meter: there is no clock on the job. A job
+  that takes seconds is covered by any bid.
 - Costs (fares, tickets, flights) are on top and paid up front. Flights and hotels need a
   real quote.
 - Highest qualifying bid wins. Only the winner pays. A win under 50¢ is free.
 - One win per person per week, and a daily limit on bids per person.
-- Bidding closes the night before. A bid in the last five minutes adds five minutes.
+- Bidding closes the night before. A new high bid in the last five minutes adds five
+  minutes, up to an hour in total.
 - If the winner does not pay in time, the next bid wins.
 - Allowed: hard, boring, early, inconvenient, kind. Refused: illegal, dangerous, sexual,
   costumes or appearance changes, scripted speech, politics, religion, product plugs,
   anything aimed at a person or private address, public scenes, family, live locations.
 - An AI screens every bid and name first. Anything it is unsure of goes to a person.
 
-## Switching bidding on
+## The bid service
 
-Near the top of the `<script>` in `index.html`:
+`service/` is a Cloudflare Worker with a D1 database, live at
+`https://dgf-bids.trevor-c2b.workers.dev`. `service/README.md` covers how bids are
+screened, the owner's page, the two secrets the owner sets, and how to open bidding.
+
+The page finds it through one line near the top of the `<script>` in `index.html`:
 
 ```js
-var CONFIG = { api: "", rate: 200, freeUnderCents: 50 };
+var CONFIG = { api: "https://dgf-bids.trevor-c2b.workers.dev", rate: 200, freeUnderCents: 50 };
 ```
 
-Set `api` to the bid service's base URL (no trailing slash). The page then expects:
+`GET {api}/board` tells the page whether bidding is `open`, `closed` or `soon`, when it
+closes, and the bids to list. `POST {api}/bids` takes `{ task, name, email, amountCents }`
+and answers with a `verdict` and a `message` that the page shows as plain text. If the
+service cannot be reached the page stays in its not-open state.
 
-**`GET {api}/board`**
-
-```json
-{
-  "status": "open",
-  "closesAt": "2026-11-14T02:00:00Z",
-  "bids": [ { "name": "backseat_driver", "amountCents": 4200, "placedAt": "2026-11-13T21:40:00Z" } ]
-}
-```
-
-`status` is `open`, `closed`, or `soon`. Only bids that passed the screen belong in
-`bids`. Never include the job text or the email: this response is public.
-
-**`POST {api}/bids`** with `{ "task", "name", "email", "amountCents" }`
-
-```json
-{ "verdict": "short", "message": "That is about 50 minutes door to door, so it needs $166.67...", "minCents": 16667 }
-```
-
-`verdict` is `qualified`, `short` (bid does not cover the job), `held` (waiting on a
-person), or `refused`. `message` is shown to the bidder as plain text.
-
-The service needs CORS enabled for `https://daddygofaster.com`.
+GitHub Pages serves every file in this repository, so the service's source is readable
+at `/service/...`. It holds no secrets.
 
 ## Previewing with sample bids
 

@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bids — owner</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--bg:#0C0D10;--card:#16171C;--line:#2A2C33;--text:#F5F5F6;--muted:#A6A9B3;--accent:#FF6A2B;--ink:#1B0A02;--good:#3DD68C;--bad:#F26D72;--gold:#FFC857}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:20px}
+main{max-width:980px;margin:0 auto;display:grid;gap:18px}
+h1{font-size:1.4rem;margin:0}
+h2{font-size:1.1rem;margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.row{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.muted{color:var(--muted)}
+.small{font-size:.88rem}
+button,input{font:inherit}
+button{background:var(--accent);color:var(--ink);border:0;border-radius:9px;padding:9px 14px;font-weight:600;cursor:pointer}
+button.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+button.bad{background:transparent;color:var(--bad);border:1px solid var(--bad)}
+input[type=password],input[type=number]{background:#0D0E12;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+input[type=number]{width:7.5em}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.8rem;color:var(--muted);font-weight:600}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.78rem;font-weight:600;border:1px solid var(--line)}
+.tag.qualified{color:var(--good);border-color:var(--good)}
+.tag.held{color:var(--gold);border-color:var(--gold)}
+.tag.refused,.tag.short{color:var(--muted)}
+.held-item{border-top:1px solid var(--line);padding:14px 0;display:grid;gap:8px}
+.held-item:first-of-type{border-top:0;padding-top:0}
+.job{background:#0D0E12;border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+.err{color:var(--bad)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <div class="row">
+    <h1>Bids — owner</h1>
+    <span class="muted small" id="updated"></span>
+    <button class="ghost" id="signout" hidden style="margin-left:auto">Sign out</button>
+  </div>
+
+  <section class="card" id="login">
+    <h2>Admin key</h2>
+    <form class="row" id="loginForm">
+      <input type="password" id="key" autocomplete="current-password" placeholder="Admin key" required>
+      <button type="submit">Open</button>
+    </form>
+    <p class="err small" id="loginErr" hidden></p>
+  </section>
+
+  <div id="app" hidden style="display:grid;gap:18px">
+    <section class="card">
+      <div class="row">
+        <span>Bidding: <b id="openState"></b></span>
+        <span>Screen: <b id="screenState"></b></span>
+        <span id="auctionLine"></span>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <label class="row small"><input type="checkbox" id="showJobs"> Show the jobs (leave off to stay surprised)</label>
+        <button class="bad" id="closeNow" hidden style="margin-left:auto">Close bidding now</button>
+      </div>
+      <p class="err small" id="actionErr" hidden></p>
+    </section>
+
+    <section class="card" id="heldCard" hidden>
+      <h2>Waiting for a person</h2>
+      <p class="muted small">These do not show on the board until approved. Approve only before bidding closes.</p>
+      <div id="held"></div>
+    </section>
+
+    <section class="card">
+      <h2>All bids in this auction</h2>
+      <p class="muted" id="noBids">No bids yet.</p>
+      <table id="bidsTable" hidden>
+        <thead><tr><th>#</th><th>Name</th><th>Status</th><th>Covers</th><th>Estimate</th><th>Note</th><th class="num">Bid</th></tr></thead>
+        <tbody id="bids"></tbody>
+      </table>
+    </section>
+
+    <section class="card" id="prevCard" hidden>
+      <h2 id="prevTitle"></h2>
+      <div id="prev"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var key = '';
+  try { key = sessionStorage.getItem('dgfKey') || ''; } catch (e) {}
+  var timer = null;
+
+  function money(c){ return '$' + (c / 100).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+  function when(iso){ return new Date(iso).toLocaleString([], {weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'}); }
+  function el(tag, cls, text){ var e = document.createElement(tag); if(cls) e.className = cls; if(text !== undefined && text !== null) e.textContent = text; return e; }
+  function estimate(b){
+    if(b.estMinutes === null || b.estMinutes === undefined) return '—';
+    var t = b.estMinutes < 1 ? 'seconds' : Math.round(b.estMinutes) + ' min';
+    return t + (b.estCostCents ? ' + ' + money(b.estCostCents) + ' costs' : '');
+  }
+
+  function api(path, options){
+    options = options || {};
+    options.headers = Object.assign({'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'}, options.headers || {});
+    return fetch(path, options).then(function(r){
+      return r.json().catch(function(){ return {}; }).then(function(d){ if(!r.ok){ var e = new Error(d.message || ('Error ' + r.status)); e.status = r.status; throw e; } return d; });
+    });
+  }
+  function act(path, body){
+    $('actionErr').hidden = true;
+    return api(path, {method: 'POST', body: JSON.stringify(body || {})}).then(load).catch(function(e){
+      $('actionErr').textContent = e.message; $('actionErr').hidden = false;
+    });
+  }
+
+  function heldItem(b){
+    var box = el('div', 'held-item');
+    var top = el('div', 'row');
+    top.appendChild(el('b', null, b.name));
+    top.appendChild(el('span', null, money(b.amountCents)));
+    top.appendChild(el('span', 'muted small', 'covers ' + b.covers));
+    box.appendChild(top);
+    if(b.task !== null) box.appendChild(el('div', 'job', b.task));
+    if(b.note) box.appendChild(el('div', 'muted small', 'Screen: ' + b.note));
+    var row = el('div', 'row');
+    var mins = el('input'); mins.type = 'number'; mins.min = '0'; mins.step = 'any'; mins.placeholder = 'Minutes';
+    var cost = el('input'); cost.type = 'number'; cost.min = '0'; cost.step = 'any'; cost.placeholder = 'Costs $';
+    var ok = el('button', null, 'Approve');
+    var no = el('button', 'bad', 'Refuse');
+    ok.addEventListener('click', function(){ act('/admin/api/bids/' + b.id + '/decide', {decision: 'approve', estMinutes: mins.value, costDollars: cost.value}); });
+    no.addEventListener('click', function(){ act('/admin/api/bids/' + b.id + '/decide', {decision: 'refuse'}); });
+    row.appendChild(mins); row.appendChild(cost); row.appendChild(ok); row.appendChild(no);
+    box.appendChild(row);
+    return box;
+  }
+
+  function render(d){
+    $('openState').textContent = d.open ? 'open' : 'not open (the site says "opens soon")';
+    $('screenState').textContent = d.screen === 'ai' ? 'AI' : 'manual, every bid waits for you';
+    $('auctionLine').textContent = d.auction
+      ? 'Job day ' + d.auction.day + (d.auction.status === 'open' ? ', closes ' + when(d.auction.closesAt) : ', closed')
+      : 'No auction running.';
+    $('closeNow').hidden = !(d.auction && d.auction.status === 'open');
+    $('closeNow').onclick = function(){ if(confirm('Close bidding for ' + d.auction.day + ' now and pick the winner?')) act('/admin/api/auctions/' + d.auction.day + '/close'); };
+
+    var held = d.bids.filter(function(b){ return b.status === 'held'; });
+    $('heldCard').hidden = held.length === 0;
+    $('held').textContent = '';
+    held.forEach(function(b){ $('held').appendChild(heldItem(b)); });
+
+    $('noBids').hidden = d.bids.length > 0;
+    $('bidsTable').hidden = d.bids.length === 0;
+    var body = $('bids'); body.textContent = '';
+    d.bids.forEach(function(b, i){
+      var tr = el('tr');
+      tr.appendChild(el('td', null, String(i + 1)));
+      var name = el('td', null, b.name);
+      if(b.task !== null) name.appendChild(el('div', 'muted small', b.task));
+      tr.appendChild(name);
+      var st = el('td'); st.appendChild(el('span', 'tag ' + b.status, b.status)); tr.appendChild(st);
+      tr.appendChild(el('td', 'small', b.covers));
+      tr.appendChild(el('td', 'small', estimate(b)));
+      tr.appendChild(el('td', 'muted small', b.note || ''));
+      tr.appendChild(el('td', 'num', money(b.amountCents)));
+      body.appendChild(tr);
+    });
+
+    var p = d.previous, box = $('prev');
+    $('prevCard').hidden = !p;
+    box.textContent = '';
+    if(p){
+      $('prevTitle').textContent = 'Last closed auction: job day ' + p.day;
+      if(!p.winner){ box.appendChild(el('p', 'muted', 'Nobody won. There were no qualifying bids left.')); return; }
+      var w = p.winner, row = el('div', 'row');
+      row.appendChild(el('b', null, 'Winner: ' + w.name));
+      row.appendChild(el('span', null, w.free ? money(w.amountCents) + ' (free, under 50¢)' : money(w.amountCents)));
+      row.appendChild(el('span', 'muted small', 'estimate ' + estimate(w)));
+      box.appendChild(row);
+      var mail = el('p'); mail.appendChild(document.createTextNode('Reach them at '));
+      var a = el('a', null, w.email); a.href = 'mailto:' + w.email; a.style.color = 'var(--gold)'; mail.appendChild(a);
+      box.appendChild(mail);
+      box.appendChild(w.task !== null ? el('div', 'job', w.task) : el('p', 'muted small', 'The job is hidden. Tick "Show the jobs" to read it. Someone should read it before you do it.'));
+      var pass = el('button', 'bad', 'Winner did not pay, or I declined: pass to the next bid');
+      pass.style.marginTop = '12px';
+      pass.addEventListener('click', function(){ if(confirm('Pass over ' + w.name + ' and give the day to the next highest bid?')) act('/admin/api/auctions/' + p.day + '/pass'); });
+      box.appendChild(pass);
+      box.appendChild(el('p', 'muted small', p.othersWaiting + ' other qualifying bid(s) in line.'));
+    }
+  }
+
+  function load(){
+    return api('/admin/api/state?jobs=' + ($('showJobs').checked ? '1' : '0')).then(function(d){
+      $('login').hidden = true; $('app').hidden = false; $('signout').hidden = false;
+      $('updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+      render(d);
+    });
+  }
+  function start(){
+    load().then(function(){
+      clearInterval(timer);
+      timer = setInterval(function(){ if(!document.hidden) load().catch(function(){}); }, 30000);
+    }).catch(function(e){
+      $('login').hidden = false; $('app').hidden = true; $('signout').hidden = true;
+      $('loginErr').textContent = e.message; $('loginErr').hidden = false;
+    });
+  }
+
+  $('loginForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    key = $('key').value.trim();
+    try { sessionStorage.setItem('dgfKey', key); } catch (err) {}
+    $('loginErr').hidden = true;
+    start();
+  });
+  $('signout').addEventListener('click', function(){
+    key = ''; try { sessionStorage.removeItem('dgfKey'); } catch (err) {}
+    clearInterval(timer);
+    $('app').hidden = true; $('login').hidden = false; $('signout').hidden = true; $('key').value = '';
+  });
+  $('showJobs').addEventListener('change', function(){ load().catch(function(){}); });
+  if(key) start();
+})();
+</script>
+</body>
+</html>
