@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DaddyGoFaster — Bid on my tomorrow</title>
-<meta name="description" content="Every day the highest bid decides what I do tomorrow. Bids start at one cent. The money is public and the job stays sealed until the video.">
+<title>DaddyGoFaster — Bid on what I do tomorrow</title>
+<meta name="description" content="Each day the highest bid sets a job for me to do the next day, on camera. Bidding is free, bids start at one cent, and only the winner pays.">
 <link rel="canonical" href="https://daddygofaster.com/">
-<meta name="theme-color" content="#120E0C">
+<meta name="theme-color" content="#0C0D10">
 <script>document.documentElement.className="js"</script>
 
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://daddygofaster.com/">
-<meta property="og:title" content="DaddyGoFaster — Bid on my tomorrow">
-<meta property="og:description" content="The highest bid decides what I do tomorrow. Bids start at one cent. The job stays sealed until the video.">
+<meta property="og:title" content="Bid on what I do tomorrow">
+<meta property="og:description" content="The highest bid sets a job for me to do tomorrow, on camera. Bids start at one cent and only the winner pays.">
 <meta property="og:image" content="https://daddygofaster.com/assets/og-bid.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://daddygofaster.com/assets/og-bid.jpg">
@@ -22,565 +22,539 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Barlow:wght@400;500;600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
 /* ---- tokens ------------------------------------------------ */
 :root{
-  --tarmac:#120E0C;
-  --slick:#1C1613;
-  --grit:#2E2420;
-  --afterburn:#FF5A1F;
-  --nitro:#FFC23D;
-  --bone:#F2EBE1;
-  --dust:#A2948A;
-  --flag-r:#B4232A;
-  --flag-b:#1F3E7A;
+  --bg:#0C0D10;
+  --bg-2:#111217;
+  --card:#16171C;
+  --field:#0D0E12;
+  --line:#25272E;
+  --line-2:#383B45;
+  --text:#F5F5F6;
+  --muted:#A6A9B3;
+  --faint:#8A8D98;
+  --accent:#FF6A2B;
+  --accent-hi:#FF8A55;
+  --accent-ink:#1B0A02;
+  --good:#3DD68C;
+  --bad:#F26D72;
+  --gold:#FFC857;
 
-  --display:"Archivo",system-ui,sans-serif;
-  --body:"Barlow",system-ui,sans-serif;
-  --data:"Courier Prime",ui-monospace,monospace;
+  --display:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
 
-  --pad:clamp(20px,5vw,72px);
-  --gut:max(var(--pad),(100% - 1560px) / 2);
-  --rule:1px solid var(--grit);
+  --wrap:1120px;
+  --pad:clamp(20px,5vw,40px);
 }
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{
-  margin:0;background:var(--tarmac);color:var(--bone);
-  font-family:var(--body);font-size:clamp(16px,1.05vw,18px);line-height:1.6;
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:var(--body);font-size:16px;line-height:1.6;
   -webkit-font-smoothing:antialiased;overflow-x:hidden;
 }
-img{max-width:100%;display:block}
 a{color:inherit}
-::selection{background:var(--afterburn);color:#120E0C}
-:focus-visible{outline:2px solid var(--nitro);outline-offset:3px;border-radius:2px}
-[id]{scroll-margin-top:72px}
+h1,h2,h3{font-family:var(--display);letter-spacing:-.02em;line-height:1.1;margin:0}
+p{margin:0}
+::selection{background:var(--accent);color:var(--accent-ink)}
+:focus-visible{outline:2px solid var(--accent-hi);outline-offset:3px;border-radius:4px}
+[id]{scroll-margin-top:84px}
 [hidden]{display:none!important}
-
-/* ---- shared ------------------------------------------------ */
-.tag{font-family:var(--data);font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--dust);margin:0}
-.stripe{display:inline-block;width:7px;height:1em;vertical-align:-.12em;flex:0 0 auto;
-  background:linear-gradient(to bottom,var(--flag-r) 0 33.3%,var(--bone) 33.3% 66.6%,var(--flag-b) 66.6% 100%)}
-.flagrule{height:3px;opacity:.9;
-  background:linear-gradient(90deg,var(--flag-r) 0 33.3%,var(--bone) 33.3% 66.6%,var(--flag-b) 66.6% 100%)}
-
-.btn{font-family:var(--data);font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;
-  padding:15px 26px;border:1px solid transparent;cursor:pointer;transition:.2s;
-  display:inline-flex;align-items:center;gap:10px}
-.btn svg{width:16px;height:16px;flex:0 0 auto}
-.btn--fire{background:var(--afterburn);color:#120E0C;font-weight:700}
-.btn--fire:hover{background:var(--nitro);transform:translateY(-2px)}
-.btn--line{border-color:var(--grit);color:var(--bone);background:rgba(11,8,7,.55)}
-.btn--line:hover{border-color:var(--nitro);color:var(--nitro)}
-.btn[disabled]{background:var(--grit);color:var(--dust);cursor:not-allowed;transform:none}
-
-.chip{font-family:var(--data);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;text-decoration:none;
-  border:1px solid var(--grit);color:var(--bone);padding:8px 13px;transition:.18s;white-space:nowrap;
-  display:inline-flex;align-items:center;gap:7px;background:rgba(11,8,7,.55)}
-.chip svg{width:13px;height:13px;flex:0 0 auto}
-.chip:hover{border-color:var(--nitro);color:var(--nitro)}
-.chip--fire{background:var(--afterburn);border-color:var(--afterburn);color:#120E0C;font-weight:700}
-.chip--fire:hover{background:var(--nitro);border-color:var(--nitro);color:#120E0C}
-
-.sec{padding:clamp(56px,8vw,120px) var(--gut);border-bottom:var(--rule);position:relative}
-.sec--slick{background:var(--slick)}
-.sec__h{margin:12px 0 0;font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;
-  font-size:clamp(1.9rem,5.4vw,4rem);line-height:.9;letter-spacing:-.03em}
-.sec__h em{font-style:normal;color:var(--afterburn)}
-.sec__h--gold em{color:var(--nitro)}
-.sec__p{max-width:54ch;margin:20px 0 0;color:var(--dust)}
-.sec__p b{color:var(--bone);font-weight:600}
-.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:clamp(28px,5vw,80px);align-items:start}
-@media(max-width:880px){.split{grid-template-columns:1fr}}
-
-/* ---- top bar ----------------------------------------------- */
-.bar{position:sticky;top:0;z-index:80;display:flex;align-items:center;gap:clamp(10px,2vw,24px);
-  padding:12px var(--gut);background:rgba(18,14,12,.96);border-bottom:var(--rule)}
-.bar__mark{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:.95rem;letter-spacing:.02em;
-  text-transform:uppercase;text-decoration:none;display:flex;align-items:center;gap:9px;white-space:nowrap}
-.bar__nav{margin-left:auto;display:flex;gap:20px}
-.bar__nav a{font-family:var(--data);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;
-  color:var(--dust);text-decoration:none;transition:color .18s}
-.bar__nav a:hover{color:var(--nitro)}
-.bar__links{display:flex;gap:8px;margin-left:auto}
-.bar__nav ~ .bar__links{margin-left:clamp(12px,2vw,28px)}
-@media(max-width:940px){.bar__nav{display:none}}
-@media(max-width:520px){.chip--icon span{display:none}.chip--icon{padding:9px 11px}}
-@media(max-width:380px){.bar__mark{font-size:.82rem}.chip--icon{display:none}}
-
-/* ---- hero -------------------------------------------------- */
-.hero{position:relative;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,420px);
-  gap:clamp(28px,5vw,80px);align-items:center;
-  padding:clamp(48px,6vw,90px) var(--gut) clamp(52px,6vw,96px);overflow:hidden;border-bottom:var(--rule)}
-.hero__flag{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
-.hero__flag img{width:100%;height:100%;object-fit:cover;object-position:18% 50%;opacity:.22;
-  -webkit-mask-image:linear-gradient(90deg,#000 0,#000 25%,transparent 85%);
-  mask-image:linear-gradient(90deg,#000 0,#000 25%,transparent 85%)}
-.hero::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
-  background:linear-gradient(0deg,rgba(18,14,12,.95) 0%,rgba(18,14,12,.25) 55%),
-             radial-gradient(50% 70% at 88% 40%,rgba(255,90,31,.14),transparent 70%)}
-.hero__copy,.hero .slip{position:relative;z-index:5}
-.hero__eyebrow{color:var(--bone)}
-.hero__h1{margin:clamp(14px,2vw,22px) 0 0;font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;
-  font-size:clamp(2.2rem,7.4vw,8.6rem);line-height:.84;letter-spacing:-.035em;
-  text-shadow:0 8px 46px rgba(18,14,12,.85)}
-.hero__h1 span{display:block}
-.hero__h1 .go{color:var(--dust);font-stretch:100%;font-weight:800;font-size:.52em;letter-spacing:.02em;margin:.12em 0 .04em}
-.hero__h1 .fill{display:inline-block;min-width:min(4.6em,100%);padding-bottom:.05em;
-  border-bottom:.075em solid var(--afterburn);border-image:linear-gradient(96deg,var(--nitro),var(--afterburn) 62%) 1}
-.hero__h1 .fill__w{background:linear-gradient(96deg,var(--nitro),var(--afterburn) 62%,var(--afterburn));
-  -webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap;
-  transition:opacity .28s ease,transform .28s ease}
-.hero__h1 .fill__w.out{opacity:0;transform:translateY(.12em)}
-.hero__sub{max-width:46ch;margin:clamp(20px,2.6vw,30px) 0 0;color:#CFC4B9;font-size:1.06rem;
-  text-shadow:0 2px 18px rgba(18,14,12,.95)}
-.hero__sub b{color:var(--bone);font-weight:600}
-.hero__actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:clamp(24px,3vw,34px)}
-@media(max-width:940px){
-  .hero{grid-template-columns:1fr}
-  .hero__h1{font-size:clamp(2.2rem,13.2vw,7rem)}
-}
-/* size the headline off its own column so the longest fill-in word always fits */
-@supports (font-size:1cqi){
-  .hero__copy{container-type:inline-size}
-  .hero__h1{font-size:clamp(2.2rem,15.5cqi,8.6rem)}
-}
-
-/* ---- timing slip ------------------------------------------- */
-.slip{background:#0B0807;border:var(--rule);font-family:var(--data);box-shadow:0 24px 60px rgba(0,0,0,.5)}
-.slip__head{display:flex;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:var(--rule);
-  font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dust)}
-.slip__head b{color:var(--afterburn);font-weight:700}
-.slip__rows{margin:0;padding:6px 18px}
-.slip__row{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:13px 0;border-bottom:1px dashed var(--grit)}
-.slip__row:last-child{border-bottom:0}
-.slip__row dt{font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dust)}
-.slip__row dd{margin:0;font-size:1.02rem;font-weight:700;text-align:right;color:var(--bone)}
-.slip__row dd.hot{color:var(--nitro)}
-.sealed{display:inline-block;border:2px solid var(--afterburn);color:var(--afterburn);padding:2px 10px;
-  font-size:.74rem;letter-spacing:.24em;text-transform:uppercase;transform:rotate(-3deg)}
-.slip__foot{margin:0;padding:12px 18px;border-top:var(--rule);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:#6B5D54}
-
-/* ---- how it works ------------------------------------------ */
-.steps{list-style:none;margin:clamp(30px,4vw,54px) 0 0;padding:0;display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--grit);border:var(--rule)}
-.step{background:var(--tarmac);padding:clamp(20px,2.4vw,32px)}
-.step__n{font-family:var(--data);font-size:.72rem;letter-spacing:.24em;color:var(--afterburn)}
-.step__h{margin:14px 0 8px;font-family:var(--display);font-stretch:110%;font-weight:800;text-transform:uppercase;
-  font-size:1.15rem;line-height:1.05}
-.step p{margin:0;color:var(--dust);font-size:.98rem}
-@media(max-width:1000px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:560px){.steps{grid-template-columns:1fr}}
-
-.reply{margin:clamp(28px,4vw,48px) 0 0;max-width:780px;border-left:3px solid var(--afterburn);background:var(--slick);
-  padding:20px 24px;font-family:var(--data);font-size:.94rem}
-.reply__tag{font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dust);margin:0 0 12px}
-.reply p{margin:0 0 10px}
-.reply p:last-child{margin-bottom:0}
-.reply .q{color:var(--dust)}
-.reply b{color:var(--nitro);font-weight:700}
-
-/* ---- board ------------------------------------------------- */
-.board{list-style:none;margin:clamp(28px,4vw,48px) 0 0;padding:0;border:var(--rule);background:#0B0807}
-.board__row{display:grid;grid-template-columns:3ch minmax(0,1fr) minmax(0,1.3fr) 9ch 8ch;
-  gap:clamp(10px,2vw,24px);align-items:center;padding:15px clamp(14px,2vw,24px);border-top:var(--rule);
-  font-family:var(--data);font-size:.92rem}
-.board__row:first-child{border-top:0}
-.board__rank{color:var(--dust)}
-.board__name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.board__job{height:12px;opacity:.9;
-  background:repeating-linear-gradient(90deg,var(--grit) 0 22px,transparent 22px 28px)}
-.board__amt{font-weight:700;color:var(--bone);text-align:right}
-.board__age{color:var(--dust);text-align:right;font-size:.74rem;letter-spacing:.06em}
-.board__row--lead .board__amt{color:var(--nitro)}
-.board__row--lead .board__rank{color:var(--afterburn)}
-@media(max-width:620px){
-  .board__row{grid-template-columns:3ch minmax(0,1fr) auto}
-  .board__job,.board__age{display:none}
-}
-.board__note{margin:16px 0 0;font-family:var(--data);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--dust)}
-.board__note--demo{color:var(--nitro)}
-.board__empty{margin:clamp(28px,4vw,48px) 0 0;padding:clamp(24px,4vw,44px);border:1px dashed var(--grit);
-  color:var(--dust);max-width:none}
-.board__empty b{color:var(--bone);font-weight:600}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 var(--pad)}
+.num{font-variant-numeric:tabular-nums}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
-/* ---- bid form ---------------------------------------------- */
-.form{display:grid;gap:18px}
-.field label{display:block;font-family:var(--data);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;
-  color:var(--dust);margin-bottom:8px}
-.field input,.field textarea{width:100%;background:rgba(11,8,7,.85);border:1px solid var(--grit);color:var(--bone);
-  font-family:var(--data);font-size:1rem;padding:14px 16px;border-radius:0}
-.field textarea{min-height:128px;resize:vertical;line-height:1.5}
-.field input::placeholder,.field textarea::placeholder{color:#6B5D54}
-.field input:focus,.field textarea:focus{border-color:var(--nitro);outline:none}
-.field__hint{margin:8px 0 0;font-size:.86rem;color:var(--dust)}
-.form__pair{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-@media(max-width:520px){.form__pair{grid-template-columns:1fr}}
-.calc{margin:0;padding:16px 18px;border-left:3px solid var(--nitro);background:var(--slick);
-  font-family:var(--data);font-size:.94rem;color:var(--bone);min-height:3.4em}
-.form__go{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
-.form__msg{margin:0;padding:16px 18px;border-left:3px solid var(--afterburn);background:var(--slick);
-  font-family:var(--data);font-size:.94rem}
-.form__msg--ok{border-left-color:#2BE06A}
-.form__soon{margin:0;font-size:.92rem;color:var(--dust)}
-.form__soon a{color:var(--nitro)}
+/* ---- buttons ----------------------------------------------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:13px 22px;
+  font:600 1rem/1.1 var(--body);text-decoration:none;border-radius:12px;border:1px solid transparent;cursor:pointer;
+  transition:background .15s,border-color .15s,transform .15s}
+.btn svg{width:18px;height:18px;flex:0 0 auto}
+.btn--primary{background:var(--accent);color:var(--accent-ink)}
+.btn--primary:hover{background:var(--accent-hi);transform:translateY(-1px)}
+.btn--ghost{background:transparent;border-color:var(--line-2);color:var(--text)}
+.btn--ghost:hover{border-color:var(--muted)}
+.btn--sm{min-height:40px;padding:9px 16px;font-size:.93rem;border-radius:10px}
+.btn--block{width:100%}
+.btn[disabled]{background:var(--line);color:var(--faint);cursor:not-allowed;transform:none}
 
-/* ---- the rate ---------------------------------------------- */
-.rates{width:100%;border-collapse:collapse;font-family:var(--data);font-size:.98rem}
-.rates caption{text-align:left;font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dust);padding-bottom:10px}
-.rates th,.rates td{padding:13px 0;border-bottom:var(--rule);text-align:left;font-weight:400}
-.rates th{color:var(--nitro);font-weight:700;width:9ch}
-.rates td{color:var(--bone)}
-.rates td span{color:var(--dust)}
+/* ---- top bar ----------------------------------------------- */
+.top{position:sticky;top:0;z-index:50;background:rgba(12,13,16,.84);
+  -webkit-backdrop-filter:saturate(1.4) blur(14px);backdrop-filter:saturate(1.4) blur(14px);
+  border-bottom:1px solid var(--line)}
+.top__in{display:flex;align-items:center;gap:clamp(14px,3vw,28px);height:64px}
+.logo{font-family:var(--display);font-weight:800;font-size:1.12rem;letter-spacing:-.02em;text-decoration:none;white-space:nowrap}
+.logo b{color:var(--accent);font-weight:800}
+.nav{display:flex;gap:26px;margin-left:auto}
+.nav a{color:var(--muted);text-decoration:none;font-size:.94rem;font-weight:500;transition:color .15s}
+.nav a:hover{color:var(--text)}
+.top .btn{margin-left:auto}
+.nav + .btn{margin-left:0}
+@media(max-width:820px){.nav{display:none}}
+/* phones and small tablets get the fixed bid bar instead of a second button up here */
+@media(max-width:900px){.top .btn{display:none}}
+
+/* ---- hero -------------------------------------------------- */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;top:-30%;right:-12%;width:68%;height:130%;pointer-events:none;
+  background:radial-gradient(closest-side,rgba(255,106,43,.17),transparent)}
+.hero__in{position:relative;display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);
+  gap:clamp(32px,5vw,72px);align-items:center;
+  padding-top:clamp(36px,6vw,80px);padding-bottom:clamp(44px,6vw,92px)}
+.pill{display:inline-flex;align-items:center;gap:10px;padding:7px 14px 7px 12px;border:1px solid var(--line-2);
+  border-radius:999px;font-size:.88rem;font-weight:500;color:var(--muted);background:rgba(255,255,255,.03)}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:0 0 auto}
+.pill.is-open{color:var(--text)}
+.pill.is-open i{background:var(--good);box-shadow:0 0 0 4px rgba(61,214,140,.18)}
+.hero h1{margin-top:22px;font-size:clamp(2.5rem,6.2vw,4.6rem);font-weight:800;letter-spacing:-.035em;line-height:1.02}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero__sub{margin-top:22px;max-width:33em;color:var(--muted);font-size:clamp(1.05rem,1.4vw,1.2rem)}
+.ticks{list-style:none;padding:0;margin:26px 0 0;display:flex;flex-wrap:wrap;gap:10px 24px}
+.ticks li{display:flex;align-items:center;gap:8px;font-size:.96rem;font-weight:500}
+.ticks svg{width:18px;height:18px;color:var(--good);flex:0 0 auto}
+.hero__links{margin-top:28px;display:flex;flex-wrap:wrap;gap:8px 24px;font-size:.96rem;font-weight:500}
+.hero__links a{color:var(--muted);text-decoration:underline;text-decoration-color:var(--line-2);text-underline-offset:4px}
+.hero__links a:hover{color:var(--text);text-decoration-color:var(--muted)}
+@media(max-width:900px){
+  .hero__in{grid-template-columns:1fr}
+  .hero__links{display:none}
+}
+
+/* ---- bid card ---------------------------------------------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px}
+.bid{box-shadow:0 30px 80px -24px rgba(0,0,0,.75)}
+.bid__stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid var(--line)}
+.stat{padding:16px 20px}
+.stat + .stat{border-left:1px solid var(--line)}
+.stat__k{font-size:.8rem;font-weight:500;color:var(--muted)}
+.stat__v{margin-top:2px;font-family:var(--display);font-weight:700;font-size:clamp(1.1rem,2.2vw,1.35rem);white-space:nowrap}
+.stat__v--hot{color:var(--gold)}
+.bid__body{padding:clamp(18px,2.4vw,24px);display:grid;gap:16px}
+.bid__more{display:grid;gap:16px}
+.field label{display:block;margin-bottom:7px;font-size:.9rem;font-weight:600}
+.field input,.field textarea{width:100%;background:var(--field);border:1px solid var(--line-2);border-radius:10px;
+  color:var(--text);font:400 1rem/1.5 var(--body);padding:12px 14px;transition:border-color .15s,box-shadow .15s}
+.field textarea{min-height:76px;resize:vertical;display:block}
+.field input::placeholder,.field textarea::placeholder{color:#6F727D}
+.field input:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,106,43,.25)}
+.field__hint{margin-top:7px;font-size:.84rem;color:var(--faint)}
+.field__hint--tight{margin-top:-8px}
+.money{position:relative}
+.money span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:600;pointer-events:none}
+.money input{padding-left:28px;font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chipbtn{font:500 .85rem/1 var(--body);color:var(--muted);background:transparent;border:1px solid var(--line-2);
+  border-radius:999px;padding:9px 13px;cursor:pointer;transition:color .15s,border-color .15s}
+.chipbtn:hover{color:var(--text);border-color:var(--muted)}
+.chipbtn--lead{color:var(--gold);border-color:rgba(255,200,87,.45)}
+.chipbtn--lead:hover{color:var(--gold);border-color:var(--gold)}
+.readout{font-size:.93rem;color:var(--muted);min-height:1.6em}
+.readout b{color:var(--text);font-weight:600}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:480px){.row2{grid-template-columns:1fr}}
+.msg{padding:13px 15px;border-radius:10px;font-size:.95rem;background:rgba(242,109,114,.1);border:1px solid rgba(242,109,114,.4)}
+.msg--ok{background:rgba(61,214,140,.1);border-color:rgba(61,214,140,.4)}
+.fine{font-size:.86rem;color:var(--faint);text-align:center}
+
+/* ---- sections ---------------------------------------------- */
+.sec{padding:clamp(56px,8vw,104px) 0;border-bottom:1px solid var(--line)}
+.sec--alt{background:var(--bg-2)}
+.sec h2{font-size:clamp(1.8rem,3.6vw,2.6rem);font-weight:800;letter-spacing:-.03em}
+.lead{margin-top:14px;max-width:39em;color:var(--muted);font-size:1.08rem}
+.sec__head{margin-bottom:clamp(28px,4vw,44px)}
+
+/* ---- how it works ------------------------------------------ */
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(14px,2vw,22px)}
+.step{padding:clamp(20px,2.4vw,28px)}
+.step__n{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;
+  background:rgba(255,106,43,.14);color:var(--accent);font:700 .95rem/1 var(--body)}
+.step h3{margin-top:18px;font-size:1.2rem;font-weight:700}
+.step p{margin-top:8px;color:var(--muted)}
+@media(max-width:820px){.steps{grid-template-columns:1fr}}
+
+.answer{margin-top:clamp(14px,2vw,22px);display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);
+  gap:clamp(20px,4vw,48px);align-items:center;padding:clamp(22px,3vw,34px)}
+.answer h3{font-size:1.2rem;font-weight:700}
+.answer > div > p{margin-top:8px;color:var(--muted)}
+.chat{display:grid;gap:10px}
+.chat__label{font-size:.8rem;font-weight:600;color:var(--faint)}
+.chat__you,.chat__reply{padding:13px 16px;border-radius:14px;font-size:.96rem}
+.chat__you{justify-self:end;max-width:92%;background:var(--line);border-bottom-right-radius:4px}
+.chat__reply{justify-self:start;max-width:96%;background:rgba(255,106,43,.1);border:1px solid rgba(255,106,43,.3);border-bottom-left-radius:4px}
+.chat__reply b{color:var(--gold);font-weight:600}
+@media(max-width:820px){.answer{grid-template-columns:1fr}}
+
+/* ---- board ------------------------------------------------- */
+.board{overflow:hidden}
+.board table{width:100%;border-collapse:collapse}
+.board th,.board td{padding:15px clamp(14px,2vw,22px);text-align:left;border-bottom:1px solid var(--line)}
+.board th{font-size:.8rem;font-weight:600;color:var(--muted)}
+.board tbody tr:last-child td{border-bottom:0}
+.board td{font-size:.98rem}
+.board .c-rank{width:3.2em;color:var(--faint)}
+.board .c-bid{text-align:right;font-weight:700}
+.board .c-when{text-align:right;color:var(--muted);font-size:.9rem;white-space:nowrap}
+.board .c-name{font-weight:500;max-width:12em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hidden-job{display:inline-flex;align-items:center;gap:7px;color:var(--faint);font-size:.9rem}
+.hidden-job svg{width:15px;height:15px}
+.badge{margin-left:10px;padding:3px 9px;border-radius:999px;font-size:.74rem;font-weight:600;
+  background:rgba(255,200,87,.14);color:var(--gold);vertical-align:middle}
+.board tr.is-lead .c-bid{color:var(--gold)}
+@media(max-width:640px){.board .c-job,.board .c-when{display:none}}
+.board__empty{padding:clamp(28px,5vw,48px);text-align:center;color:var(--muted)}
+.board__empty b{display:block;color:var(--text);font-family:var(--display);font-size:1.2rem;margin-bottom:6px}
+.board__foot{margin-top:18px;display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between}
+.board__note{font-size:.9rem;color:var(--faint)}
+.board__note--demo{color:var(--gold)}
+
+/* ---- what a bid covers ------------------------------------- */
+.tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:clamp(10px,1.4vw,16px)}
+.tile{padding:20px 18px;text-align:center}
+.tile b{display:block;font-family:var(--display);font-weight:800;font-size:clamp(1.4rem,2.6vw,1.9rem);color:var(--accent)}
+.tile span{display:block;margin-top:4px;color:var(--muted);font-size:.95rem}
+@media(max-width:820px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.tile:last-child{grid-column:1 / -1}}
+.notes{margin-top:clamp(14px,2vw,22px);display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,2vw,22px)}
+.note{padding:clamp(18px,2.2vw,24px)}
+.note h3{font-size:1.05rem;font-weight:700}
+.note p{margin-top:6px;color:var(--muted)}
+@media(max-width:820px){.notes{grid-template-columns:1fr}}
 
 /* ---- rules ------------------------------------------------- */
-.rules{margin:clamp(30px,4vw,54px) 0 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(16px,2vw,28px)}
-@media(max-width:1000px){.rules{grid-template-columns:1fr}}
-.rulebox{border:var(--rule);background:#0B0807}
-.rulebox__h{margin:0;padding:14px 20px;border-bottom:var(--rule);font-family:var(--data);font-size:.72rem;
-  letter-spacing:.2em;text-transform:uppercase;display:flex;align-items:center;gap:10px}
-.rulebox__h i{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
-.rulebox--yes .rulebox__h i{background:#2BE06A}
-.rulebox--no .rulebox__h i{background:var(--flag-r)}
-.rulebox--cash .rulebox__h i{background:var(--nitro)}
-.rulebox ul{list-style:none;margin:0;padding:6px 20px}
-.rulebox li{padding:13px 0;border-bottom:1px dashed var(--grit);color:#D8CEC3;font-size:.98rem}
-.rulebox li:last-child{border-bottom:0}
-.rulebox li b{color:var(--bone);font-weight:600}
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:clamp(14px,2vw,22px)}
+@media(max-width:820px){.rules{grid-template-columns:1fr}}
+.rulebox{padding:clamp(20px,2.4vw,28px)}
+.rulebox--wide{grid-column:1 / -1}
+.rulebox h3{font-size:1.15rem;font-weight:700;margin-bottom:14px}
+.list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.list--2{grid-template-columns:1fr 1fr;gap:12px clamp(20px,3vw,40px)}
+@media(max-width:820px){.list--2{grid-template-columns:1fr}}
+.list li{display:grid;grid-template-columns:20px 1fr;gap:10px;color:#D5D7DD}
+.list svg{width:18px;height:18px;margin-top:3px}
+.list--yes svg{color:var(--good)}
+.list--no svg{color:var(--bad)}
+.list--dot svg{color:var(--accent)}
 
-/* ---- sponsor spots ----------------------------------------- */
-.spots{margin:clamp(30px,4vw,54px) 0 0;display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:clamp(16px,2vw,28px)}
-@media(max-width:1000px){.spots{grid-template-columns:1fr}}
-.spot{border:var(--rule);background:#0B0807;padding:clamp(22px,2.6vw,34px);display:flex;flex-direction:column;gap:12px;
-  text-decoration:none;min-height:230px;transition:border-color .18s}
-a.spot:hover{border-color:var(--nitro)}
-.spot__h{margin:0;font-family:var(--display);font-stretch:112%;font-weight:900;text-transform:uppercase;
-  font-size:clamp(1.3rem,2.3vw,1.9rem);line-height:1;letter-spacing:-.01em}
-.spot p{margin:0;color:var(--dust);font-size:.98rem}
-.spot__go{margin-top:auto;font-family:var(--data);font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--nitro)}
-.spot--open{border-style:dashed}
-.spot--open .spot__h{color:var(--dust)}
-.spot__own{font-size:.86rem!important;color:#8A7C72!important}
+/* ---- sponsors ---------------------------------------------- */
+.spots{display:grid;grid-template-columns:1.25fr 1fr;gap:clamp(14px,2vw,22px)}
+@media(max-width:820px){.spots{grid-template-columns:1fr}}
+.spot{padding:clamp(22px,2.6vw,30px);display:flex;flex-direction:column;gap:8px;text-decoration:none;transition:border-color .15s}
+a.spot:hover{border-color:var(--line-2)}
+.spot__k{font-size:.8rem;font-weight:600;color:var(--faint)}
+.spot h3{font-size:1.4rem;font-weight:800}
+.spot p{color:var(--muted)}
+.spot__own{font-size:.88rem;color:var(--faint)!important}
+.spot__go{margin-top:auto;padding-top:10px;font-weight:600;color:var(--accent)}
+.spot--open{border-style:dashed;background:transparent}
 
-/* ---- finale ------------------------------------------------ */
-.ride{position:relative;padding:clamp(70px,10vw,150px) var(--gut);text-align:center;overflow:hidden}
-.ride__bg{position:absolute;inset:0;z-index:1}
-.ride__bg img{width:100%;height:100%;object-fit:cover;object-position:50% 40%;opacity:.3}
-.ride::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
-  background:radial-gradient(62% 70% at 50% 45%,rgba(18,14,12,.62),rgba(18,14,12,.93) 78%)}
-.ride__in{position:relative;z-index:6}
-.ride__h{margin:14px auto 0;font-family:var(--display);font-stretch:125%;font-weight:900;
-  text-transform:uppercase;font-size:clamp(2.4rem,9vw,6.4rem);line-height:.86;letter-spacing:-.035em;max-width:16ch;
-  text-shadow:0 8px 40px rgba(18,14,12,.9)}
-.ride__p{max-width:46ch;margin:22px auto 0;color:#CFC4B9;text-shadow:0 2px 14px rgba(18,14,12,.9)}
-.ride__links{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:30px auto 0}
+/* ---- closing call ------------------------------------------ */
+.close{position:relative;overflow:hidden;text-align:center;padding:clamp(64px,9vw,120px) 0}
+.close::before{content:"";position:absolute;left:50%;top:50%;width:min(900px,120%);height:140%;transform:translate(-50%,-50%);
+  background:radial-gradient(closest-side,rgba(255,106,43,.16),transparent);pointer-events:none}
+.close .wrap{position:relative}
+.close h2{font-size:clamp(2rem,5vw,3.4rem);font-weight:800;letter-spacing:-.03em}
+.close p{margin:14px auto 0;max-width:30em;color:var(--muted);font-size:1.08rem}
+.close__go{margin-top:28px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
 
 /* ---- footer ------------------------------------------------ */
-.foot{border-top:var(--rule);padding:34px var(--gut);display:flex;flex-wrap:wrap;gap:16px 24px;align-items:center}
-.foot__mark{font-family:var(--display);font-stretch:125%;font-weight:900;text-transform:uppercase;display:flex;align-items:center;gap:9px}
-.foot__links{display:flex;flex-wrap:wrap;gap:18px}
-.foot__links a{font-family:var(--data);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--dust);text-decoration:none}
-.foot__links a:hover{color:var(--nitro)}
-.foot__meta{margin-left:auto;font-family:var(--data);font-size:.66rem;letter-spacing:.14em;color:#7A6D64;
-  text-transform:uppercase;text-align:right;line-height:1.9}
-@media(max-width:760px){.foot__meta{margin-left:0;text-align:left}}
+.foot{border-top:1px solid var(--line);padding:28px 0}
+.foot__in{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center}
+.foot__links{display:flex;flex-wrap:wrap;gap:8px 22px;margin-left:auto}
+.foot__links a{color:var(--muted);text-decoration:none;font-size:.92rem}
+.foot__links a:hover{color:var(--text)}
+.foot__meta{color:var(--faint);font-size:.88rem}
+@media(max-width:640px){.foot__links{margin-left:0}}
+
+/* ---- phone dock -------------------------------------------- */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;align-items:center;gap:14px;
+  padding:12px var(--pad) calc(12px + env(safe-area-inset-bottom));
+  background:rgba(17,18,23,.95);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);transform:translateY(110%);transition:transform .25s ease}
+.dock.is-on{transform:none}
+.dock__text{font-size:.9rem;color:var(--muted);line-height:1.3;min-width:0}
+.dock__text b{display:block;color:var(--text);font-size:1rem}
+.dock .btn{margin-left:auto;flex:0 0 auto}
+@media(max-width:900px){.dock{display:flex}body{padding-bottom:76px}}
 
 /* ---- reveal ------------------------------------------------ */
-.js .rise{opacity:0;transform:translateY(22px);
-  transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.js .rise{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
 .js .rise.in{opacity:1;transform:none}
-
 @media(prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
-  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}
   .js .rise{opacity:1;transform:none}
 }
 </style>
 </head>
 <body>
 
-<header class="bar">
-  <a class="bar__mark" href="#top"><i class="stripe"></i>DaddyGoFaster</a>
-  <nav class="bar__nav" aria-label="Sections">
-    <a href="#how">How it works</a><a href="#board">The board</a><a href="#rate">The rate</a><a href="#rules">Rules</a><a href="#sponsors">Sponsors</a>
-  </nav>
-  <div class="bar__links">
-    <a class="chip chip--icon" href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
-      <span>Watch</span></a>
-    <a class="chip chip--fire" href="#bid">Bid</a>
+<header class="top">
+  <div class="wrap top__in">
+    <a class="logo" href="#top">DaddyGo<b>Faster</b></a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#how">How it works</a>
+      <a href="#board">Today's bids</a>
+      <a href="#rules">Rules</a>
+      <a href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">YouTube</a>
+    </nav>
+    <a class="btn btn--primary btn--sm" href="#bid">Place a bid</a>
   </div>
 </header>
 
 <main id="top">
 
   <!-- ===== HERO ============================================ -->
-  <section class="hero" id="hero">
-    <div class="hero__flag" aria-hidden="true">
-      <picture>
-        <source srcset="/assets/flag.webp" type="image/webp">
-        <img src="/assets/flag.jpg" alt="" width="1800" height="1200" fetchpriority="high">
-      </picture>
-    </div>
-
-    <div class="hero__copy">
-      <p class="tag hero__eyebrow">Bids start at one cent</p>
-      <h1 class="hero__h1" aria-label="Daddy, go blank. You finish the sentence.">
-        <span aria-hidden="true">Daddy,</span>
-        <span class="go" aria-hidden="true">go</span>
-        <span class="fill" aria-hidden="true"><span class="fill__w" id="fill">&nbsp;</span></span>
-      </h1>
-      <p class="hero__sub">Two kids named this place by hollering from the back seat. Now <b>you finish the sentence</b>. Every day the highest bid picks what I do tomorrow, and the camera comes along.</p>
-      <div class="hero__actions">
-        <a class="btn btn--fire" id="heroCta" href="#how">See how it works</a>
-        <a class="btn btn--line" href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
-          Watch on YouTube</a>
+  <section class="hero">
+    <div class="wrap hero__in">
+      <div>
+        <span class="pill" id="pill"><i></i><span id="pillText">Bidding opens soon</span></span>
+        <h1>Decide what I do <em>tomorrow.</em></h1>
+        <p class="hero__sub">Each day, the highest bid sets a job for me to do the next day. I do it on camera and post the video.</p>
+        <ul class="ticks">
+          <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Free to bid</li>
+          <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Bids start at 1&cent;</li>
+          <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Only the winner pays</li>
+        </ul>
+        <p class="hero__links"><a href="#how">How it works</a><a href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">Watch the videos on YouTube</a></p>
       </div>
-    </div>
 
-    <aside class="slip" aria-label="Tomorrow's job at a glance">
-      <div class="slip__head"><span>Tomorrow's job</span><b id="slipFlag">Not open yet</b></div>
-      <dl class="slip__rows">
-        <div class="slip__row"><dt id="slipClockLabel">Bidding</dt><dd id="slipClock">Opens soon</dd></div>
-        <div class="slip__row"><dt>High bid</dt><dd class="hot" id="slipHigh">&mdash;</dd></div>
-        <div class="slip__row"><dt>Bids in</dt><dd id="slipCount">&mdash;</dd></div>
-        <div class="slip__row"><dt>The job</dt><dd><span class="sealed">Sealed</span></dd></div>
-      </dl>
-      <p class="slip__foot">Opened on camera. Not before.</p>
-    </aside>
-  </section>
-
-  <div class="flagrule"></div>
-
-  <!-- ===== HOW IT WORKS ==================================== -->
-  <section class="sec" id="how">
-    <div class="rise">
-      <p class="tag">How it works</p>
-      <h2 class="sec__h">Your money.<br><em>My tomorrow.</em></h2>
-      <p class="sec__p">Somebody might send me to do something kind. Somebody might set my alarm for 4 a.m. <b>Nobody watching knows which</b> until the video goes up.</p>
-    </div>
-    <ol class="steps rise">
-      <li class="step">
-        <span class="step__n">01</span>
-        <h3 class="step__h">Name the job</h3>
-        <p>Write what you want me to do tomorrow and what you will pay for it. A penny gets you in.</p>
-      </li>
-      <li class="step">
-        <span class="step__n">02</span>
-        <h3 class="step__h">The screen reads it</h3>
-        <p>An AI checks every bid against the house rules, works out how long the job takes, and tells you on the spot whether your bid covers it.</p>
-      </li>
-      <li class="step">
-        <span class="step__n">03</span>
-        <h3 class="step__h">High bid takes the day</h3>
-        <p>Bidding closes the night before. The highest bid that covers its job wins. Only the winner pays.</p>
-      </li>
-      <li class="step">
-        <span class="step__n">04</span>
-        <h3 class="step__h">I do it on camera</h3>
-        <p>The crowd sees the money, never the job. The job gets opened in the video, and the video goes up after it is done.</p>
-      </li>
-    </ol>
-    <div class="reply rise">
-      <p class="reply__tag">Example &middot; what the screen sends back</p>
-      <p class="q">$20.00 &mdash; &ldquo;Ride the city bus downtown and back.&rdquo;</p>
-      <p>That is about 50 minutes door to door, so it needs <b>$166.67</b>, plus about $4 in fares. Your $20.00 covers 6 minutes. Raise the bid or shrink the job.</p>
-    </div>
-  </section>
-
-  <!-- ===== THE BOARD ======================================= -->
-  <section class="sec sec--slick" id="board">
-    <div class="rise">
-      <p class="tag">The board</p>
-      <h2 class="sec__h sec__h--gold">The money is public.<br><em>The job is sealed.</em></h2>
-      <p class="sec__p">Every bid that clears the screen lands here with a name and an amount. What they asked for stays shut until the video.</p>
-    </div>
-    <ol class="board rise" id="boardList" hidden></ol>
-    <p class="board__note rise" id="boardNote" hidden></p>
-    <p class="board__empty rise" id="boardEmpty"><b>Bidding is not open yet.</b> When it is, this is where the bids stack up: name, amount, and a job nobody gets to read.</p>
-  </section>
-
-  <!-- ===== BID ============================================= -->
-  <section class="sec" id="bid">
-    <div class="split">
-      <div class="rise">
-        <p class="tag">Place a bid</p>
-        <h2 class="sec__h">Finish the<br><em>sentence.</em></h2>
-        <p class="sec__p">Say what the job is and what it is worth to you. The readout shows how big a job your number covers, so you know where you stand before you send it.</p>
-        <p class="sec__p">Read the <a href="#rules">house rules</a> first. They are short, and they decide what gets through.</p>
-      </div>
-      <form class="form rise" id="bidForm" novalidate>
-        <div class="field">
-          <label for="task">Daddy, go&hellip;</label>
-          <textarea id="task" name="task" maxlength="280" required
-            placeholder="&hellip;walk the two miles to the hardware store instead of driving."></textarea>
-          <p class="field__hint">One job, 280 characters. Be specific: a vague job gets sent back.</p>
+      <form class="card bid" id="bid" novalidate aria-label="Place a bid">
+        <div class="bid__stats">
+          <div class="stat"><div class="stat__k">High bid</div><div class="stat__v stat__v--hot num" id="statHigh">&mdash;</div></div>
+          <div class="stat"><div class="stat__k">Bids</div><div class="stat__v num" id="statCount">&mdash;</div></div>
+          <div class="stat"><div class="stat__k" id="statClockLabel">Opens</div><div class="stat__v num" id="statClock">Soon</div></div>
         </div>
-        <div class="form__pair">
+        <div class="bid__body">
+          <h2 class="visually-hidden">Place a bid</h2>
           <div class="field">
-            <label for="who">Name on the board</label>
-            <input id="who" name="name" type="text" maxlength="24" required autocomplete="nickname" placeholder="backseat_driver">
+            <label for="task">What should I do tomorrow?</label>
+            <textarea id="task" name="task" rows="2" maxlength="280" required placeholder="Walk the two miles to the hardware store instead of driving."></textarea>
+            <div class="chips" aria-label="Ideas">
+              <button class="chipbtn" type="button" data-idea="Walk to work instead of driving.">Walk to work</button>
+              <button class="chipbtn" type="button" data-idea="Take a cold shower at 5 a.m.">Cold shower at 5 a.m.</button>
+              <button class="chipbtn" type="button" data-idea="Spend 30 minutes picking up litter at a park.">Pick up litter</button>
+            </div>
           </div>
           <div class="field">
-            <label for="amount">Your bid, in dollars</label>
-            <input id="amount" name="amount" type="text" inputmode="decimal" required autocomplete="off" placeholder="0.01">
+            <label for="amount">Your bid</label>
+            <div class="money"><span aria-hidden="true">$</span><input class="num" id="amount" name="amount" type="text" inputmode="decimal" required autocomplete="off" placeholder="0.01"></div>
+            <div class="chips" id="leadWrap" hidden>
+              <button class="chipbtn chipbtn--lead num" type="button" id="leadChip"></button>
+            </div>
           </div>
+          <p class="readout" id="readout" aria-live="polite">Bids start at $0.01.</p>
+          <div class="bid__more" id="more" hidden>
+            <div class="row2">
+              <div class="field">
+                <label for="who">Name on the board</label>
+                <input id="who" name="name" type="text" maxlength="24" autocomplete="nickname">
+              </div>
+              <div class="field">
+                <label for="email">Email</label>
+                <input id="email" name="email" type="email" autocomplete="email">
+              </div>
+            </div>
+            <p class="field__hint field__hint--tight">Your email is only used to reach you if you win. It is never shown.</p>
+          </div>
+          <p class="msg" id="bidMsg" role="status" hidden></p>
+          <button class="btn btn--primary btn--block" id="bidBtn" type="submit" hidden>Continue</button>
+          <a class="btn btn--primary btn--block" id="notifyBtn" href="mailto:hello@daddygofaster.com?subject=Tell%20me%20when%20bidding%20opens">Tell me when bidding opens</a>
+          <p class="fine" id="bidFine">Bidding is not open yet. This opens an email asking to be told when it is.</p>
         </div>
-        <div class="field">
-          <label for="email">Email</label>
-          <input id="email" name="email" type="email" required autocomplete="email" placeholder="you@wherever.com">
-          <p class="field__hint">How I reach you if you win. It never goes on the board.</p>
-        </div>
-        <p class="calc" id="calc" aria-live="polite">Type a number. A penny counts.</p>
-        <div class="form__go">
-          <button class="btn btn--fire" id="bidBtn" type="submit" disabled>Bidding opens soon</button>
-          <p class="form__soon" id="bidSoon">Not open yet. <a href="mailto:hello@daddygofaster.com?subject=Tell%20me%20when%20bidding%20opens">Email me and I will tell you when it is.</a></p>
-        </div>
-        <p class="form__msg" id="bidMsg" role="status" hidden></p>
       </form>
     </div>
   </section>
 
-  <!-- ===== THE RATE ======================================== -->
-  <section class="sec sec--slick" id="rate">
-    <div class="split">
-      <div class="rise">
-        <p class="tag">The rate</p>
-        <h2 class="sec__h sec__h--gold">$200 an hour<br><em>is the yardstick.</em></h2>
-        <p class="sec__p">There is no meter and no stopwatch. It is a sanity check: <b>your bid has to cover the job</b>. Two dollars does not buy eight hours.</p>
-        <p class="sec__p">Costs are on top. Bus fare, gas, tickets, a flight: you cover them before I leave the driveway. Travel time counts both ways, and anything with a flight or a hotel gets a real quote first.</p>
+  <!-- ===== HOW IT WORKS ==================================== -->
+  <section class="sec" id="how">
+    <div class="wrap">
+      <div class="sec__head rise">
+        <h2>How it works</h2>
       </div>
-      <div class="rise">
-        <table class="rates">
-          <caption>What a bid covers</caption>
-          <tbody>
-            <tr><th scope="row">1&cent;</th><td>0.18 seconds. <span>A blink.</span></td></tr>
-            <tr><th scope="row">$1</th><td>18 seconds</td></tr>
-            <tr><th scope="row">$10</th><td>3 minutes</td></tr>
-            <tr><th scope="row">$50</th><td>15 minutes</td></tr>
-            <tr><th scope="row">$200</th><td>1 hour</td></tr>
-            <tr><th scope="row">$400</th><td>2 hours. <span>And so on up.</span></td></tr>
-          </tbody>
+      <ol class="steps rise">
+        <li class="card step">
+          <span class="step__n" aria-hidden="true">1</span>
+          <h3>Place a bid</h3>
+          <p>Say what you want me to do and what you will pay for it. Bids start at one cent.</p>
+        </li>
+        <li class="card step">
+          <span class="step__n" aria-hidden="true">2</span>
+          <h3>The highest bid wins</h3>
+          <p>Bidding closes each evening. The highest bid that covers its job wins, and only the winner pays.</p>
+        </li>
+        <li class="card step">
+          <span class="step__n" aria-hidden="true">3</span>
+          <h3>Watch me do it</h3>
+          <p>I do the job the next day, on camera. Nobody else sees what the job is until the video goes up.</p>
+        </li>
+      </ol>
+      <div class="card answer rise">
+        <div>
+          <h3>You get an answer right away</h3>
+          <p>Every bid is checked against the rules and sized up for time and cost. If your bid is too low for the job, you see what it would take.</p>
+        </div>
+        <div class="chat">
+          <span class="chat__label">Example</span>
+          <p class="chat__you">$20.00 &mdash; Ride the city bus downtown and back.</p>
+          <p class="chat__reply">That is about 50 minutes door to door, so it needs <b>$166.67</b>, plus about $4 in fares. Your $20.00 covers about 6 minutes. Raise the bid or pick a smaller job.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== THE BOARD ======================================= -->
+  <section class="sec sec--alt" id="board">
+    <div class="wrap">
+      <div class="sec__head rise">
+        <h2>Today's bids</h2>
+        <p class="lead">Names and amounts are public. The jobs stay hidden until the video.</p>
+      </div>
+      <div class="card board rise">
+        <table id="boardTable" hidden>
+          <thead>
+            <tr><th class="c-rank" scope="col">#</th><th scope="col">Bidder</th><th class="c-job" scope="col">Job</th><th class="c-bid" scope="col">Bid</th><th class="c-when" scope="col">Placed</th></tr>
+          </thead>
+          <tbody id="boardBody"></tbody>
         </table>
+        <div class="board__empty" id="boardEmpty"><b>No bids yet</b><span id="boardEmptyText">Bidding is not open yet. When it opens, the bids show up here.</span></div>
+      </div>
+      <div class="board__foot rise">
+        <p class="board__note" id="boardNote">A bid only appears here after it passes the screen.</p>
+        <a class="btn btn--primary btn--sm" href="#bid" id="boardCta">Place a bid</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== WHAT A BID COVERS =============================== -->
+  <section class="sec" id="covers">
+    <div class="wrap">
+      <div class="sec__head rise">
+        <h2>What a bid covers</h2>
+        <p class="lead">I price my time at about $200 an hour, and your bid has to be in line with the job you ask for. It is a sense check, not a timer: two dollars does not buy eight hours of work.</p>
+      </div>
+      <ul class="tiles rise">
+        <li class="card tile"><b class="num">$1</b><span>18 seconds</span></li>
+        <li class="card tile"><b class="num">$10</b><span>3 minutes</span></li>
+        <li class="card tile"><b class="num">$50</b><span>15 minutes</span></li>
+        <li class="card tile"><b class="num">$200</b><span>1 hour</span></li>
+        <li class="card tile"><b class="num">$400</b><span>2 hours</span></li>
+      </ul>
+      <div class="notes rise">
+        <div class="card note">
+          <h3>Costs are extra</h3>
+          <p>Fares, fuel, tickets and flights are added on top and paid before the job. Anything with a flight or a hotel gets a real quote first.</p>
+        </div>
+        <div class="card note">
+          <h3>Travel counts</h3>
+          <p>The time it takes me to get there and back is part of the job, so it is part of what the bid has to cover.</p>
+        </div>
       </div>
     </div>
   </section>
 
   <!-- ===== RULES =========================================== -->
-  <section class="sec" id="rules">
-    <div class="rise">
-      <p class="tag">House rules</p>
-      <h2 class="sec__h">Hard is fine.<br><em>Humiliating is not.</em></h2>
-      <p class="sec__p">Make it early, cold, boring, or a long way on foot. Do not try to make me a joke. The test is simple: would I be fine with a ten-second clip of it going around with no explanation?</p>
-    </div>
-    <div class="rules rise">
-      <div class="rulebox rulebox--yes">
-        <h3 class="rulebox__h"><i></i>Go ahead</h3>
-        <ul>
-          <li><b>Hard, boring, early, cold, inconvenient.</b> That is the game.</li>
-          <li><b>Kind.</b> Send me to do something good for somebody.</li>
-          <li><b>Out of my way.</b> The long route, the bus, the stairs.</li>
-          <li><b>Far.</b> If the bid covers the trip and you cover the ticket.</li>
-        </ul>
+  <section class="sec sec--alt" id="rules">
+    <div class="wrap">
+      <div class="sec__head rise">
+        <h2>The rules</h2>
+        <p class="lead">A job can be hard, boring or inconvenient. It cannot be humiliating or harmful. If I would not want a ten-second clip of it shared without context, I will not do it.</p>
       </div>
-      <div class="rulebox rulebox--no">
-        <h3 class="rulebox__h"><i></i>Not happening</h3>
-        <ul>
-          <li><b>Illegal, dangerous, or sexual.</b></li>
-          <li><b>Costumes,</b> or anything that changes how I look.</li>
-          <li><b>Scripts.</b> You buy what I do, not what I say. Shout-outs are in my own words.</li>
-          <li><b>Politics, religion, or plugging a product.</b> Sponsor spots exist for that last one.</li>
-          <li><b>Anything aimed at a person,</b> or at a private address.</li>
-          <li><b>Making a scene,</b> or bothering people who are just at work.</li>
-          <li><b>My kids, my family,</b> or anybody else who did not sign up.</li>
-          <li><b>Live locations.</b> I pick the time, and the video goes up after.</li>
-        </ul>
-      </div>
-      <div class="rulebox rulebox--cash">
-        <h3 class="rulebox__h"><i></i>Money and fair play</h3>
-        <ul>
-          <li><b>Bids start at 1&cent;.</b> Only the winner pays, and pays before the job.</li>
-          <li><b>A bid has to cover its job</b> at about $200 an hour, plus costs.</li>
-          <li><b>Wins under 50&cent; are on the house.</b> Cards cannot go that low.</li>
-          <li><b>One win per person per week,</b> and a daily limit on bids.</li>
-          <li><b>A bid in the last five minutes</b> adds five minutes to the clock.</li>
-          <li><b>If the winner does not pay in time,</b> the next bid wins.</li>
-          <li><b>Names get screened too.</b> When the screen is not sure, a person decides.</li>
-          <li><b>I can turn down any job.</b> If I turn down a winner, nobody is charged.</li>
-        </ul>
+      <div class="rules rise">
+        <div class="card rulebox">
+          <h3>Fine to ask for</h3>
+          <ul class="list list--yes">
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg><span>Jobs that are hard, boring, early, cold or inconvenient</span></li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg><span>Kind jobs that help someone</span></li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg><span>Jobs that take me out of my way</span></li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg><span>Travel, if the bid covers the time and you cover the fare</span></li>
+          </ul>
+        </div>
+        <div class="card rulebox">
+          <h3>Not allowed</h3>
+          <ul class="list list--no">
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg><span>Anything illegal, dangerous or sexual</span></li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg><span>Costumes, or anything that changes how I look</span></li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg><span>Scripts. You choose what I do, not what I say</span></li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg><span>Politics, religion or promoting a product</span></li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg><span>Anything aimed at a specific person or a private address</span></li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg><span>Causing a scene, or bothering people who are at work</span></li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg><span>Anything involving my family, or people who have not agreed to it</span></li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg><span>Live locations. I choose the time and post afterwards</span></li>
+          </ul>
+        </div>
+        <div class="card rulebox rulebox--wide">
+          <h3>Payment and fairness</h3>
+          <ul class="list list--dot list--2">
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Bids start at 1&cent;. Only the winner pays, and pays before the job.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A bid must cover its job at about $200 an hour, plus costs.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A winning bid under 50&cent; is free, because cards cannot charge less.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>One win per person per week, with a daily limit on bids.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A bid in the last five minutes extends bidding by five minutes.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>If the winner does not pay in time, the next highest bid wins.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Names are screened too. If the screen is not sure, a person decides.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>I can decline any job. If I decline the winning bid, nobody is charged.</span></li>
+          </ul>
+        </div>
       </div>
     </div>
   </section>
 
   <!-- ===== SPONSORS ======================================== -->
-  <section class="sec sec--slick" id="sponsors">
-    <div class="rise">
-      <p class="tag">Sponsor spots</p>
-      <h2 class="sec__h sec__h--gold">Put your name<br><em>on the day.</em></h2>
-      <p class="sec__p">A spot on this page and a mention in the video. These are not sold by bid. Ask.</p>
-    </div>
-    <div class="spots rise">
-      <a class="spot" href="https://protectandassist.com/" target="_blank" rel="noopener sponsored">
-        <p class="tag">Spot 01 &middot; The day job</p>
-        <h3 class="spot__h">Protect &amp; Assist</h3>
-        <p>Help look out for an older parent with AI call screening, family alerts and care reminders.</p>
-        <p class="spot__own">House ad. Protect &amp; Assist is my company.</p>
-        <span class="spot__go">protectandassist.com &rarr;</span>
-      </a>
-      <a class="spot spot--open" href="mailto:hello@daddygofaster.com?subject=Sponsor%20spot">
-        <p class="tag">Spot 02 &middot; Open</p>
-        <h3 class="spot__h">Your name here</h3>
-        <p>Family-friendly businesses only.</p>
-        <span class="spot__go">Ask about it &rarr;</span>
-      </a>
-      <a class="spot spot--open" href="mailto:hello@daddygofaster.com?subject=Sponsor%20spot">
-        <p class="tag">Spot 03 &middot; Open</p>
-        <h3 class="spot__h">Your name here</h3>
-        <p>Family-friendly businesses only.</p>
-        <span class="spot__go">Ask about it &rarr;</span>
-      </a>
-    </div>
-  </section>
-
-  <!-- ===== FINALE ========================================== -->
-  <section class="ride" id="watch">
-    <div class="ride__bg" aria-hidden="true">
-      <picture><source srcset="/assets/flag.webp" type="image/webp">
-        <img src="/assets/flag.jpg" alt="" loading="lazy"></picture>
-    </div>
-    <div class="ride__in">
-      <p class="tag">Ride along</p>
-      <h2 class="ride__h rise">See how it went.</h2>
-      <p class="ride__p">Every job ends up on the channel. Subscribe and find out what somebody paid for.</p>
-      <div class="ride__links">
-        <a class="btn btn--fire" href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
-          Watch on YouTube</a>
-        <a class="btn btn--line" href="#bid">Place a bid</a>
+  <section class="sec" id="sponsors">
+    <div class="wrap">
+      <div class="sec__head rise">
+        <h2>Sponsors</h2>
+        <p class="lead">A sponsor gets a spot on this page and a mention in the video.</p>
+      </div>
+      <div class="spots rise">
+        <a class="card spot" href="https://protectandassist.com/" target="_blank" rel="noopener sponsored">
+          <span class="spot__k">Sponsor</span>
+          <h3>Protect &amp; Assist</h3>
+          <p>Help look out for an older parent with AI call screening, family alerts and care reminders.</p>
+          <p class="spot__own">Protect &amp; Assist is my company.</p>
+          <span class="spot__go">Visit protectandassist.com</span>
+        </a>
+        <a class="card spot spot--open" href="mailto:hello@daddygofaster.com?subject=Sponsoring%20a%20day">
+          <span class="spot__k">Open spot</span>
+          <h3>Sponsor a day</h3>
+          <p>Open to family-friendly businesses.</p>
+          <span class="spot__go">Email hello@daddygofaster.com</span>
+        </a>
       </div>
     </div>
   </section>
 
-  <div class="flagrule"></div>
+  <!-- ===== CLOSING CALL ==================================== -->
+  <section class="close">
+    <div class="wrap">
+      <h2>What should I do tomorrow?</h2>
+      <p>The highest bid decides. Bids start at one cent.</p>
+      <div class="close__go">
+        <a class="btn btn--primary" href="#bid">Place a bid</a>
+        <a class="btn btn--ghost" href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">Watch on YouTube</a>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer class="foot">
-  <span class="foot__mark"><i class="stripe"></i>DaddyGoFaster</span>
-  <nav class="foot__links" aria-label="Elsewhere">
-    <a href="#rules">Rules</a>
-    <a href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">YouTube</a>
-    <a href="https://www.etsy.com/shop/DaddyGoFaster" target="_blank" rel="noopener">Etsy</a>
-    <a href="mailto:hello@daddygofaster.com">Say hello</a>
-  </nav>
-  <span class="foot__meta">
-    &copy; 2026 DaddyGoFaster &middot; Made loud in the USA<br>
-    Flag photo: CC0
-  </span>
+  <div class="wrap foot__in">
+    <span class="logo">DaddyGo<b>Faster</b></span>
+    <span class="foot__meta">&copy; 2026 DaddyGoFaster</span>
+    <nav class="foot__links" aria-label="Footer">
+      <a href="#rules">Rules</a>
+      <a href="#sponsors">Sponsors</a>
+      <a href="https://www.youtube.com/@DaddyGoFaster" target="_blank" rel="noopener">YouTube</a>
+      <a href="mailto:hello@daddygofaster.com">Contact</a>
+    </nav>
+  </div>
 </footer>
+
+<div class="dock" id="dock">
+  <div class="dock__text"><span id="dockK">Bids start at</span><b class="num" id="dockV">1&cent;</b></div>
+  <a class="btn btn--primary btn--sm" href="#bid">Place a bid</a>
+</div>
 
 <script>
 (function(){
@@ -593,6 +567,7 @@ a.spot:hover{border-color:var(--nitro)}
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var demo = /[?&]demo\b/.test(location.search);
   var $ = function(id){ return document.getElementById(id); };
+  var open = false, highCents = 0, closesAt = null, timer = null;
 
   /* ---------- money and time ---------- */
   function toCents(str){
@@ -606,7 +581,7 @@ a.spot:hover{border-color:var(--nitro)}
   function plural(n, word){ return n + ' ' + word + (n === 1 ? '' : 's'); }
   function covers(cents){
     var sec = cents / 100 / CONFIG.rate * 3600;
-    if(sec < 1) return sec.toFixed(2) + ' seconds';
+    if(sec < 1) return 'under a second';
     if(sec < 90) return plural(Math.round(sec), 'second');
     var min = Math.round(sec / 60);
     if(min < 60) return 'about ' + plural(min, 'minute');
@@ -615,10 +590,10 @@ a.spot:hover{border-color:var(--nitro)}
   }
   function ago(iso){
     var s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-    if(s < 60) return 'just now';
-    if(s < 3600) return Math.floor(s / 60) + 'm ago';
-    if(s < 86400) return Math.floor(s / 3600) + 'h ago';
-    return Math.floor(s / 86400) + 'd ago';
+    if(s < 60) return 'Just now';
+    if(s < 3600) return Math.floor(s / 60) + ' min ago';
+    if(s < 86400) return Math.floor(s / 3600) + ' hr ago';
+    return Math.floor(s / 86400) + ' d ago';
   }
   function clock(ms){
     var s = Math.max(0, Math.floor(ms / 1000));
@@ -626,105 +601,117 @@ a.spot:hover{border-color:var(--nitro)}
     return p(Math.floor(s / 3600)) + ':' + p(Math.floor(s % 3600 / 60)) + ':' + p(s % 60);
   }
 
-  /* ---------- hero: finish the sentence ---------- */
-  (function(){
-    var el = $('fill');
-    if(!el || reduce) return;
-    var words = ['faster.', 'by bus.', 'on foot.', 'at 4 AM.', 'uphill.', '\u00a0'];
-    var i = 0;
-    setInterval(function(){
-      if(document.hidden) return;
-      el.classList.add('out');
-      setTimeout(function(){
-        el.textContent = words[i];
-        i = (i + 1) % words.length;
-        el.classList.remove('out');
-      }, 300);
-    }, 2600);
-  })();
-
-  /* ---------- the readout under the bid ---------- */
-  var amount = $('amount'), calc = $('calc');
-  function readout(){
-    var raw = amount.value.trim();
-    if(raw === ''){ calc.textContent = 'Type a number. A penny counts.'; return; }
-    var c = toCents(raw);
-    if(c === null){ calc.textContent = 'Dollars and cents, like 12.50.'; return; }
-    if(c < 1){ calc.textContent = 'One cent is the floor.'; return; }
-    var line = money(c) + ' covers a job of ' + covers(c) + ' at $' + CONFIG.rate + ' an hour.';
-    if(c === 1) line += ' A blink, maybe.';
-    else if(c < CONFIG.freeUnderCents) line += ' Win with this and it is on the house.';
-    else line += ' Costs are on top.';
-    calc.textContent = line;
+  /* ---------- the line under the bid ---------- */
+  var amount = $('amount'), readout = $('readout');
+  function setReadout(lead, rest){
+    readout.textContent = '';
+    if(lead){ var b = document.createElement('b'); b.textContent = lead; readout.appendChild(b); }
+    readout.appendChild(document.createTextNode(rest));
   }
-  amount.addEventListener('input', readout);
+  function refresh(){
+    var raw = amount.value.trim();
+    if(raw === '') return setReadout('', 'Bids start at $0.01.');
+    var c = toCents(raw);
+    if(c === null) return setReadout('', 'Enter dollars and cents, like 12.50.');
+    if(c < 1) return setReadout('', 'The lowest bid is $0.01.');
+    var rest = ' covers a job of ' + covers(c) + '.';
+    if(open && highCents && c <= highCents) rest += ' The high bid is ' + money(highCents) + '.';
+    else if(open && c > highCents) rest += ' That would take the lead.';
+    else if(c < CONFIG.freeUnderCents) rest += ' A winning bid under 50¢ is free.';
+    setReadout(money(c), rest);
+  }
+  amount.addEventListener('input', refresh);
+
+  /* ---------- idea and lead buttons ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('[data-idea]'), function(b){
+    b.addEventListener('click', function(){
+      $('task').value = b.getAttribute('data-idea');
+      amount.focus();
+    });
+  });
+  $('leadChip').addEventListener('click', function(){
+    amount.value = ((highCents + 1) / 100).toFixed(2);
+    refresh();
+    ($('more').hidden ? $('bidBtn') : $('who')).focus();
+  });
 
   /* ---------- the board ---------- */
-  var closesAt = null, timer = null;
+  var LOCK = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="9" width="12" height="8" rx="2"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9"/></svg>';
 
   function row(bid, i){
-    var li = document.createElement('li');
-    li.className = 'board__row' + (i === 0 ? ' board__row--lead' : '');
+    var tr = document.createElement('tr');
+    if(i === 0) tr.className = 'is-lead';
     function cell(cls, text){
-      var s = document.createElement('span');
-      s.className = cls; s.textContent = text; li.appendChild(s); return s;
+      var td = document.createElement('td');
+      td.className = cls; td.textContent = text; tr.appendChild(td); return td;
     }
-    cell('board__rank', (i < 9 ? '0' : '') + (i + 1));
-    cell('board__name', bid.name);
-    var job = cell('board__job', '');
-    var sr = document.createElement('span');
-    sr.className = 'visually-hidden'; sr.textContent = 'Job sealed';
-    job.appendChild(sr);
-    cell('board__amt', money(bid.amountCents));
-    cell('board__age', ago(bid.placedAt));
-    return li;
+    cell('c-rank num', String(i + 1));
+    var name = cell('c-name', bid.name);
+    if(i === 0){
+      var badge = document.createElement('span');
+      badge.className = 'badge'; badge.textContent = 'Leading';
+      name.appendChild(badge);
+    }
+    var job = cell('c-job', '');
+    job.innerHTML = '<span class="hidden-job">' + LOCK + 'Hidden</span>';
+    cell('c-bid num', money(bid.amountCents));
+    cell('c-when', ago(bid.placedAt));
+    return tr;
   }
 
   function tick(){
     if(!closesAt) return;
     var left = closesAt - Date.now();
-    $('slipClock').textContent = left > 0 ? clock(left) : 'Closed';
-    if(left <= 0){ $('slipFlag').textContent = 'Closed'; clearInterval(timer); }
+    $('statClock').textContent = left > 0 ? clock(left) : 'Closed';
+    if(left <= 0) clearInterval(timer);
   }
 
   function paint(data, note){
-    var open = data.status === 'open';
+    open = data.status === 'open';
     var bids = (data.bids || []).slice().sort(function(a, b){ return b.amountCents - a.amountCents; });
-    var list = $('boardList');
-    list.textContent = '';
-    bids.forEach(function(b, i){ list.appendChild(row(b, i)); });
-    list.hidden = bids.length === 0;
-    $('boardEmpty').hidden = bids.length > 0;
-    if(bids.length === 0 && open){
-      $('boardEmpty').textContent = 'No bids yet. Right now a penny wins the day.';
-    }
-    var n = $('boardNote');
-    n.hidden = !note; n.textContent = note || '';
-    n.className = 'board__note rise in' + (demo ? ' board__note--demo' : '');
+    highCents = bids.length ? bids[0].amountCents : 0;
 
-    $('slipFlag').textContent = open ? 'Bidding open' : (data.status === 'closed' ? 'Closed' : 'Not open yet');
-    $('slipHigh').textContent = bids.length ? money(bids[0].amountCents) : '—';
-    $('slipCount').textContent = String(bids.length);
+    var body = $('boardBody');
+    body.textContent = '';
+    bids.forEach(function(b, i){ body.appendChild(row(b, i)); });
+    $('boardTable').hidden = bids.length === 0;
+    $('boardEmpty').hidden = bids.length > 0;
+    if(open && bids.length === 0) $('boardEmptyText').textContent = 'One cent would win right now.';
+    if(note){
+      $('boardNote').textContent = note;
+      $('boardNote').className = 'board__note' + (demo ? ' board__note--demo' : '');
+    }
+
+    $('statHigh').textContent = bids.length ? money(highCents) : '—';
+    $('statCount').textContent = String(bids.length);
+    $('pill').className = 'pill' + (open ? ' is-open' : '');
+    $('pillText').textContent = open ? 'Bidding is open' : (data.status === 'closed' ? 'Bidding is closed for today' : 'Bidding opens soon');
+
     if(open && data.closesAt){
       closesAt = new Date(data.closesAt).getTime();
-      $('slipClockLabel').textContent = 'Closes in';
+      $('statClockLabel').textContent = 'Closes in';
       tick();
       clearInterval(timer);
       timer = setInterval(tick, 1000);
     }
-    if(open){
-      var b = $('bidBtn');
-      b.disabled = false; b.textContent = 'Send it';
-      $('bidSoon').hidden = true;
-      var cta = $('heroCta');
-      cta.textContent = 'Place a bid'; cta.setAttribute('href', '#bid');
-    }
+    $('bidBtn').hidden = !open;
+    $('notifyBtn').hidden = open;
+    $('bidFine').textContent = open
+      ? 'Free to bid. You only pay if you win.'
+      : 'Bidding is not open yet. This opens an email asking to be told when it is.';
+
+    $('leadWrap').hidden = !(open && bids.length);
+    if(open && bids.length) $('leadChip').textContent = 'Take the lead: ' + money(highCents + 1);
+    $('boardCta').textContent = open && bids.length ? 'Beat the high bid' : 'Place a bid';
+    $('dockK').textContent = bids.length ? 'High bid' : 'Bids start at';
+    $('dockV').textContent = bids.length ? money(highCents) : '1¢';
+    refresh();
   }
 
   function load(){
     fetch(CONFIG.api + '/board', {headers: {'Accept': 'application/json'}})
       .then(function(r){ if(!r.ok) throw new Error('board ' + r.status); return r.json(); })
-      .then(function(d){ paint(d, 'Jobs are sealed until the video.'); })
+      .then(function(d){ paint(d); })
       .catch(function(){ /* leave the page in its not-open state */ });
   }
 
@@ -734,11 +721,11 @@ a.spot:hover{border-color:var(--nitro)}
       status: 'open',
       closesAt: new Date(now + 193 * min + 12000).toISOString(),
       bids: [
-        {name: 'backseat_driver', amountCents: 4200, placedAt: new Date(now - 14 * min).toISOString()},
-        {name: 'nitro_nan',       amountCents: 3500, placedAt: new Date(now - 52 * min).toISOString()},
-        {name: 'the_neighbor',    amountCents: 1250, placedAt: new Date(now - 131 * min).toISOString()},
-        {name: 'cold_start',      amountCents: 400,  placedAt: new Date(now - 190 * min).toISOString()},
-        {name: 'penny_pincher',   amountCents: 1,    placedAt: new Date(now - 305 * min).toISOString()}
+        {name: 'mike_r',    amountCents: 4200, placedAt: new Date(now - 14 * min).toISOString()},
+        {name: 'sarahk',    amountCents: 3500, placedAt: new Date(now - 52 * min).toISOString()},
+        {name: 'tj88',      amountCents: 1250, placedAt: new Date(now - 131 * min).toISOString()},
+        {name: 'dana_w',    amountCents: 400,  placedAt: new Date(now - 190 * min).toISOString()},
+        {name: 'first_bid', amountCents: 1,    placedAt: new Date(now - 305 * min).toISOString()}
       ]
     }, 'Sample data for preview. These are not real bids.');
   } else if(CONFIG.api){
@@ -747,23 +734,30 @@ a.spot:hover{border-color:var(--nitro)}
   }
 
   /* ---------- sending a bid ---------- */
-  var form = $('bidForm'), msg = $('bidMsg'), btn = $('bidBtn');
+  var form = $('bid'), msg = $('bidMsg'), btn = $('bidBtn');
   function say(text, ok){
     msg.hidden = false;
     msg.textContent = text;
-    msg.className = 'form__msg' + (ok ? ' form__msg--ok' : '');
+    msg.className = 'msg' + (ok ? ' msg--ok' : '');
   }
   form.addEventListener('submit', function(e){
     e.preventDefault();
-    if(btn.disabled) return;
+    if(!open || btn.disabled) return;
     var task = $('task').value.trim(), name = $('who').value.trim(), email = $('email').value.trim();
     var cents = toCents(amount.value.trim());
-    if(task.length < 10) return say('Say what the job is. A few more words.');
-    if(name.length < 2) return say('Pick a name for the board.');
-    if(cents === null || cents < 1) return say('Put in a bid. One cent is the floor.');
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return say('That email does not look right.');
+    if(task.length < 10){ $('task').focus(); return say('Describe the job in a few more words.'); }
+    if(cents === null || cents < 1){ amount.focus(); return say('Enter a bid of at least $0.01.'); }
+    if($('more').hidden){                 /* step two: who is bidding */
+      $('more').hidden = false;
+      msg.hidden = true;
+      btn.textContent = 'Place bid';
+      $('who').focus();
+      return;
+    }
+    if(name.length < 2){ $('who').focus(); return say('Add a name to show on the board.'); }
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $('email').focus(); return say('Check the email address.'); }
 
-    if(demo) return say('Preview only. Nothing was sent. With bidding open, the screen answers right here.', true);
+    if(demo) return say('This is a preview, so nothing was sent. When bidding is open, your answer appears here.', true);
 
     btn.disabled = true; btn.textContent = 'Sending';
     fetch(CONFIG.api + '/bids', {
@@ -774,12 +768,42 @@ a.spot:hover{border-color:var(--nitro)}
       .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, d: d}; }); })
       .then(function(res){
         var d = res.d || {};
-        say(d.message || (res.ok ? 'Bid received.' : 'That did not go through. Try again.'), d.verdict === 'qualified');
+        say(d.message || (res.ok ? 'Your bid is in.' : 'That did not go through. Please try again.'), d.verdict === 'qualified');
         if(d.verdict === 'qualified'){ $('task').value = ''; load(); }
       })
       .catch(function(){ say('That did not go through. Check your connection and try again.'); })
-      .then(function(){ btn.disabled = false; btn.textContent = 'Send it'; });
+      .then(function(){ btn.disabled = false; btn.textContent = 'Place bid'; });
   });
+
+  /* ---------- before bidding opens: the button writes the email for them ---------- */
+  $('notifyBtn').addEventListener('click', function(){
+    var task = $('task').value.trim(), cents = toCents(amount.value.trim());
+    var lines = ['Please tell me when bidding opens.'];
+    if(task) lines.push('', 'My idea: ' + task);
+    if(cents) lines.push('My bid: ' + money(cents));
+    this.href = 'mailto:hello@daddygofaster.com?subject=' + encodeURIComponent('Tell me when bidding opens') +
+      '&body=' + encodeURIComponent(lines.join('\n'));
+  });
+
+  /* ---------- "Place a bid" links put the cursor in the form on larger screens ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('a[href="#bid"]'), function(a){
+    a.addEventListener('click', function(){
+      if(window.matchMedia('(min-width: 901px)').matches){
+        setTimeout(function(){ $('task').focus({preventScroll: true}); }, reduce ? 0 : 450);
+      }
+    });
+  });
+
+  /* ---------- phone dock: show until the form's own button is on screen ---------- */
+  var dock = $('dock'), seen = {};
+  if('IntersectionObserver' in window){
+    var watch = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ seen[en.target.id] = en.isIntersecting; });
+      dock.classList.toggle('is-on', !(seen.bidBtn || seen.notifyBtn));
+    }, {threshold: 0});
+    watch.observe($('bidBtn'));
+    watch.observe($('notifyBtn'));
+  }
 
   /* ---------- reveal on scroll ---------- */
   var risers = Array.prototype.slice.call(document.querySelectorAll('.rise'));
@@ -788,7 +812,7 @@ a.spot:hover{border-color:var(--nitro)}
       entries.forEach(function(en){
         if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); }
       });
-    }, {rootMargin: '0px 0px -10% 0px', threshold: .06});
+    }, {rootMargin: '0px 0px -8% 0px', threshold: .05});
     risers.forEach(function(el){ io.observe(el); });
   } else {
     risers.forEach(function(el){ el.classList.add('in'); });

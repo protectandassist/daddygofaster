@@ -9,8 +9,9 @@ job wins, and only the winner pays.
 ## Status
 
 The page is built. **Bidding is not switched on.** Until a bid service exists and its
-address is set in `index.html`, the page says "Bidding opens soon", the send button is
-disabled, and nothing a visitor types leaves their browser.
+address is set in `index.html`, the page says "Bidding opens soon" and the form's only
+button opens an email asking to be told when it does. Nothing a visitor types is sent to a
+server.
 
 ## Files
 
@@ -21,12 +22,12 @@ disabled, and nothing a visitor types leaves their browser.
 | `404.html` | "Wrong exit" error page. |
 | `CNAME` | Maps the site to `daddygofaster.com`. **Do not delete.** |
 | `.nojekyll` | Tells Pages to serve files as-is instead of running Jekyll. |
-| `assets/` | Flag photo, favicons, share card (`og-bid.jpg`), and the images the legacy page uses. |
+| `assets/` | Favicons, share card (`og-bid.jpg`), and the images the legacy page uses. |
 | `robots.txt`, `sitemap.xml` | Search engine basics. |
 
 ## The rules the page states
 
-These came from the owner. Change the wording in `index.html` (sections `#how`, `#rate`,
+These came from the owner. Change the wording in `index.html` (sections `#how`, `#covers`,
 `#rules`) if a rule changes; the bid service has to enforce the same thing.
 
 - A bid is a job plus an amount. The floor is 1¢.
@@ -80,8 +81,8 @@ The service needs CORS enabled for `https://daddygofaster.com`.
 ## Previewing with sample bids
 
 Add `?demo` to the address (`http://127.0.0.1:8899/?demo`). The board fills with clearly
-labelled sample bids and a running countdown, and the send button answers "Preview only.
-Nothing was sent." Demo mode never contacts a server.
+labelled sample bids and a running countdown, and the form answers "This is a preview, so
+nothing was sent." Demo mode never contacts a server.
 
 ## Local preview
 
@@ -95,9 +96,13 @@ the repo root rather than opening `index.html` off the filesystem.
 ## Editing
 
 Design tokens (every color in the site) live in the `:root` block at the top of the
-`<style>` tag. The sponsor spots are the three `.spot` blocks in `#sponsors`; the first is
+`<style>` tag. The sponsor spots are the two `.spot` blocks in `#sponsors`; the first is
 the Protect & Assist house ad, whose one-line description is copied from the Protect &
 Assist home page and should stay in step with it.
+
+The page is written to get a visitor to bid: the bid form is the first thing on screen,
+every section ends near a "Place a bid" button, and phones get a fixed bid bar. Keep the
+wording plain. Section headings say what the section is; no slogans.
 
 ## Deploying
 
