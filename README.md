@@ -88,10 +88,11 @@ the repo root rather than opening `index.html` off the filesystem.
 
 ## Editing
 
-The hero shows 12 curated challenge ideas with three locally hosted illustrative images.
+The hero shows 18 curated challenge ideas with three locally hosted illustrative images.
 Ideas rotate every nine seconds, run through a shuffled deck, and avoid starting a new
 visit with the last displayed idea (when browser storage is available). Visitors can
-shuffle, pause, or filter by outdoor, workshop, or community ideas. Rotation pauses
+shuffle, pause, or filter by outdoor challenges, creative challenges, or chores with a
+catch. Each idea has a concrete constraint and something to reveal on camera. Rotation pauses
 while the hero is hovered, its controls or the bid form have focus, the hero is offscreen,
 or the tab is hidden. Reduced-motion users start with automatic rotation paused.
 "Use this idea" fills the task field but never sends a bid; automatic changes only

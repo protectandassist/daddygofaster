@@ -458,10 +458,10 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
               <img id="scene-workshop" src="/assets/idea-workshop.webp" width="1672" height="941" alt="" decoding="async">
               <img id="scene-cleanup" src="/assets/idea-cleanup.webp" width="1672" height="941" alt="" decoding="async">
             </div>
-            <div class="idea-scene__top"><span class="idea-tag" id="ideaCategory">The great outdoors</span><span class="idea-scene__counter num" id="ideaCount">01 / 12</span></div>
+            <div class="idea-scene__top"><span class="idea-tag" id="ideaCategory">Take the long way</span><span class="idea-scene__counter num" id="ideaCount">01 / 18</span></div>
             <div class="idea-scene__caption">
-              <p>What if tomorrow I…</p>
-              <h2 id="ideaTitle">Beat the sun out of bed?</h2>
+              <p>Make me work for it</p>
+              <h2 id="ideaTitle">Walk five miles for one doughnut.</h2>
               <a href="#bid" id="ideaUse">Use this idea <span aria-hidden="true">↗</span></a>
             </div>
           </div>
@@ -469,13 +469,13 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
             <div class="idea-filters" role="group" aria-label="Choose an idea category">
               <button class="idea-filter idea-filter--all" type="button" data-category="all" aria-pressed="true" aria-label="All challenge ideas">All</button>
               <button class="idea-filter" type="button" data-category="sunrise" aria-pressed="false" aria-label="Outdoor ideas" title="Outdoor ideas"><img src="/assets/idea-sunrise.webp" width="44" height="44" alt=""></button>
-              <button class="idea-filter" type="button" data-category="workshop" aria-pressed="false" aria-label="Workshop ideas" title="Workshop ideas"><img src="/assets/idea-workshop.webp" width="44" height="44" alt=""></button>
-              <button class="idea-filter" type="button" data-category="cleanup" aria-pressed="false" aria-label="Community ideas" title="Community ideas"><img src="/assets/idea-cleanup.webp" width="44" height="44" alt=""></button>
+              <button class="idea-filter" type="button" data-category="workshop" aria-pressed="false" aria-label="Creative challenge ideas" title="Creative challenge ideas"><img src="/assets/idea-workshop.webp" width="44" height="44" alt=""></button>
+              <button class="idea-filter" type="button" data-category="cleanup" aria-pressed="false" aria-label="Chores with a catch" title="Chores with a catch"><img src="/assets/idea-cleanup.webp" width="44" height="44" alt=""></button>
             </div>
             <button class="idea-control" id="ideaShuffle" type="button" aria-label="Show another challenge idea"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h2c4 0 6 10 10 10h2M14 12l3 3-3 3M3 15h2c1 0 2-1 3-2M12 7c1-1 2-2 3-2h2M14 2l3 3-3 3"/></svg>Shuffle</button>
             <button class="idea-control idea-control--pause" id="ideaPause" type="button" aria-label="Pause changing ideas" title="Pause changing ideas"><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M5 4h3v12H5zM12 4h3v12h-3z"/></svg></button>
           </div>
-          <p class="idea-note">A little inspiration. The job you bid on is up to you.</p>
+          <p class="idea-note">Pick a challenge. Add a twist. Make tomorrow worth watching.</p>
           <span class="visually-hidden" id="ideaAnnouncement" role="status" aria-live="polite"></span>
         </div>
         <ul class="ticks">
@@ -505,11 +505,11 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <div class="mine" id="mine" aria-live="polite" hidden></div>
           <div class="field">
             <label for="task">What should I do tomorrow?</label>
-            <textarea id="task" name="task" rows="2" maxlength="280" required placeholder="Walk the two miles to the hardware store instead of driving."></textarea>
+            <textarea id="task" name="task" rows="2" maxlength="280" required placeholder="Walk a five-mile round trip for one doughnut. Film the journey and tell us if it was worth it."></textarea>
             <div class="chips" aria-label="Ideas">
-              <button class="chipbtn" type="button" data-idea="Walk a local public trail at sunrise and film the view.">Sunrise walk</button>
-              <button class="chipbtn" type="button" data-idea="Build a simple wooden birdhouse from scrap wood.">Build a birdhouse</button>
-              <button class="chipbtn" type="button" data-idea="Spend 30 minutes picking up ordinary litter in a public park using gloves and a grabber.">Clean up a park</button>
+              <button class="chipbtn" type="button" data-idea="Walk a five-mile round trip to buy one doughnut. Film the journey and the verdict on whether it was worth it.">The five-mile doughnut</button>
+              <button class="chipbtn" type="button" data-idea="Spend up to 90 minutes building a tabletop chain-reaction machine from household objects that ends by ringing a desk bell. Show the failed attempts and a complete run.">Overengineer a bell</button>
+              <button class="chipbtn" type="button" data-idea="Spend up to 45 minutes cleaning a two-foot-by-two-foot square of your own patio using a toothbrush and water. Film the timer, the effort and the before-and-after reveal.">Toothbrush vs. patio</button>
             </div>
           </div>
           <p class="raising" id="raiseBar" hidden>You are raising your bid on this job. <button type="button" class="linkbtn" id="raiseCancel">Place a different bid</button></p>
@@ -844,20 +844,26 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
      These are suggestions, never real bids. Rotation never edits a typed job.
      Each shuffled deck runs without repeats; a new visit avoids the last idea. */
   var ideas = [
-    {scene:'sunrise', title:'Beat the sun out of bed?', task:'Walk a local public trail at sunrise and film the view.'},
-    {scene:'sunrise', title:'Take the long way home?', task:'Walk to a nearby store instead of driving, with the distance agreed in advance.'},
-    {scene:'sunrise', title:'Trade screen time for trail time?', task:'Spend an hour walking an easy public trail without checking your phone except for filming.'},
-    {scene:'sunrise', title:'Find a view worth the walk?', task:'Walk to a scenic public viewpoint on a marked, easy trail and film the view.'},
-    {scene:'workshop', title:'Build something for the birds?', task:'Build a simple wooden birdhouse from scrap wood.'},
-    {scene:'workshop', title:'Give an old chair a second chance?', task:'Sand and refinish an old wooden chair you already own.'},
-    {scene:'workshop', title:'Turn leftover wood into a planter?', task:'Build a small planter from leftover wood.'},
-    {scene:'workshop', title:'Finally sort that mystery drawer?', task:'Spend 30 minutes organizing a drawer of loose screws and hardware.'},
-    {scene:'cleanup', title:'Make one park a little better?', task:'Spend 30 minutes picking up ordinary litter in a public park using gloves and a grabber.'},
-    {scene:'cleanup', title:'Fill a bag. Leave a better trail?', task:'Spend an hour collecting ordinary litter along a public walking path using gloves and a grabber.'},
-    {scene:'cleanup', title:'Give a picnic spot a fresh start?', task:'Spend 20 minutes collecting ordinary litter around a public park picnic area using gloves and a grabber.'},
-    {scene:'cleanup', title:'Make a lakeside walk count?', task:'Spend 30 minutes picking up ordinary litter along a safe public lakeside path, staying out of the water.'}
+    {scene:'sunrise', title:'Walk five miles for one doughnut.', task:'Walk a five-mile round trip to buy one doughnut. Film the journey and the verdict on whether it was worth it.'},
+    {scene:'sunrise', title:'Let a coin choose my next turn.', task:'Take a 45-minute walk on public pedestrian routes, flipping a coin at each safe junction to choose left or right. Then find your way back.'},
+    {scene:'sunrise', title:'Carry a watermelon. Two miles.', task:'Carry one watermelon on a two-mile walk without a bag or wheels. Bring it home and cut it open at the finish.'},
+    {scene:'sunrise', title:'Draw a dinosaur with my walk.', task:'Plan and walk a route of up to three miles on public paths so the GPS trace looks like a dinosaur. Reveal the finished shape after the walk.'},
+    {scene:'sunrise', title:'Earn my coffee with 10,000 steps.', task:'Complete 10,000 walking steps before your first coffee, then show the step count and the coffee you earned.'},
+    {scene:'sunrise', title:'Find A to Z without using a sign.', task:'Spend up to 90 minutes on a public walking route photographing natural shapes that look like letters A through Z. No printed letters or signs; reveal your alphabet at the end.'},
+    {scene:'workshop', title:'Overengineer ringing a bell.', task:'Spend up to 90 minutes building a tabletop chain-reaction machine from household objects that ends by ringing a desk bell. Show the failed attempts and a complete run.'},
+    {scene:'workshop', title:'Make spaghetti hold 100 coins.', task:'Build a tabletop bridge from dry spaghetti and glue, then gradually load it with 100 coins. Film the build and find out how many it holds before it breaks.'},
+    {scene:'workshop', title:'Turn the garage into mini golf.', task:'Build a homemade miniature-golf hole across your garage with at least three obstacles. Film attempts until you make a hole in one or 60 minutes of trying are up.'},
+    {scene:'workshop', title:'Build a card tower taller than me.', task:'Try to build a playing-card tower taller than you in 90 minutes. No tape, glue or supports. Show the tallest attempt, even if it collapses.'},
+    {scene:'workshop', title:'Sort 500 coins with chopsticks.', task:'Sort 500 mixed coins into denominations using only chopsticks to move them. Film the timer and the final piles.'},
+    {scene:'workshop', title:'Make a gas station feast.', task:'Buy up to $20 of food at a gas station and turn it into a three-course dinner at home. Show the receipt, cook the meal and give an unscripted taste test.'},
+    {scene:'workshop', title:'Turn a cardboard box into an arcade.', task:'Spend two hours turning a cardboard box into a working tabletop arcade game with a score system. Build it from household materials, then play a round on camera.'},
+    {scene:'cleanup', title:'Clean a patio with a toothbrush.', task:'Spend up to 45 minutes cleaning a two-foot-by-two-foot square of your own patio using a toothbrush and water. Film the timer, the effort and the before-and-after reveal.'},
+    {scene:'cleanup', title:'Pick up 100 pieces. Beat the clock.', task:'Pick up 100 pieces of ordinary litter in a public park using gloves and a grabber. Time the cleanup and show the five most surprising finds at the end.'},
+    {scene:'cleanup', title:'Rake leaves with a dinner fork.', task:'Spend 30 minutes clearing fallen leaves from a six-foot-by-six-foot patch of your own yard using only a dinner fork. Show how much ground you actually cleared.'},
+    {scene:'cleanup', title:'Make a cleanup gadget from junk.', task:'Spend one hour making a hand-operated litter grabber from scrap materials, then test whether it can pick up 20 clean empty cans without dropping them.'},
+    {scene:'cleanup', title:'Rescue the ugliest $10 thrift find.', task:'Find an item for $10 or less at a thrift store, spend up to two hours repairing or improving it at home, and reveal the before and after. Film the project, not store staff or customers.'}
   ];
-  var sceneNames = {sunrise:'The great outdoors', workshop:'Make something', cleanup:'Do a little good'};
+  var sceneNames = {sunrise:'Take the long way', workshop:'Make it ridiculous', cleanup:'Chores with a catch'};
   var inspiration = $('inspiration'), category = 'all', deck = [], ideaIndex = -1;
   var ideaTimer = null, ideaPaused = reduce, ideaHovered = false, ideaVisible = true;
   try { ideaIndex = Number(localStorage.getItem('dgfIdeaLast') || -1); } catch(e) {}
