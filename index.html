@@ -232,6 +232,10 @@ p{margin:0}
 .field input:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,106,43,.25)}
 .field__hint{margin-top:7px;font-size:.84rem;color:var(--faint)}
 .field__hint--tight{margin-top:-8px}
+.field__label{display:block;margin-bottom:7px;font-size:.9rem;font-weight:600}
+.cardbox{background:var(--field);border:1px solid var(--line-2);border-radius:10px;padding:15px 14px;min-height:50px;transition:border-color .15s,box-shadow .15s}
+.cardbox.StripeElement--focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,106,43,.25)}
+.cardbox.StripeElement--invalid{border-color:#F26D72}
 .money{position:relative}
 .money span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:600;pointer-events:none}
 .money input{padding-left:28px;font-weight:600}
@@ -540,6 +544,11 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
             <p class="field__hint field__hint--tight">Your email is only used to reach you about your bid. It is never shown.</p>
             <label class="check" id="notifyWrap" hidden><input type="checkbox" id="notify" checked>Email me if I am outbid</label>
           </div>
+          <div class="field" id="cardWrap" hidden>
+            <span class="field__label" id="cardLabel">Card</span>
+            <div class="cardbox" id="cardEl" role="group" aria-labelledby="cardLabel"></div>
+            <p class="field__hint">Your bid is held on this card, not charged. If you set a maximum, the hold is for your maximum. Only the winner is charged, and every other hold is released when bidding closes.</p>
+          </div>
           <p class="msg" id="bidMsg" role="status" hidden></p>
           <button class="btn btn--primary btn--block" id="bidBtn" type="submit" hidden>Continue</button>
           <a class="btn btn--primary btn--block" id="notifyBtn" href="mailto:hello@daddygofaster.com?subject=Tell%20me%20when%20bidding%20opens">Tell me when bidding opens</a>
@@ -678,16 +687,17 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         <div class="card rulebox rulebox--wide">
           <h3>Payment and fairness</h3>
           <ul class="list list--dot list--2">
-            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Bids start at 1&cent;. Only the winner pays, and pays before the job.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Bids start at 1&cent;. Only the winner pays: the winner's card is charged when bidding closes.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A bid needs a card. Your bid, or your maximum if you set one, is held on the card and not charged. If you do not win, the hold is released when bidding closes. On a debit card it can take a few days to show again.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Any winning bid includes up to one hour. Bids below $200 stop at one hour. $200–$399.99 allows up to two hours, $400–$599.99 up to three, and so on. I set the actual time within the cap; costs are extra.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A winning bid under 50&cent; is free, because cards cannot charge less.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>One win per person per week, and up to five jobs a day each.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A new high bid in the last five minutes extends bidding by five minutes. While the bids keep climbing, bidding stays open.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>You can raise your bid as often as you like. Send the same job with a higher amount, and the same rules apply.</span></li>
-            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Set a maximum and your bid rises on its own, one cent at a time, only when someone outbids you. Nobody else sees your maximum, and that includes me.</span></li>
-            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>If the winner does not pay in time, the next highest bid wins.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Set a maximum and your bid rises on its own, one cent at a time, only when someone outbids you. Your maximum is never shown on the site.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>If the winner's card does not go through, the next highest bid wins.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Names are screened too. If the screen is not sure, a person decides.</span></li>
-            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>I can decline any job. If I decline the winning bid, nobody is charged.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>I can decline any job. If I decline the winning bid, the winner is refunded in full.</span></li>
           </ul>
         </div>
       </div>
@@ -768,6 +778,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   var $ = function(id){ return document.getElementById(id); };
   var open = false, highCents = 0, closesAt = null, timer = null;
   var alerts = false, roundDay = null, raising = null, baseTitle = document.title;
+  var cardKey = null, stripe = null, cardEl = null, stripeLoading = false;
 
   /* ---------- money and time ---------- */
   function toCents(str){
@@ -974,6 +985,8 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     open = data.status === 'open';
     alerts = Boolean(data.alerts);
     roundDay = data.day || null;
+    cardKey = open && data.cardKey ? data.cardKey : null;
+    if(cardKey) loadStripe();
     $('notifyWrap').hidden = !alerts;
     var bids = (data.bids || []).slice().sort(function(a, b){ return b.amountCents - a.amountCents; });
     highCents = bids.length ? bids[0].amountCents : 0;
@@ -1010,7 +1023,8 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     $('bidBtn').hidden = !open;
     $('notifyBtn').hidden = open || closed;
     $('bidFine').textContent = open
-      ? 'Free to bid. The first hour is included with any winning bid. You only pay if you win.'
+      ? (cardKey ? 'A card holds your bid. The first hour is included with any winning bid. You are only charged if you win.'
+                 : 'Free to bid. The first hour is included with any winning bid. You only pay if you win.')
       : closed
         ? 'Bidding is closed for today. The next round opens this evening.'
         : 'Bidding is not open yet. This opens an email asking to be told when it is.';
@@ -1115,6 +1129,41 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       .catch(function(){ /* the board still works without this */ });
   }
 
+  /* ---------- the card box ----------
+     The card goes from this page straight to Stripe, the card processor. The bid
+     service only ever gets Stripe's id for the card, never the number. */
+  function loadStripe(){
+    if(stripe || stripeLoading || !cardKey) return;
+    stripeLoading = true;
+    var sc = document.createElement('script');
+    sc.src = 'https://js.stripe.com/v3/';
+    sc.onload = function(){
+      stripeLoading = false;
+      try { stripe = window.Stripe(cardKey); } catch (e) { stripe = null; }
+      if(!$('cardWrap').hidden) mountCard();
+    };
+    sc.onerror = function(){ stripeLoading = false; };
+    document.head.appendChild(sc);
+  }
+  function mountCard(){
+    if(cardEl || !stripe) return;
+    cardEl = stripe.elements().create('card', {style: {
+      base: {color: '#F5F5F6', iconColor: '#A6A9B3', fontSize: '16px', fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', '::placeholder': {color: '#6F727D'}},
+      invalid: {color: '#F26D72', iconColor: '#F26D72'}
+    }});
+    cardEl.mount('#cardEl');
+  }
+  function showCard(){
+    if(!cardKey) return;
+    $('cardWrap').hidden = false;
+    loadStripe();
+    mountCard();
+  }
+  function hideCard(){
+    $('cardWrap').hidden = true;
+    if(cardEl) cardEl.clear();
+  }
+
   /* ---------- raising one of them ---------- */
   function startRaise(entry, standing){
     raising = entry;
@@ -1123,6 +1172,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     document.querySelector('#bid .chips[aria-label="Ideas"]').hidden = true;
     $('raiseBar').hidden = false;
     $('more').hidden = true;
+    hideCard();   /* a raise uses the card already on the bid; the box comes back if the service asks */
     amount.value = standing && standing.standing !== 'leading' && standing.highCents ? ((standing.highCents + 1) / 100).toFixed(2) : '';
     $('max').value = '';
     msg.hidden = true;
@@ -1136,6 +1186,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     $('task').readOnly = false;
     document.querySelector('#bid .chips[aria-label="Ideas"]').hidden = false;
     $('raiseBar').hidden = true;
+    hideCard();
     amount.value = ''; $('max').value = '';
     msg.hidden = true;
     btn.textContent = 'Continue';
@@ -1163,6 +1214,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     if(maxRaw !== '' && (maxCents === null || maxCents < cents)){ $('max').focus(); return say('Your maximum has to be at least your bid.'); }
     if(!raising && $('more').hidden){     /* step two: who is bidding */
       $('more').hidden = false;
+      showCard();
       msg.hidden = true;
       btn.textContent = 'Place bid';
       $('who').focus();
@@ -1179,25 +1231,61 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       ? {token: raising.token, amountCents: cents, maxCents: maxCents}
       : {task: task, name: name, email: email, amountCents: cents, maxCents: maxCents, notify: alerts && $('notify').checked};
     btn.disabled = true; btn.textContent = 'Sending';
-    fetch(CONFIG.api + '/bids', {
+    if(cardKey && !$('cardWrap').hidden){
+      if(!stripe || !cardEl) return stop('The card box is still loading. Try again in a moment.');
+      btn.textContent = 'Checking card';
+      stripe.createPaymentMethod({type: 'card', card: cardEl, billing_details: raising ? {} : {email: email}}).then(function(r){
+        if(r.error) return stop(r.error.message || 'Check the card details.');
+        body.paymentMethod = r.paymentMethod.id;
+        send(body, task);
+      }, function(){ stop('The card could not be checked. Check your connection and try again.'); });
+    } else {
+      send(body, task);
+    }
+  });
+
+  function stop(text){
+    if(text) say(text);
+    btn.disabled = false; btn.textContent = buttonLabel();
+  }
+  function post(path, body){
+    return fetch(CONFIG.api + path, {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
       body: JSON.stringify(body)
-    })
-      .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, d: d}; }); })
-      .then(function(res){
-        var d = res.d || {};
-        var landed = d.verdict === 'qualified' || d.verdict === 'held';
-        say(d.message || (res.ok ? 'Your bid is in.' : 'That did not go through. Please try again.'), landed);
-        if(d.token) remember(d.token, task);
-        /* the job stays in the box, so raising it is one number and one click */
-        if(landed){ amount.value = ''; $('max').value = ''; refresh(); }
-        if(d.token && !raising && (landed || d.verdict === 'short')) startRaiseQuietly(d.token, task);
-        load();
-      })
+    }).then(function(r){ return r.json().then(function(d){ return {ok: r.ok, d: d}; }); });
+  }
+  function send(body, task){
+    post('/bids', body)
+      .then(function(res){ return answer(res, task); })
       .catch(function(){ say('That did not go through. Check your connection and try again.'); })
-      .then(function(){ btn.disabled = false; btn.textContent = buttonLabel(); });
-  });
+      .then(function(){ stop(); });
+  }
+  function answer(res, task){
+    var d = res.d || {};
+    /* the bidder's bank wants them to confirm the card: Stripe shows the bank's
+       own check, then the service reads the result from Stripe itself */
+    if(d.verdict === 'card_action' && d.clientSecret){
+      if(!stripe) return say('The card check could not load. Reload the page and try again.');
+      if(d.token) remember(d.token, task);
+      say(d.message || 'Your bank wants you to confirm this card.', true);
+      btn.textContent = 'Waiting for your bank';
+      return stripe.confirmCardPayment(d.clientSecret)
+        .then(function(){ return post('/bids/confirm', {token: d.token}); })
+        .then(function(next){ return answer(next, task); });
+    }
+    if(d.verdict === 'card' || d.verdict === 'declined'){
+      showCard();
+      return say(d.message || 'Add a card to place this bid.');
+    }
+    var landed = d.verdict === 'qualified' || d.verdict === 'held';
+    say(d.message || (res.ok ? 'Your bid is in.' : 'That did not go through. Please try again.'), landed);
+    if(d.token) remember(d.token, task);
+    /* the job stays in the box, so raising it is one number and one click */
+    if(landed){ amount.value = ''; $('max').value = ''; hideCard(); refresh(); }
+    if(d.token && !raising && (landed || d.verdict === 'short')) startRaiseQuietly(d.token, task);
+    load();
+  }
 
   /* after a bid lands, the form is already set up to raise that same bid */
   function startRaiseQuietly(token, task){
@@ -1206,6 +1294,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     document.querySelector('#bid .chips[aria-label="Ideas"]').hidden = true;
     $('raiseBar').hidden = false;
     $('more').hidden = true;
+    hideCard();
   }
 
   /* ---------- before bidding opens: the button writes the email for them ---------- */

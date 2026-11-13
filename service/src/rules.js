@@ -158,6 +158,27 @@ export function raiseVerdict(existing, amountCents, maxCents = null) {
     message: verdict.status === 'qualified' ? `${now}. Any winning bid includes up to one hour.` : verdict.message };
 }
 
+// ---- card holds ---------------------------------------------------------------
+
+// What has to be held on the card for a bid: the most it could end up at, which
+// is its auto-bid maximum when it has one. Cards cannot hold less than 50 cents.
+export function holdTarget(amountCents, maxCents = null) {
+  return Math.max(amountCents, maxCents ?? 0, LIMITS.freeUnderCents);
+}
+
+// How much more to hold when `heldCents` is already held. Zero when that covers it.
+export function extraHold(targetCents, heldCents) {
+  const more = targetCents - heldCents;
+  return more <= 0 ? 0 : Math.max(more, LIMITS.freeUnderCents);
+}
+
+// How much of one hold to charge when `dueCents` is still owed. Zero means
+// release the hold: either nothing is owed, or what is left is under the card
+// minimum and is let go.
+export function captureSlice(holdCents, dueCents) {
+  return dueCents < LIMITS.freeUnderCents ? 0 : Math.min(holdCents, dueCents);
+}
+
 // ---- auto-bidding -------------------------------------------------------------
 
 // Each qualifying bid has an amount and, optionally, a hidden maximum it may rise

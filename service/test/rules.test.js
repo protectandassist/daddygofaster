@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   money, minCentsFor, coveredMinutes, timeAllowance, approveDuration, describeMinutes, validateBid, decide,
   localParts, zonedToUtc, dayShift, nominalAuction, extendedClose, pickWinner, applyScreen, raiseVerdict, resolveStandings, validateMax, validateRaise, LIMITS, REFUSALS, HELD_MESSAGE,
+  holdTarget, extraHold, captureSlice,
 } from '../src/rules.js';
 
 const TZ = 'America/Chicago';
@@ -240,4 +241,27 @@ test('auto-bids can reach a time tier but never bypass owner duration approval',
   assert.equal(raiseVerdict(short, 2000, 19999).status, 'short');
   const thirdHour = applyScreen({ ...job, est_minutes: 121 }, { amountCents: 21000, maxCents: 40000 });
   assert.deepEqual([thirdHour.status, thirdHour.amountCents, thirdHour.minCents], ['held', 40000, 40000]);
+});
+
+test('a hold covers the most a bid could reach, and never less than the card minimum', () => {
+  assert.equal(holdTarget(1000), 1000);
+  assert.equal(holdTarget(1000, 3000), 3000); // the hidden maximum is what is held
+  assert.equal(holdTarget(1), 50); // cards cannot hold one cent
+  assert.equal(holdTarget(1, 20), 50);
+});
+
+test('a raise holds only the difference', () => {
+  assert.equal(extraHold(3000, 3000), 0);
+  assert.equal(extraHold(2000, 3000), 0); // already held more than it needs
+  assert.equal(extraHold(4000, 1000), 3000);
+  assert.equal(extraHold(1001, 1000), 50); // a one-cent raise still has to hold the card minimum
+  assert.equal(extraHold(1000, 0), 1000);
+});
+
+test('the winner is charged the winning amount, not everything held', () => {
+  assert.equal(captureSlice(3000, 2001), 2001); // held the $30 maximum, won at $20.01
+  assert.equal(captureSlice(1000, 4000), 1000); // this hold is only part of it
+  assert.equal(captureSlice(50, 10), 0); // ten cents left over is let go
+  assert.equal(captureSlice(1000, 0), 0);
+  assert.equal(captureSlice(1000, -5), 0);
 });

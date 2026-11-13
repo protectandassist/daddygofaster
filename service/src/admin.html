@@ -29,7 +29,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.78rem;font-weight:600;border:1px solid var(--line)}
 .tag.qualified{color:var(--good);border-color:var(--good)}
 .tag.held{color:var(--gold);border-color:var(--gold)}
-.tag.refused,.tag.short{color:var(--muted)}
+.tag.refused,.tag.short,.tag.card,.tag.nocard{color:var(--muted)}
 .held-item{border-top:1px solid var(--line);padding:14px 0;display:grid;gap:8px}
 .held-item:first-of-type{border-top:0;padding-top:0}
 .job{background:#0D0E12;border:1px solid var(--line);border-radius:9px;padding:10px 12px}
@@ -60,6 +60,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
         <span>Bidding: <b id="openState"></b></span>
         <span>Screen: <b id="screenState"></b></span>
         <span>Outbid emails: <b id="emailState"></b></span>
+        <span>Card holds: <b id="cardState"></b></span>
         <span id="auctionLine"></span>
       </div>
       <div class="row" style="margin-top:12px">
@@ -79,7 +80,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <h2>All bids in this auction</h2>
       <p class="muted" id="noBids">No bids yet.</p>
       <table id="bidsTable" hidden>
-        <thead><tr><th>#</th><th>Name</th><th>Status</th><th>Time allowance</th><th>Time / costs</th><th>Note</th><th class="num">Bid</th></tr></thead>
+        <thead><tr><th>#</th><th>Name</th><th>Status</th><th id="cardHead">Card</th><th>Time allowance</th><th>Time / costs</th><th>Note</th><th class="num">Bid</th></tr></thead>
         <tbody id="bids"></tbody>
       </table>
     </section>
@@ -101,6 +102,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   function money(c){ return '$' + (c / 100).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
   function when(iso){ return new Date(iso).toLocaleString([], {weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'}); }
   function el(tag, cls, text){ var e = document.createElement(tag); if(cls) e.className = cls; if(text !== undefined && text !== null) e.textContent = text; return e; }
+  var STATUS = {qualified: 'qualified', held: 'waiting for you', short: 'too low', refused: 'refused', card: 'bank is checking', nocard: 'card declined'};
   function estimate(b){
     if(b.estMinutes === null || b.estMinutes === undefined) return '—';
     var t = b.estMinutes < 1 ? 'seconds' : Math.round(b.estMinutes) + ' min';
@@ -127,6 +129,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     top.appendChild(el('b', null, b.name));
     top.appendChild(el('span', null, money(b.amountCents)));
     top.appendChild(el('span', 'muted small', b.covers));
+    if(b.card) top.appendChild(el('span', 'muted small', b.card === 'held' ? 'held on their card' : 'no card hold'));
     box.appendChild(top);
     if(b.task !== null) box.appendChild(el('div', 'job', b.task));
     if(b.note) box.appendChild(el('div', 'muted small', 'Screen: ' + b.note));
@@ -148,11 +151,16 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     $('openState').textContent = d.open ? 'open' : 'not open (the site says "opens soon")';
     $('screenState').textContent = d.screen === 'ai' ? 'AI' : 'manual, every bid waits for you';
     $('emailState').textContent = d.email === 'on' ? 'on' : 'off';
+    $('cardState').textContent = d.cards === 'on' ? 'on, every bid is held on a card' : 'off, you collect payment yourself';
+    $('cardHead').hidden = d.cards !== 'on';
     $('auctionLine').textContent = d.auction
       ? 'Job day ' + d.auction.day + (d.auction.status === 'open' ? ', closes ' + when(d.auction.closesAt) : ', closed')
       : 'No auction running.';
     $('closeNow').hidden = !(d.auction && d.auction.status === 'open');
-    $('closeNow').onclick = function(){ if(confirm('Close bidding for ' + d.auction.day + ' now and pick the winner?')) act('/admin/api/auctions/' + d.auction.day + '/close'); };
+    $('closeNow').onclick = function(){
+      var ask = 'Close bidding for ' + d.auction.day + ' now and pick the winner?' + (d.cards === 'on' ? ' The winner\'s card is charged and every other hold is released.' : '');
+      if(confirm(ask)) act('/admin/api/auctions/' + d.auction.day + '/close');
+    };
 
     var held = d.bids.filter(function(b){ return b.status === 'held'; });
     $('heldCard').hidden = held.length === 0;
@@ -168,7 +176,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       var name = el('td', null, b.name);
       if(b.task !== null) name.appendChild(el('div', 'muted small', b.task));
       tr.appendChild(name);
-      var st = el('td'); st.appendChild(el('span', 'tag ' + b.status, b.status)); tr.appendChild(st);
+      var st = el('td'); st.appendChild(el('span', 'tag ' + b.status, STATUS[b.status] || b.status)); tr.appendChild(st);
+      if(d.cards === 'on') tr.appendChild(el('td', 'small', b.card === 'held' ? 'held' : '—'));
       tr.appendChild(el('td', 'small', b.covers));
       tr.appendChild(el('td', 'small', estimate(b)));
       tr.appendChild(el('td', 'muted small', b.note || ''));
@@ -187,13 +196,28 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       row.appendChild(el('span', null, w.free ? money(w.amountCents) + ' (free, under 50¢)' : money(w.amountCents)));
       row.appendChild(el('span', 'muted small', estimate(w)));
       box.appendChild(row);
+      var PAY = {
+        paid: function(){ return 'Charged ' + money(w.paidCents || 0) + ' to their card.' + (w.estCostCents ? ' Costs are not included: collect those yourself.' : ''); },
+        free: function(){ return 'Nothing was charged: a winning bid under 50¢ is free.'; },
+        manual: function(){ return 'No card on this bid. Collect payment yourself.'; },
+        failed: function(){ return 'Their card did not go through. Pass to the next bid.'; },
+        refunded: function(){ return 'Their card was refunded.'; }
+      };
+      if(PAY[w.payState]) box.appendChild(el('p', w.payState === 'failed' ? 'err' : null, PAY[w.payState]()));
+      else if(d.cards === 'on') box.appendChild(el('p', 'muted', p.moneySettled ? 'Collect payment yourself.' : 'Charging their card. This page updates in a moment.'));
       var mail = el('p'); mail.appendChild(document.createTextNode('Reach them at '));
       var a = el('a', null, w.email); a.href = 'mailto:' + w.email; a.style.color = 'var(--gold)'; mail.appendChild(a);
       box.appendChild(mail);
       box.appendChild(w.task !== null ? el('div', 'job', w.task) : el('p', 'muted small', 'The job is hidden. Tick "Show the jobs" to read it. Someone should read it before you do it.'));
-      var pass = el('button', 'bad', 'Winner did not pay, or I declined: pass to the next bid');
+      var charged = w.payState === 'paid';
+      var pass = el('button', 'bad', charged ? 'I am declining this job: refund them and pass to the next bid' : 'Winner did not pay, or I declined: pass to the next bid');
       pass.style.marginTop = '12px';
-      pass.addEventListener('click', function(){ if(confirm('Pass over ' + w.name + ' and give the day to the next highest bid?')) act('/admin/api/auctions/' + p.day + '/pass'); });
+      pass.addEventListener('click', function(){
+        var ask = 'Pass over ' + w.name + ' and give the day to the next highest bid?' +
+          (charged ? ' ' + money(w.paidCents || 0) + ' goes back to their card.' : '') +
+          (d.cards === 'on' ? ' The next bidder\'s card is charged for their bid.' : '');
+        if(confirm(ask)) act('/admin/api/auctions/' + p.day + '/pass');
+      });
       box.appendChild(pass);
       box.appendChild(el('p', 'muted small', p.othersWaiting + ' other qualifying bid(s) in line.'));
     }

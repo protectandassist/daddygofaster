@@ -9,6 +9,7 @@ The site's page (`../index.html`) calls two public endpoints. The owner uses `/a
 |---|---|---|
 | `GET /board` | anyone | Bids that passed the screen: name, amount, time. Never the job or the email. |
 | `POST /bids` | anyone | Place a bid or raise one. Answers `qualified`, `short`, `held` or `refused` with a message. |
+| `POST /bids/confirm` | the bidder's browser | Finishes a bid after the bidder's bank asked them to confirm the card. |
 | `POST /mine` | the bidder's browser | How the bids that browser placed are standing: leading, outbid, waiting, short, won. |
 | `GET /stop` | the bidder | The link in an outbid email. Turns those emails off for that bid. |
 | `GET /admin` | owner | The owner's page. Asks for the admin key. |
@@ -41,9 +42,9 @@ limit. The same time caps apply. A raise that makes a longer job eligible moves 
 owner review; it does not bypass approval or automatically extend an agreed duration.
 
 Bidding for a job day closes at 8 p.m. Central the evening before, and the next round
-opens straight away. There is no scheduler: a round that has run past its close is
-settled the next time anyone loads the board, bids, or opens `/admin`. The highest
-qualifying bid wins and the earlier bid wins a tie.
+opens straight away. A round that has run past its close is settled the next time anyone
+loads the board, bids, or opens `/admin`, and by a timer that runs every minute. The
+highest qualifying bid wins and the earlier bid wins a tie.
 
 ## Auto-bid
 
@@ -76,8 +77,13 @@ No key is typed into a chat, a command line or this repository.
 | admin key | yes | The password for `/admin`. Stored as a salted hash, so the key itself is not kept. |
 | email key | no | A Resend API key. Stored sealed. Turns on outbid emails. |
 | AI key | no | An Anthropic API key. Stored sealed. Without it every bid waits for approval in `/admin`. |
+| `STRIPE_SECRET_KEY` | no | A Worker secret. Holds, charges and releases. Never sent to a browser. |
+| `STRIPE_PUBLISHABLE_KEY` | no | A Worker secret. Handed to the site's page so it can show the card box. |
 
-The last three go in through `POST /admin/api/setup`, as the request headers
+Card holds are on when both Stripe keys are set, and off when either is missing. Use the
+test-mode pair first: with those, Stripe's test cards work and no real card can be held.
+
+The admin, email and AI keys go in through `POST /admin/api/setup`, as the request headers
 `X-Admin-Key`, `X-Mail-Key` and `X-Ai-Key`. The call only works while a one-time code is
 waiting in the `settings` table (`setup_code`, written as `code|expiry-in-ms` through the
 Cloudflare account) and is sent as `X-Setup-Code`. The code is used up by the first call
@@ -99,11 +105,56 @@ comes from.
 npm run deploy
 ```
 
-## Payment
+## Payment: card holds
 
-Not built yet. When a round closes, `/admin` shows the winner, their email, the amount
-and the estimated costs. The owner collects payment and costs however they like before
-doing the job. "Winner did not pay" in `/admin` passes the day to the next bid.
+A bid needs a card. The bid is held on the card when it is placed, the winner's hold is
+charged when the round closes, and every other hold is released. Card processing is
+Stripe. This is on when both card keys are set (see Keys). With either missing, bids
+need no card and the owner collects payment by hand, as before.
+
+**What is held.** The most the bid could reach: its auto-bid maximum if it has one,
+otherwise the bid. Cards cannot hold less than 50 cents, so a one-cent bid holds 50 cents.
+A bid that is refused, or falls short of its job, holds nothing.
+
+**The card never touches this service.** The site's page hands the card to Stripe and
+sends back only Stripe's id for it. The database keeps Stripe's ids for the customer, the
+card and each hold. No card number, expiry or security code is ever stored or logged.
+
+**Raising.** A raise holds only the difference, on the card already on the bid, and only
+when the raise goes past what is held. A one-cent raise holds 50 cents, which then covers
+the next 49 cents of raises. After seven holds on one bid, the next raise takes one hold
+for the whole amount and releases the others. The saved card is only used for the browser
+that holds the bid's private handle; someone who only knows the email and the job has to
+bring a card of their own.
+
+**When the bank wants the cardholder to confirm (3-D Secure).** The bid waits in status
+`card`, which nothing shows. The page runs the bank's check and calls `POST /bids/confirm`;
+the service reads the result from Stripe itself. A check nobody finishes is released after
+30 minutes.
+
+**When the round closes.** The timer (or the owner pressing Close) charges the winner's
+holds for the winning amount, not the maximum, and releases what is left. A last slice
+under 50 cents is let go, and a winning bid under 50 cents is free. If the winner's card
+fails, the win passes to the next bid while its hold is still there. Then every other
+hold is released. Costs (the estimate beside the bid) are not charged: the owner collects
+those.
+
+**Passing over a winner.** "Pass to the next bid" in `/admin` refunds whatever the winner
+was charged and charges the next bid's saved card. If that card fails, `/admin` says so
+and the owner can pass again.
+
+**Limits that stop card testing.** A declined card places no bid, but the try is kept and
+counted: 20 tries per email per day, 30 per network address per hour, and 5 declined
+tries per bid.
+
+**What it costs.** Stripe charges its fee on each captured hold, not on released ones. A
+bid raised several times is charged as several payments, each with its own fixed fee.
+
+**What the owner can see.** `/admin` shows whether a card holds each bid, never the
+amount, so a hidden maximum stays hidden there. The Stripe dashboard shows each hold's
+amount.
+
+This has been run against a local stand-in for Stripe, not against Stripe itself.
 
 ## The owner's page
 
@@ -132,8 +183,9 @@ Deploying needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the enviro
 New tables or columns go in a new file under `migrations/`, applied with
 `npm run migrate:remote`.
 
-Email addresses are not verified. Anyone can bid under any address, and a bid only
-becomes real when the winner pays. A winner who does not pay is passed over in `/admin`.
+Email addresses are not verified. With card holds on, a bid is real because a card is
+holding it. With them off, anyone can bid under any address, a bid only becomes real when
+the winner pays, and a winner who does not pay is passed over in `/admin`.
 
 ## The AI screen
 

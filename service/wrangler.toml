@@ -7,6 +7,11 @@ binding = "DB"
 database_name = "dgf-bids"
 database_id = "7689b940-06a7-432a-a0a4-be60e2c4ac8e"
 
+# Every minute: close a round that has run past its time, charge the winner's card,
+# release every other hold.
+[triggers]
+crons = ["* * * * *"]
+
 [vars]
 # "true" opens bidding. Anything else and the site shows "Bidding opens soon".
 OPEN = "false"
@@ -27,6 +32,11 @@ SCREEN_MODEL = "claude-opus-5-5"
 SITE_URL = "https://daddygofaster.com"
 # Who outbid emails come from. The domain has to be verified with the email provider (Resend).
 MAIL_FROM = "DaddyGoFaster <alerts@mail.daddygofaster.com>"
+
+# Card holds (Stripe) are on when both of these are set as Worker secrets:
+#   STRIPE_SECRET_KEY        holds, charges and releases
+#   STRIPE_PUBLISHABLE_KEY   handed to the site's page so it can show the card box
+# With either missing, bids need no card and the owner collects payment by hand.
 
 # Keys are not kept in this file.
 #   VAULT_KEY   a Worker secret, set once at random. It seals the keys below in the database.
