@@ -88,6 +88,17 @@ the repo root rather than opening `index.html` off the filesystem.
 
 ## Editing
 
+The hero shows 12 curated challenge ideas with three locally hosted illustrative images.
+Ideas rotate every nine seconds, run through a shuffled deck, and avoid starting a new
+visit with the last displayed idea (when browser storage is available). Visitors can
+shuffle, pause, or filter by outdoor, workshop, or community ideas. Rotation pauses
+while the hero is hovered, its controls or the bid form have focus, the hero is offscreen,
+or the tab is hidden. Reduced-motion users start with automatic rotation paused.
+"Use this idea" fills the task field but never sends a bid; automatic changes only
+update an empty field's placeholder. Edit the `ideas` array in `index.html` to change
+the suggestions. The three `assets/idea-*.webp` files are illustrative scenes, not
+footage of completed jobs.
+
 Design tokens (every color in the site) live in the `:root` block at the top of the
 `<style>` tag. The sponsor spots are the two `.spot` blocks in `#sponsors`; the first is
 the Protect & Assist house ad, whose one-line description is copied from the Protect &

@@ -19,6 +19,7 @@
 
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" as="image" href="/assets/idea-sunrise.webp">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -123,23 +124,23 @@ p{margin:0}
   background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
   background-size:64px 64px;mask-image:linear-gradient(90deg,transparent 30%,#000)}
 .hero__in{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);
-  gap:clamp(32px,5vw,76px);align-items:center;
-  padding-top:clamp(44px,6vw,84px);padding-bottom:clamp(48px,6vw,84px)}
-.hero__copy{padding:12px 0}
+  gap:clamp(32px,5vw,64px);align-items:start;
+  padding-top:clamp(32px,4vw,56px);padding-bottom:clamp(40px,5vw,64px)}
+.hero__copy{padding:0;min-width:0}
 .hero__copy > .eyebrow{margin-bottom:22px}
 .pill{display:inline-flex;align-items:center;gap:10px;padding:7px 14px 7px 12px;border:1px solid var(--line-2);
   border-radius:999px;font-size:.88rem;font-weight:500;color:var(--muted);background:rgba(255,255,255,.03)}
 .pill i{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:0 0 auto}
 .pill.is-open{color:var(--text)}
 .pill.is-open i{background:var(--good);box-shadow:0 0 0 4px rgba(61,214,140,.18)}
-.hero h1{margin-top:24px;font-size:clamp(3.1rem,6.15vw,5.25rem);font-weight:900;letter-spacing:-.065em;line-height:.99}
-.hero h1 > span,.hero h1 em{display:block}
-.hero h1 em{font-style:normal;color:var(--accent);padding-bottom:.08em}
-.hero__sub{margin-top:24px;max-width:31em;color:var(--muted);font-size:1.04rem;line-height:1.75}
+.hero h1{margin-top:0;font-size:clamp(2.8rem,4.9vw,4.4rem);font-weight:800;letter-spacing:-.045em;line-height:1.09}
+.hero h1 > span{display:block}
+.hero h1 .hero__accent{color:var(--accent)}
+.hero__sub{margin-top:16px;max-width:33em;color:var(--muted);font-size:.95rem;line-height:1.7}
 .ticks{list-style:none;padding:0;margin:26px 0 0;display:flex;flex-wrap:wrap;gap:10px 18px}
 .ticks li{display:flex;align-items:center;gap:6px;font-size:.76rem;font-weight:500}
 .ticks svg{width:18px;height:18px;color:var(--good);flex:0 0 auto}
-.hero__links{margin-top:30px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.hero__links{margin-top:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
 .hero__links .watch{display:inline-flex;align-items:center;gap:9px;padding:12px 6px;color:var(--muted);text-decoration:none;font-size:.82rem;font-weight:600}
 .hero__links .watch:hover{color:var(--text)}
 .watch svg{width:19px;height:19px;color:var(--accent)}
@@ -149,16 +150,60 @@ p{margin:0}
 .hero__trail b{color:var(--accent);font-size:.63rem;font-weight:500}
 .hero__trail i{width:clamp(20px,8vw,120px);height:1px;background:var(--line-2);position:relative}
 .hero__trail i::after{content:"";position:absolute;right:0;top:-2px;width:5px;height:5px;border-right:1px solid var(--line-2);border-top:1px solid var(--line-2);transform:rotate(45deg)}
+/* The photographs are illustrative possibilities, not completed jobs. */
+.inspiration{margin-top:26px}
+.idea-scene{position:relative;isolation:isolate;min-height:360px;border:1px solid var(--line-2);border-radius:14px;overflow:hidden;background:var(--bg-2)}
+.idea-scene__images{position:absolute;inset:0;z-index:-2}
+.idea-scene__images img{position:absolute;width:100%;height:100%;object-fit:cover;object-position:56% 48%;opacity:0;transform:scale(1.035);
+  transition:opacity .65s ease,transform 9s linear}
+.idea-scene__images img.is-active{opacity:1;transform:scale(1)}
+.idea-scene::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(12,13,16,.38),transparent 35%,rgba(12,13,16,.45) 60%,rgba(12,13,16,.95))}
+.idea-scene__top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px}
+.idea-tag{display:inline-flex;align-items:center;gap:8px;border:1px solid #ffffff40;background:rgba(12,13,16,.55);
+  backdrop-filter:blur(8px);padding:6px 10px;border-radius:5px;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--text)}
+.idea-tag::before{content:"";height:5px;width:5px;background:var(--accent);border-radius:50%}
+.idea-scene__counter{font-size:.67rem;letter-spacing:.08em;color:var(--text);text-shadow:0 1px 8px #000}
+.idea-scene__caption{position:absolute;inset:auto 24px 24px}
+.idea-scene__caption p{font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-hi);margin-bottom:9px}
+.idea-scene__caption h2{font-size:clamp(1.6rem,2.7vw,2.15rem);font-weight:800;line-height:1.07;letter-spacing:-.04em;max-width:16ch;text-wrap:balance;text-shadow:0 2px 20px #0008}
+.idea-scene__caption a{display:inline-flex;align-items:center;gap:12px;margin-top:15px;font-size:.8rem;font-weight:700;text-decoration:none;min-height:36px}
+.idea-scene__caption a span{display:grid;place-items:center;width:28px;height:28px;background:var(--accent);color:var(--accent-ink);border-radius:50%;transition:transform .2s}
+.idea-scene__caption a:hover span{transform:translate(3px,-3px)}
+.idea-controls{display:flex;align-items:center;gap:8px;padding-top:12px}
+.idea-filters{display:flex;align-items:center;gap:5px;flex:1;min-width:0}
+.idea-filter{width:36px;height:36px;position:relative;border:1px solid var(--line-2);padding:0;border-radius:7px;overflow:hidden;cursor:pointer;background:var(--card)}
+.idea-filter img{width:100%;height:100%;object-fit:cover;display:block;opacity:.55;transition:opacity .2s}
+.idea-filter[aria-pressed="true"]{border:2px solid var(--accent)}
+.idea-filter[aria-pressed="true"] img,.idea-filter:hover img{opacity:1}
+.idea-filter--all{font:700 .62rem var(--body);width:auto;min-width:36px;padding:0 8px;color:var(--muted)}
+.idea-filter--all[aria-pressed="true"]{color:var(--accent-hi)}
+.idea-control{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:8px 10px;
+  border:1px solid var(--line-2);border-radius:7px;background:var(--bg-2);color:var(--text);font:600 .7rem/1.2 var(--body);cursor:pointer}
+.idea-control:hover{border-color:var(--accent)}
+.idea-control svg{width:15px;height:15px;flex:none}
+.idea-control--pause{width:36px;padding:8px}
+.idea-note{margin-top:9px;color:var(--faint);font-size:.65rem}
+.bid-status{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.bid-status .pill{font-size:.72rem;padding:6px 11px}
+.bid-status__label{font-size:.62rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--faint)}
+.bid-column{padding-top:4px;min-width:0}
 @media(max-width:900px){
   .hero__in{grid-template-columns:1fr;gap:34px;max-width:720px}
-  .hero h1{font-size:clamp(2.5rem,12.7vw,5.4rem)}
+  .hero h1{font-size:clamp(2.3rem,8.6vw,4.5rem)}
   .hero__copy{padding:0}
   .hero__sub{max-width:34em}
+  .idea-scene{min-height:clamp(320px,56vw,410px)}
+  .idea-scene__caption h2{font-size:clamp(1.7rem,5.2vw,2.2rem)}
+  .bid-column{position:static;padding:0}
+  .idea-filter,.idea-control{min-height:44px}.idea-filter{width:44px}.idea-control--pause{width:44px}
   .hero__trail{justify-content:center;font-size:.6rem;gap:12px}
   .hero__trail span{gap:6px}
   .hero__trail i{width:20px;flex-shrink:0}
 }
 @media(max-width:480px){.hero__trail{display:none}}
+@media(max-width:380px){.idea-controls{flex-wrap:wrap}.idea-filters{flex:1 0 100%;gap:6px}
+  .idea-control:not(.idea-control--pause){flex:1}.idea-scene__caption{left:20px;right:20px;bottom:20px}}
 
 /* ---- bid card ---------------------------------------------- */
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px}
@@ -403,10 +448,36 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   <section class="hero">
     <div class="wrap hero__in">
       <div class="hero__copy">
-        <p class="eyebrow">Your idea. My next day.</p>
-        <span class="pill" id="pill"><i></i><span id="pillText">Bidding opens soon</span></span>
-        <h1><span>Decide what</span> <span>I do</span> <em>tomorrow.</em></h1>
+        <p class="eyebrow">Bid. Win. Watch.</p>
+        <h1><span>Your idea.</span> <span class="hero__accent">My tomorrow.</span></h1>
         <p class="hero__sub">Each day, the highest bid sets a job for me to do the next day. I do it on camera and post the video.</p>
+        <div class="inspiration" id="inspiration" aria-label="Challenge inspiration">
+          <div class="idea-scene">
+            <div class="idea-scene__images" aria-hidden="true">
+              <img class="is-active" id="scene-sunrise" src="/assets/idea-sunrise.webp" width="1672" height="941" alt="" fetchpriority="high">
+              <img id="scene-workshop" src="/assets/idea-workshop.webp" width="1672" height="941" alt="" decoding="async">
+              <img id="scene-cleanup" src="/assets/idea-cleanup.webp" width="1672" height="941" alt="" decoding="async">
+            </div>
+            <div class="idea-scene__top"><span class="idea-tag" id="ideaCategory">The great outdoors</span><span class="idea-scene__counter num" id="ideaCount">01 / 12</span></div>
+            <div class="idea-scene__caption">
+              <p>What if tomorrow I…</p>
+              <h2 id="ideaTitle">Beat the sun out of bed?</h2>
+              <a href="#bid" id="ideaUse">Use this idea <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+          <div class="idea-controls" id="ideaControls" hidden>
+            <div class="idea-filters" role="group" aria-label="Choose an idea category">
+              <button class="idea-filter idea-filter--all" type="button" data-category="all" aria-pressed="true" aria-label="All challenge ideas">All</button>
+              <button class="idea-filter" type="button" data-category="sunrise" aria-pressed="false" aria-label="Outdoor ideas" title="Outdoor ideas"><img src="/assets/idea-sunrise.webp" width="44" height="44" alt=""></button>
+              <button class="idea-filter" type="button" data-category="workshop" aria-pressed="false" aria-label="Workshop ideas" title="Workshop ideas"><img src="/assets/idea-workshop.webp" width="44" height="44" alt=""></button>
+              <button class="idea-filter" type="button" data-category="cleanup" aria-pressed="false" aria-label="Community ideas" title="Community ideas"><img src="/assets/idea-cleanup.webp" width="44" height="44" alt=""></button>
+            </div>
+            <button class="idea-control" id="ideaShuffle" type="button" aria-label="Show another challenge idea"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h2c4 0 6 10 10 10h2M14 12l3 3-3 3M3 15h2c1 0 2-1 3-2M12 7c1-1 2-2 3-2h2M14 2l3 3-3 3"/></svg>Shuffle</button>
+            <button class="idea-control idea-control--pause" id="ideaPause" type="button" aria-label="Pause changing ideas" title="Pause changing ideas"><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M5 4h3v12H5zM12 4h3v12h-3z"/></svg></button>
+          </div>
+          <p class="idea-note">A little inspiration. The job you bid on is up to you.</p>
+          <span class="visually-hidden" id="ideaAnnouncement" role="status" aria-live="polite"></span>
+        </div>
         <ul class="ticks">
           <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Free to bid</li>
           <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Bids start at 1&cent;</li>
@@ -418,6 +489,8 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         </div>
       </div>
 
+      <div class="bid-column">
+      <div class="bid-status"><span class="pill" id="pill"><i></i><span id="pillText">Bidding opens soon</span></span><span class="bid-status__label">Only the winner pays</span></div>
       <form class="card bid" id="bid" novalidate aria-label="Place a bid">
         <div class="bid__heading">
           <span class="bid__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m14 4 6 6-4 4-6-6 4-4ZM8 10l6 6-4 4-6-6 4-4ZM12 12l-8 8M15 21h7"/></svg></span>
@@ -434,9 +507,9 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
             <label for="task">What should I do tomorrow?</label>
             <textarea id="task" name="task" rows="2" maxlength="280" required placeholder="Walk the two miles to the hardware store instead of driving."></textarea>
             <div class="chips" aria-label="Ideas">
-              <button class="chipbtn" type="button" data-idea="Walk to work instead of driving.">Walk to work</button>
-              <button class="chipbtn" type="button" data-idea="Take a cold shower at 5 a.m.">Cold shower at 5 a.m.</button>
-              <button class="chipbtn" type="button" data-idea="Spend 30 minutes picking up litter at a park.">Pick up litter</button>
+              <button class="chipbtn" type="button" data-idea="Walk a local public trail at sunrise and film the view.">Sunrise walk</button>
+              <button class="chipbtn" type="button" data-idea="Build a simple wooden birdhouse from scrap wood.">Build a birdhouse</button>
+              <button class="chipbtn" type="button" data-idea="Spend 30 minutes picking up ordinary litter in a public park using gloves and a grabber.">Clean up a park</button>
             </div>
           </div>
           <p class="raising" id="raiseBar" hidden>You are raising your bid on this job. <button type="button" class="linkbtn" id="raiseCancel">Place a different bid</button></p>
@@ -474,6 +547,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <p class="fine" id="bidFine">Bidding is not open yet. This opens an email asking to be told when it is.</p>
         </div>
       </form>
+      </div>
     </div>
     <div class="wrap hero__trail" aria-hidden="true"><span><b>01</b> You choose the job</span><i></i><span><b>02</b> The highest bid wins</span><i></i><span><b>03</b> I do it on camera</span></div>
   </section>
@@ -765,6 +839,96 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     refresh();
     ($('more').hidden || raising ? $('bidBtn') : $('who')).focus();
   });
+
+  /* ---------- changing challenge inspiration ----------
+     These are suggestions, never real bids. Rotation never edits a typed job.
+     Each shuffled deck runs without repeats; a new visit avoids the last idea. */
+  var ideas = [
+    {scene:'sunrise', title:'Beat the sun out of bed?', task:'Walk a local public trail at sunrise and film the view.'},
+    {scene:'sunrise', title:'Take the long way home?', task:'Walk to a nearby store instead of driving, with the distance agreed in advance.'},
+    {scene:'sunrise', title:'Trade screen time for trail time?', task:'Spend an hour walking an easy public trail without checking your phone except for filming.'},
+    {scene:'sunrise', title:'Find a view worth the walk?', task:'Walk to a scenic public viewpoint on a marked, easy trail and film the view.'},
+    {scene:'workshop', title:'Build something for the birds?', task:'Build a simple wooden birdhouse from scrap wood.'},
+    {scene:'workshop', title:'Give an old chair a second chance?', task:'Sand and refinish an old wooden chair you already own.'},
+    {scene:'workshop', title:'Turn leftover wood into a planter?', task:'Build a small planter from leftover wood.'},
+    {scene:'workshop', title:'Finally sort that mystery drawer?', task:'Spend 30 minutes organizing a drawer of loose screws and hardware.'},
+    {scene:'cleanup', title:'Make one park a little better?', task:'Spend 30 minutes picking up ordinary litter in a public park using gloves and a grabber.'},
+    {scene:'cleanup', title:'Fill a bag. Leave a better trail?', task:'Spend an hour collecting ordinary litter along a public walking path using gloves and a grabber.'},
+    {scene:'cleanup', title:'Give a picnic spot a fresh start?', task:'Spend 20 minutes collecting ordinary litter around a public park picnic area using gloves and a grabber.'},
+    {scene:'cleanup', title:'Make a lakeside walk count?', task:'Spend 30 minutes picking up ordinary litter along a safe public lakeside path, staying out of the water.'}
+  ];
+  var sceneNames = {sunrise:'The great outdoors', workshop:'Make something', cleanup:'Do a little good'};
+  var inspiration = $('inspiration'), category = 'all', deck = [], ideaIndex = -1;
+  var ideaTimer = null, ideaPaused = reduce, ideaHovered = false, ideaVisible = true;
+  try { ideaIndex = Number(localStorage.getItem('dgfIdeaLast') || -1); } catch(e) {}
+  function shuffleDeck(){
+    deck = ideas.map(function(_, i){ return i; }).filter(function(i){ return category === 'all' || ideas[i].scene === category; });
+    for(var i = deck.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1)), temp = deck[i]; deck[i] = deck[j]; deck[j] = temp;
+    }
+    if(deck.length > 1 && deck[0] === ideaIndex){ var first = deck[0]; deck[0] = deck[1]; deck[1] = first; }
+  }
+  function scheduleIdea(){
+    clearTimeout(ideaTimer);
+    var focused = inspiration.contains(document.activeElement) || $('bid').contains(document.activeElement);
+    if(!ideaPaused && !ideaHovered && !focused && ideaVisible && !document.hidden){
+      ideaTimer = setTimeout(function(){ nextIdea(false); }, 9000);
+    }
+  }
+  function nextIdea(announce){
+    if(!deck.length) shuffleDeck();
+    ideaIndex = deck.shift();
+    var idea = ideas[ideaIndex];
+    $('ideaTitle').textContent = idea.title;
+    $('ideaCategory').textContent = sceneNames[idea.scene];
+    var pool = ideas.filter(function(x){ return category === 'all' || x.scene === category; });
+    $('ideaCount').textContent = String(pool.indexOf(idea) + 1).padStart(2, '0') + ' / ' + String(pool.length).padStart(2, '0');
+    Object.keys(sceneNames).forEach(function(scene){ $('scene-' + scene).classList.toggle('is-active', scene === idea.scene); });
+    if(!$('task').value.trim() && !raising) $('task').placeholder = idea.task;
+    if(announce) $('ideaAnnouncement').textContent = 'Idea: ' + idea.title;
+    try { localStorage.setItem('dgfIdeaLast', String(ideaIndex)); } catch(e) {}
+    scheduleIdea();
+  }
+  function paintPause(){
+    var label = ideaPaused ? 'Resume changing ideas' : 'Pause changing ideas';
+    $('ideaPause').setAttribute('aria-label', label); $('ideaPause').title = label;
+    $('ideaPause').innerHTML = ideaPaused
+      ? '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="m6 4 10 6-10 6Z"/></svg>'
+      : '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M5 4h3v12H5zM12 4h3v12h-3z"/></svg>';
+  }
+  $('ideaControls').hidden = false;
+  $('ideaShuffle').addEventListener('click', function(){ nextIdea(true); });
+  $('ideaPause').addEventListener('click', function(){ ideaPaused = !ideaPaused; paintPause(); scheduleIdea(); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-category]'), function(button){
+    button.addEventListener('click', function(){
+      category = button.getAttribute('data-category'); deck = [];
+      Array.prototype.forEach.call(document.querySelectorAll('[data-category]'), function(b){
+        b.setAttribute('aria-pressed', String(b === button));
+      });
+      nextIdea(true);
+    });
+  });
+  $('ideaUse').addEventListener('click', function(){
+    if(raising) stopRaise();
+    $('task').value = ideas[ideaIndex].task;
+    $('task').focus({preventScroll:true});
+    $('ideaAnnouncement').textContent = 'Idea added to your job description. You can edit it before bidding.';
+    scheduleIdea();
+  });
+  inspiration.addEventListener('mouseenter', function(){ ideaHovered = true; scheduleIdea(); });
+  inspiration.addEventListener('mouseleave', function(){ ideaHovered = false; scheduleIdea(); });
+  [inspiration, $('bid')].forEach(function(area){
+    area.addEventListener('focusin', scheduleIdea);
+    area.addEventListener('focusout', function(){ setTimeout(scheduleIdea, 0); });
+  });
+  document.addEventListener('visibilitychange', scheduleIdea);
+  if('IntersectionObserver' in window){
+    var ideaObserver = new IntersectionObserver(function(entries){
+      ideaVisible = entries[0].isIntersecting; scheduleIdea();
+    }, {threshold:.2});
+    ideaObserver.observe(inspiration);
+  }
+  paintPause(); nextIdea(false);
 
   /* ---------- the board ---------- */
   var LOCK = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="9" width="12" height="8" rx="2"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9"/></svg>';
