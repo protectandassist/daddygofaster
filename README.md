@@ -1,30 +1,87 @@
 # daddygofaster.com
 
-Single-page site for **DaddyGoFaster**, served by GitHub Pages from `main`.
+The **DaddyGoFaster** bid site, served by GitHub Pages from `main`.
+
+The idea: every day people bid on what the owner does tomorrow. Bids start at one cent.
+Amounts are public, the job stays sealed until the video. The highest bid that covers its
+job wins, and only the winner pays.
+
+## Status
+
+The page is built. **Bidding is not switched on.** Until a bid service exists and its
+address is set in `index.html`, the page says "Bidding opens soon", the send button is
+disabled, and nothing a visitor types leaves their browser.
 
 ## Files
 
 | Path | What it is |
 |---|---|
-| `index.html` | The whole site — markup, CSS, and JS in one file. No build step. |
-| `404.html` | "Red light" error page. |
+| `index.html` | The whole bid site: markup, CSS, and JS in one file. No build step. |
+| `legacy/index.html` | The original DaddyGoFaster home page (YouTube and Etsy), set aside unchanged. Still reachable at `/legacy/`, not linked, and excluded in `robots.txt`. |
+| `404.html` | "Wrong exit" error page. |
 | `CNAME` | Maps the site to `daddygofaster.com`. **Do not delete.** |
 | `.nojekyll` | Tells Pages to serve files as-is instead of running Jekyll. |
-| `assets/` | Hero photo (jpg + webp, full and small), Open Graph card, favicons. |
+| `assets/` | Flag photo, favicons, share card (`og-bid.jpg`), and the images the legacy page uses. |
 | `robots.txt`, `sitemap.xml` | Search engine basics. |
 
-## Editing
+## The rules the page states
 
-Open `index.html` and change the text. The parts most likely to need swapping:
+These came from the owner. Change the wording in `index.html` (sections `#how`, `#rate`,
+`#rules`) if a rule changes; the bid service has to enforce the same thing.
 
-- **Hero** — headline, the one-line description, the `Ride along` button target.
-- **60 FT / 330 FT** — the three crew roles and the three "what we get up to" cards.
-- **660 FT** — the timing slip. Each `slip__row` is one house rule; add or remove rows freely.
-- **1320 FT** — the signup. It currently opens the visitor's mail client to
-  `hello@daddygofaster.com`. Point `action` at a real form endpoint when there is one.
+- A bid is a job plus an amount. The floor is 1¢.
+- A bid only qualifies if it covers the job at about **$200 an hour**, with travel counted
+  both ways. This is a sanity check, not a meter: there is no clock on the job.
+- Costs (fares, tickets, flights) are on top and paid up front. Flights and hotels need a
+  real quote.
+- Highest qualifying bid wins. Only the winner pays. A win under 50¢ is free.
+- One win per person per week, and a daily limit on bids per person.
+- Bidding closes the night before. A bid in the last five minutes adds five minutes.
+- If the winner does not pay in time, the next bid wins.
+- Allowed: hard, boring, early, inconvenient, kind. Refused: illegal, dangerous, sexual,
+  costumes or appearance changes, scripted speech, politics, religion, product plugs,
+  anything aimed at a person or private address, public scenes, family, live locations.
+- An AI screens every bid and name first. Anything it is unsure of goes to a person.
 
-Design tokens (every color in the site) live in the `:root` block at the top of the
-`<style>` tag, so a palette change is a handful of hex values.
+## Switching bidding on
+
+Near the top of the `<script>` in `index.html`:
+
+```js
+var CONFIG = { api: "", rate: 200, freeUnderCents: 50 };
+```
+
+Set `api` to the bid service's base URL (no trailing slash). The page then expects:
+
+**`GET {api}/board`**
+
+```json
+{
+  "status": "open",
+  "closesAt": "2026-11-14T02:00:00Z",
+  "bids": [ { "name": "backseat_driver", "amountCents": 4200, "placedAt": "2026-11-13T21:40:00Z" } ]
+}
+```
+
+`status` is `open`, `closed`, or `soon`. Only bids that passed the screen belong in
+`bids`. Never include the job text or the email: this response is public.
+
+**`POST {api}/bids`** with `{ "task", "name", "email", "amountCents" }`
+
+```json
+{ "verdict": "short", "message": "That is about 50 minutes door to door, so it needs $166.67...", "minCents": 16667 }
+```
+
+`verdict` is `qualified`, `short` (bid does not cover the job), `held` (waiting on a
+person), or `refused`. `message` is shown to the bidder as plain text.
+
+The service needs CORS enabled for `https://daddygofaster.com`.
+
+## Previewing with sample bids
+
+Add `?demo` to the address (`http://127.0.0.1:8899/?demo`). The board fills with clearly
+labelled sample bids and a running countdown, and the send button answers "Preview only.
+Nothing was sent." Demo mode never contacts a server.
 
 ## Local preview
 
@@ -34,6 +91,13 @@ python -m http.server 8899
 
 Then open <http://127.0.0.1:8899/>. Paths are absolute (`/assets/...`), so preview from
 the repo root rather than opening `index.html` off the filesystem.
+
+## Editing
+
+Design tokens (every color in the site) live in the `:root` block at the top of the
+`<style>` tag. The sponsor spots are the three `.spot` blocks in `#sponsors`; the first is
+the Protect & Assist house ad, whose one-line description is copied from the Protect &
+Assist home page and should stay in step with it.
 
 ## Deploying
 
