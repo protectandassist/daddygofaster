@@ -204,7 +204,8 @@ p{margin:0}
 .msg{padding:13px 15px;border-radius:10px;font-size:.95rem;background:rgba(242,109,114,.1);border:1px solid rgba(242,109,114,.4)}
 .msg--ok{background:rgba(61,214,140,.1);border-color:rgba(61,214,140,.4)}
 .fine{font-size:.72rem;color:var(--faint);text-align:center;line-height:1.65}
-@media(max-width:480px){.bid__heading{padding:22px 20px 18px}.bid__stats{margin:0 20px}.bid__body{padding:22px 20px}.stat{padding:12px 10px}.chipbtn{min-height:40px}}
+@media(max-width:480px){.bid__heading{padding:22px 20px 18px}.bid__stats{margin:0 20px}.bid__body{padding:22px 20px}
+  .stat{padding:12px 6px}.stat__v{font-size:clamp(.85rem,3.8vw,1.05rem)}.chipbtn{min-height:40px}}
 .mine{display:grid;gap:8px}
 .mine__row{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:10px;border:1px solid var(--line-2);background:var(--field)}
 .mine__row > div{min-width:0;flex:1}
@@ -270,6 +271,7 @@ p{margin:0}
 .board tr.is-lead{background:rgba(255,200,87,.035)}
 .board tr.is-lead .c-bid{color:var(--gold)}
 @media(max-width:640px){.board .c-job,.board .c-when{display:none}}
+@media(max-width:480px){.board th,.board td{padding:14px 10px}.board .c-rank{width:2.5em}.badge{margin-left:6px;font-size:.68rem}}
 .board__empty{padding:clamp(36px,5vw,60px);text-align:center;color:var(--muted);font-size:.9rem;
   background:radial-gradient(ellipse at 50% 0,rgba(255,106,43,.04),transparent 70%)}
 .board__symbol{display:grid;place-items:center;margin:0 auto 22px;width:58px;height:64px;border:1px solid var(--line-2);border-radius:12px;background:var(--bg-2);transform:rotate(-7deg);box-shadow:6px 5px 0 var(--card),7px 6px 0 var(--line)}
