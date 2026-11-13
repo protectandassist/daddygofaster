@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   money, minCentsFor, coveredMinutes, describeMinutes, validateBid, decide,
-  localParts, zonedToUtc, dayShift, nominalAuction, extendedClose, pickWinner, applyScreen, LIMITS, REFUSALS, HELD_MESSAGE,
+  localParts, zonedToUtc, dayShift, nominalAuction, extendedClose, pickWinner, applyScreen, raiseVerdict, LIMITS, REFUSALS, HELD_MESSAGE,
 } from '../src/rules.js';
 
 const TZ = 'America/Chicago';
@@ -132,4 +132,22 @@ test('a one-cent bid can win a job that takes seconds, and nothing bigger', () =
   const wave = { decision: 'allow', category: 'none', name_ok: true, est_minutes: 0.1, est_cost_dollars: 0, needs_quote: false, reason: '' };
   assert.equal(applyScreen(wave, { amountCents: 1, ratePerHour: 200 }).status, 'qualified');
   assert.equal(applyScreen({ ...wave, est_minutes: 1 }, { amountCents: 1, ratePerHour: 200 }).status, 'short');
+});
+
+test('raising a bid: it must go up, and the same $200-an-hour check applies', () => {
+  const qualified = { amount_cents: 4200, status: 'qualified', est_minutes: 5, est_cost_cents: 0, min_cents: 1667 };
+  assert.equal(raiseVerdict(qualified, 4200, 200).ok, false);
+  assert.equal(raiseVerdict(qualified, 100, 200).ok, false);
+  assert.deepEqual(raiseVerdict(qualified, 5000, 200), { ok: true, status: 'qualified', message: 'Your bid is now $50.00.' });
+
+  const short = { amount_cents: 2000, status: 'short', est_minutes: 50, est_cost_cents: 400, min_cents: 16667 };
+  const still = raiseVerdict(short, 10000, 200);
+  assert.equal(still.status, 'short');
+  assert.match(still.message, /needs \$166\.67, plus about \$4\.00 in costs/);
+  assert.deepEqual(raiseVerdict(short, 16667, 200), { ok: true, status: 'qualified', message: 'Your bid is now $166.67, which covers the job.' });
+
+  const held = { amount_cents: 900, status: 'held', est_minutes: null, est_cost_cents: null, min_cents: null };
+  assert.equal(raiseVerdict(held, 1500, 200).status, 'held');
+  const ownerApproved = { amount_cents: 900, status: 'qualified', est_minutes: null, est_cost_cents: null, min_cents: null };
+  assert.equal(raiseVerdict(ownerApproved, 1500, 200).status, 'qualified');
 });

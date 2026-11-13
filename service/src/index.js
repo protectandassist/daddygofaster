@@ -8,14 +8,14 @@
 // There is no scheduler. An auction that has run past its close is settled the
 // next time anyone reads the board, bids, or opens the admin page.
 import {
-  LIMITS, money, describeMinutes, coveredMinutes, minCentsFor, validateBid, applyScreen, HELD_MESSAGE,
+  LIMITS, money, describeMinutes, coveredMinutes, minCentsFor, validateBid, applyScreen, raiseVerdict, HELD_MESSAGE,
   nominalAuction, extendedClose, dayShift, pickWinner,
 } from './rules.js';
 import { screenBid } from './screen.js';
 import ADMIN_HTML from './admin.html';
 
 const IP_BIDS_PER_HOUR = 30;
-const MAX_EXTENSIONS = 12; // late bids can push the close back an hour at most
+const MAX_RAISES = 200; // per bid per round; far more than a person needs, enough to stop a script
 const MAX_BODY = 4000;
 
 function int(value, fallback) {
@@ -117,6 +117,37 @@ async function getBoard(env, s, now) {
 
 // ---- public: placing a bid ------------------------------------------------------
 
+// Says where a qualifying bid stands, and moves the close back when a new high
+// bid lands in the last few minutes. There is no cap on that: while people keep
+// outbidding each other, the round runs on.
+async function leadAndExtend(env, s, a, bidId, now) {
+  const top = await env.DB.prepare(
+    "SELECT id, amount_cents FROM bids WHERE day = ? AND status = 'qualified' ORDER BY amount_cents DESC, created_at ASC LIMIT 1",
+  ).bind(a.day).first();
+  const leads = top.id === bidId;
+  const closesAt = extendedClose(a.closes_at, now, s.extend);
+  if (leads && closesAt !== a.closes_at) {
+    await env.DB.prepare(
+      "UPDATE auctions SET closes_at = ?, extensions = extensions + 1 WHERE day = ? AND status = 'open' AND closes_at = ?",
+    ).bind(closesAt, a.day, a.closes_at).run();
+  }
+  return leads ? ' You are in the lead.' : ` The high bid is ${money(top.amount_cents)}.`;
+}
+
+// The same person sending the same job again raises their bid. No new screen,
+// no new row, and it does not count against the daily limit.
+async function raiseBid(env, s, a, mine, amountCents, now) {
+  if (mine.raises >= MAX_RAISES) return [429, { verdict: 'limit', message: 'That bid cannot be raised any more today.' }];
+  const v = raiseVerdict(mine, amountCents, s.rate);
+  if (!v.ok) return [400, { verdict: 'invalid', message: v.message }];
+  const r = await env.DB.prepare(
+    'UPDATE bids SET amount_cents = ?, status = ?, created_at = ?, raises = raises + 1 WHERE id = ? AND amount_cents < ?',
+  ).bind(amountCents, v.status, now, mine.id, amountCents).run();
+  if (!r.meta.changes) return [409, { verdict: 'invalid', message: 'That bid changed while you were raising it. Try again.' }];
+  const message = v.status === 'qualified' ? v.message + (await leadAndExtend(env, s, a, mine.id, now)) : v.message;
+  return [200, { verdict: v.status, message, minCents: mine.min_cents ?? null }];
+}
+
 async function postBid(request, env, s, now) {
   if (!s.open) return [403, { verdict: 'closed', message: 'Bidding is not open yet.' }];
 
@@ -130,6 +161,11 @@ async function postBid(request, env, s, now) {
 
   let a = await currentAuction(env, s, now);
   if (a.status !== 'open') return [409, { verdict: 'closed', message: 'Bidding is closed for today. It opens again soon.' }];
+
+  const mine = await env.DB.prepare(
+    "SELECT * FROM bids WHERE day = ? AND email = ? AND lower(task) = lower(?) AND status IN ('qualified', 'short', 'held') ORDER BY id DESC LIMIT 1",
+  ).bind(a.day, bid.email, bid.task).first();
+  if (mine) return raiseBid(env, s, a, mine, bid.amountCents, now);
 
   const ipHash = await sha256((request.headers.get('CF-Connecting-IP') || 'unknown') + '|' + a.day);
   const [byEmail, byIp, wonLately] = await env.DB.batch([
@@ -170,22 +206,9 @@ async function postBid(request, env, s, now) {
     answer ? String(answer.reason || '').slice(0, 300) : null, answer ? 'ai' : 'none', ipHash, after,
   ).run();
 
-  let message = verdict.message;
-  if (verdict.status === 'qualified') {
-    const top = await env.DB.prepare(
-      "SELECT id, amount_cents FROM bids WHERE day = ? AND status = 'qualified' ORDER BY amount_cents DESC, created_at ASC LIMIT 1",
-    ).bind(a.day).first();
-    const leads = top.id === inserted.meta.last_row_id;
-    message += leads ? ' You are in the lead.' : ` The high bid is ${money(top.amount_cents)}.`;
-    // A new high bid in the last few minutes moves the close back, so nobody
-    // wins by bidding in the final second. Capped, so it cannot be dragged out.
-    const closesAt = extendedClose(a.closes_at, after, s.extend);
-    if (leads && closesAt !== a.closes_at && a.extensions < MAX_EXTENSIONS) {
-      await env.DB.prepare(
-        "UPDATE auctions SET closes_at = ?, extensions = extensions + 1 WHERE day = ? AND status = 'open' AND closes_at = ?",
-      ).bind(closesAt, a.day, a.closes_at).run();
-    }
-  }
+  const message = verdict.status === 'qualified'
+    ? verdict.message + (await leadAndExtend(env, s, a, inserted.meta.last_row_id, after))
+    : verdict.message;
   return [200, { verdict: verdict.status, message, minCents: verdict.minCents ?? null }];
 }
 

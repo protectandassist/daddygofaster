@@ -91,6 +91,22 @@ export function decide({ amountCents, estMinutes, estCostCents = 0, ratePerHour 
   };
 }
 
+// The same person sending the same job again is raising their bid, not placing a
+// new one. `existing` is their current row for that job. The job was already
+// screened, so the only question is whether the new amount covers it.
+export function raiseVerdict(existing, amountCents, ratePerHour) {
+  if (amountCents <= existing.amount_cents) {
+    return { ok: false, message: `Your bid on this job is already ${money(existing.amount_cents)}. Enter a higher amount to raise it.` };
+  }
+  const now = `Your bid is now ${money(amountCents)}`;
+  if (existing.status === 'held') return { ok: true, status: 'held', message: `${now}. It is still waiting for a person to check it.` };
+  if (existing.min_cents == null || amountCents >= existing.min_cents) {
+    return { ok: true, status: 'qualified', message: existing.status === 'short' ? `${now}, which covers the job.` : `${now}.` };
+  }
+  const short = decide({ amountCents, estMinutes: existing.est_minutes, estCostCents: existing.est_cost_cents || 0, ratePerHour });
+  return { ok: true, status: 'short', message: short.message };
+}
+
 // What a bidder is told when a job breaks a rule. Fixed wording: the screen
 // picks a category, it never writes the reply.
 export const REFUSALS = {
@@ -200,7 +216,8 @@ export function nominalAuction(nowMs, tz, closeHour) {
   return { day: ymd(job), closesAt };
 }
 
-// A bid in the last `extendMinutes` adds `extendMinutes` to the clock.
+// A new high bid in the last `extendMinutes` adds `extendMinutes` to the clock.
+// There is no cap: while people keep outbidding each other, the round runs on.
 export function extendedClose(closesAt, nowMs, extendMinutes) {
   const window = extendMinutes * 60_000;
   return closesAt - nowMs <= window ? closesAt + window : closesAt;

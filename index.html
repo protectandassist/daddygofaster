@@ -489,8 +489,9 @@ a.spot:hover{border-color:var(--line-2)}
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Bids start at 1&cent;. Only the winner pays, and pays before the job.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A bid must cover its job at about $200 an hour, plus costs. A job that takes seconds is covered by any bid.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A winning bid under 50&cent; is free, because cards cannot charge less.</span></li>
-            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>One win per person per week, with a daily limit on bids.</span></li>
-            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A new high bid in the last five minutes extends bidding by five minutes, up to an hour.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>One win per person per week, and up to five jobs a day each.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A new high bid in the last five minutes extends bidding by five minutes. While the bids keep climbing, bidding stays open.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>You can raise your bid as often as you like. Send the same job with a higher amount, and the same rules apply.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>If the winner does not pay in time, the next highest bid wins.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Names are screened too. If the screen is not sure, a person decides.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>I can decline any job. If I decline the winning bid, nobody is charged.</span></li>
@@ -707,7 +708,7 @@ a.spot:hover{border-color:var(--line-2)}
     $('bidBtn').hidden = !open;
     $('notifyBtn').hidden = open || closed;
     $('bidFine').textContent = open
-      ? 'Free to bid. You only pay if you win.'
+      ? 'Free to bid. You only pay if you win. To raise a bid, send the same job with a higher amount.'
       : closed
         ? 'Bidding is closed for today. The next round opens this evening.'
         : 'Bidding is not open yet. This opens an email asking to be told when it is.';
@@ -782,7 +783,8 @@ a.spot:hover{border-color:var(--line-2)}
         var d = res.d || {};
         var landed = d.verdict === 'qualified' || d.verdict === 'held';
         say(d.message || (res.ok ? 'Your bid is in.' : 'That did not go through. Please try again.'), landed);
-        if(landed){ $('task').value = ''; amount.value = ''; refresh(); load(); }
+        /* keep the job in the box so raising it later is one number and one click */
+        if(landed){ amount.value = ''; refresh(); load(); }
       })
       .catch(function(){ say('That did not go through. Check your connection and try again.'); })
       .then(function(){ btn.disabled = false; btn.textContent = 'Place bid'; });

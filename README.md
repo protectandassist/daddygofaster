@@ -37,9 +37,10 @@ These came from the owner. Change the wording in `index.html` (sections `#how`, 
 - Costs (fares, tickets, flights) are on top and paid up front. Flights and hotels need a
   real quote.
 - Highest qualifying bid wins. Only the winner pays. A win under 50¢ is free.
-- One win per person per week, and a daily limit on bids per person.
+- One win per person per week, and up to five jobs a day per person. A bidder can raise
+  their own bid as often as they like: the same job sent again with a higher amount.
 - Bidding closes the night before. A new high bid in the last five minutes adds five
-  minutes, up to an hour in total.
+  minutes, with no cap: while the bids keep climbing, the round stays open.
 - If the winner does not pay in time, the next bid wins.
 - Allowed: hard, boring, early, inconvenient, kind. Refused: illegal, dangerous, sexual,
   costumes or appearance changes, scripted speech, politics, religion, product plugs,

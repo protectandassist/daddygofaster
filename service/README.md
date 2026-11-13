@@ -25,8 +25,13 @@ The site's page (`../index.html`) calls two public endpoints. The owner uses `/a
    - **short**: the bid does not cover the job at $200 an hour. The reply says what would.
    - **qualified**: it goes on the board.
    A job that takes under a minute is covered by any bid. That is what lets one cent win.
-4. A new high bid in the last five minutes moves the close back five minutes, at most
-   twelve times.
+4. A new high bid in the last five minutes moves the close back five minutes. There is
+   no cap: while people keep outbidding each other, the round stays open.
+
+**Raising a bid.** The same email sending the same job again raises that bid. The amount
+has to go up. There is no new screen and no new row, it does not count against the daily
+limit, and the same $200-an-hour check applies, so a bid that fell short qualifies once
+it is raised far enough.
 
 Bidding for a job day closes at 8 p.m. Central the evening before, and the next round
 opens straight away. There is no scheduler: a round that has run past its close is
@@ -82,6 +87,9 @@ For local runs put `ADMIN_KEY=anything` in `.dev.vars` (ignored by git) and star
 Deploying needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment.
 New tables or columns go in a new file under `migrations/`, applied with
 `npm run migrate:remote`.
+
+Email addresses are not verified. Anyone can bid under any address, and a bid only
+becomes real when the winner pays. A winner who does not pay is passed over in `/admin`.
 
 ## The AI screen
 
