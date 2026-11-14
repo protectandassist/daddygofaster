@@ -9,6 +9,7 @@ export const LIMITS = {
   emailMax: 254,
   maxCents: 10_000_000, // $100,000
   freeUnderCents: 50, // card minimum: a win below this is free
+  minPledgeCents: 200, // least someone can add to an open job; below this the card fee eats it
 };
 
 export const TIME_POLICY = { includedMinutes: 60, additionalHourCents: 20000 };
@@ -80,6 +81,23 @@ export function validateBid(body) {
   const max = validateMax(body.maxCents, amountCents);
   if (!max.ok) return max;
   return { ok: true, value: { task, name, email, amountCents, maxCents: max.value, notify: body.notify === true } };
+}
+
+// Money added to someone else's open job. Returns { ok, value } or { ok: false, error }.
+export function validatePledge(body) {
+  if (!body || typeof body !== 'object') return { ok: false, error: 'Send a name, an email and an amount.' };
+  const name = String(body.name ?? '').replace(/\s+/g, ' ').trim();
+  const email = String(body.email ?? '').trim().toLowerCase();
+  const amountCents = body.amountCents;
+  if (name.length < LIMITS.nameMin || name.length > LIMITS.nameMax || !NAME_OK.test(name)) {
+    return { ok: false, error: `Use a name of ${LIMITS.nameMin} to ${LIMITS.nameMax} letters or numbers.` };
+  }
+  if (email.length > LIMITS.emailMax || !EMAIL_OK.test(email)) return { ok: false, error: 'Check the email address.' };
+  if (!Number.isInteger(amountCents) || amountCents < LIMITS.minPledgeCents) {
+    return { ok: false, error: `The least you can add is ${money(LIMITS.minPledgeCents)}.` };
+  }
+  if (amountCents > LIMITS.maxCents) return { ok: false, error: `The most you can add here is ${money(LIMITS.maxCents)}.` };
+  return { ok: true, value: { name, email, amountCents } };
 }
 
 // The optional auto-bid maximum. Returns null when none was given.

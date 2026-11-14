@@ -91,7 +91,7 @@ export async function createHold(env, key, { customerId, email, cardId, cents, d
 
 // Charges a saved card now, with the cardholder away. Used when a win passes to
 // the next bid after that bid's hold was already released.
-export async function chargeSaved(env, key, { customerId, cardId, email, cents, day, bidId }) {
+export async function chargeSaved(env, key, { customerId, cardId, email, cents, day, bidId, idempotencyKey }) {
   const r = await stripeCall(env, key, 'POST', '/payment_intents', {
     amount: String(cents),
     currency: 'usd',
@@ -104,7 +104,7 @@ export async function chargeSaved(env, key, { customerId, cardId, email, cents, 
     receipt_email: email,
     'metadata[bid_id]': String(bidId),
     'metadata[day]': day,
-  }, `dgf-win-${bidId}-${cents}`);
+  }, idempotencyKey || `dgf-win-${bidId}-${cents}`);
   if (r.ok && r.data.status === 'succeeded') return { ok: true, intentId: r.data.id, cents: r.data.amount_received ?? cents };
   const left = r.ok ? r.data : r.error.payment_intent;
   if (left && left.id) await cancelIntent(env, key, left.id);

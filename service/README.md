@@ -10,6 +10,8 @@ The site's page (`../index.html`) calls two public endpoints. The owner uses `/a
 | `GET /board` | anyone | Bids that passed the screen: name, amount, time. Never the job or the email. |
 | `POST /bids` | anyone | Place a bid or raise one. Answers `qualified`, `short`, `held` or `refused` with a message. |
 | `POST /bids/confirm` | the bidder's browser | Finishes a bid after the bidder's bank asked them to confirm the card. |
+| `POST /pledges` | anyone | Add money to someone's open job. Needs card holds to be on. |
+| `POST /pledges/confirm` | the backer's browser | Finishes that after the backer's bank asked them to confirm the card. |
 | `POST /mine` | the bidder's browser | How the bids that browser placed are standing: leading, outbid, waiting, short, won. |
 | `GET /stop` | the bidder | The link in an outbid email. Turns those emails off for that bid. |
 | `GET /admin` | owner | The owner's page. Asks for the admin key. |
@@ -45,6 +47,31 @@ Bidding for a job day closes at 8 p.m. Central the evening before, and the next 
 opens straight away. A round that has run past its close is settled the next time anyone
 loads the board, bids, or opens `/admin`, and by a timer that runs every minute. The
 highest qualifying bid wins and the earlier bid wins a tie.
+
+## Secret jobs, open jobs and pooled money
+
+The person posting a job chooses how it is shown.
+
+- **Secret** (the default): the board shows the name, the amount and the time, never the
+  job. Only the poster can raise it. It can carry a hidden auto-bid maximum.
+- **Open**: the board also shows the job itself, a public handle for it, and how many
+  people have added money. Anyone can add $2 or more with `POST /pledges`. An open job
+  has no hidden maximum.
+
+A job's total is what competes: the poster's part plus everything added. Secret jobs'
+auto-bids answer a growing open job the same way they answer a raise. So a crowd can
+outbid one big bidder, and a big bidder can outbid a crowd.
+
+Money added is held on the backer's card like a bid. If the job wins, the poster and
+every backer are charged what they put in, a few backers per minute by the timer. A
+backer whose card fails is dropped and the job still stands. If the job loses, every
+hold is released. If the owner passes over a winning open job, everyone is refunded.
+
+Backers' names and emails are never shown: the board gives only the count. The $2
+minimum is there because a card payment costs a fixed fee, which would eat a smaller
+amount. Limits: 20 additions per email per day, 30 per network address per hour.
+
+Open jobs and added money need card holds to be on. With them off, every job is secret.
 
 ## Auto-bid
 

@@ -335,6 +335,19 @@ p{margin:0}
 .board .c-when{text-align:right;color:var(--muted);font-size:.9rem;white-space:nowrap}
 .board .c-name{font-weight:500;max-width:12em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hidden-job{display:inline-flex;align-items:center;gap:7px;color:var(--faint);font-size:.9rem}
+.open-tag{display:inline-flex;align-items:center;gap:7px;color:var(--good);font-size:.9rem;font-weight:600}
+.openjob{margin-top:8px;display:grid;gap:9px;justify-items:start}
+.openjob p{font-size:.9rem;font-weight:400;color:var(--muted);line-height:1.45;max-width:46ch;white-space:normal;overflow-wrap:anywhere}
+.board td.c-name:has(.openjob){white-space:normal;overflow:visible;max-width:none}
+.openjob .chipbtn{color:var(--text);border-color:var(--accent)}
+/* The poster's choice: keep the job secret, or open it so anyone can add money. */
+.vis{border:0;padding:0;margin:0;display:grid;gap:8px}
+.vis legend{padding:0;margin-bottom:7px;font-size:.9rem;font-weight:600}
+.vis__opt{display:flex;gap:11px;align-items:flex-start;padding:11px 13px;border:1px solid var(--line-2);border-radius:10px;background:var(--field);cursor:pointer}
+.vis__opt:has(input:checked){border-color:var(--accent);background:rgba(255,106,43,.08)}
+.vis__opt input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);flex:0 0 auto}
+.vis__opt b{display:block;font-size:.92rem;font-weight:600}
+.vis__opt span span{display:block;font-size:.82rem;color:var(--muted)}
 .hidden-job svg{width:15px;height:15px}
 .badge{margin-left:10px;padding:3px 9px;border-radius:999px;font-size:.74rem;font-weight:600;
   background:rgba(255,200,87,.14);color:var(--gold);vertical-align:middle}
@@ -556,13 +569,18 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
               <button class="chipbtn" type="button" data-idea="Spend up to 45 minutes cleaning a two-foot-by-two-foot square of your own patio using a toothbrush and water. Film the timer, the effort and the before-and-after reveal.">Toothbrush vs. patio</button>
             </div>
           </div>
-          <p class="raising" id="raiseBar" hidden>You are raising your bid on this job. <button type="button" class="linkbtn" id="raiseCancel">Place a different bid</button></p>
+          <fieldset class="vis" id="visWrap" hidden>
+            <legend>Who can see this job?</legend>
+            <label class="vis__opt"><input type="radio" name="vis" id="visSecret" value="secret" checked><span><b>Keep it secret</b><span>Hidden until the video. Only you can raise it.</span></span></label>
+            <label class="vis__opt"><input type="radio" name="vis" id="visOpen" value="open"><span><b>Open it up</b><span>Shown on the board. Anyone can add money to help it win.</span></span></label>
+          </fieldset>
+          <p class="raising" id="raiseBar" hidden><span id="raiseText">You are raising your bid on this job.</span> <button type="button" class="linkbtn" id="raiseCancel">Place a different bid</button></p>
           <div class="row2">
             <div class="field">
-              <label for="amount">Your bid</label>
+              <label for="amount" id="amountLabel">Your bid</label>
               <div class="money"><span aria-hidden="true">$</span><input class="num" id="amount" name="amount" type="text" inputmode="decimal" required autocomplete="off" placeholder="0.01"></div>
             </div>
-            <div class="field">
+            <div class="field" id="maxField">
               <label for="max">Auto-bid up to (optional)</label>
               <div class="money"><span aria-hidden="true">$</span><input class="num" id="max" name="max" type="text" inputmode="decimal" autocomplete="off" placeholder="No maximum"></div>
             </div>
@@ -734,6 +752,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A winning bid under 50&cent; is free, because cards cannot charge less.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>One win per person per week, and up to five jobs a day each.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A new high bid in the last five minutes extends bidding by five minutes. While the bids keep climbing, bidding stays open.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>You choose whether your job is secret or open. A secret job stays hidden until the video. An open job is shown on the board, and anyone can add $2 or more to it. The job's total is what competes, so a crowd can outbid one big bidder. Everyone who adds money is charged only if that job wins.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>You can raise your bid as often as you like. Send the same job with a higher amount, and the same rules apply.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Set a maximum and your bid rises on its own, one cent at a time, only when someone outbids you. Your maximum is never shown on the site.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>If the winner's card does not go through, the next highest bid wins.</span></li>
@@ -820,6 +839,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   var open = false, highCents = 0, closesAt = null, timer = null;
   var alerts = false, roundDay = null, raising = null, baseTitle = document.title;
   var cardKey = null, stripe = null, cardEl = null, stripeLoading = false;
+  var pooling = false, minPledge = 200, backing = null;   /* backing: the open job this visitor is adding money to */
 
   /* ---------- money and time ---------- */
   function toCents(str){
@@ -863,6 +883,13 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   }
   function refresh(){
     var raw = amount.value.trim();
+    if(backing){   /* adding money to someone's open job */
+      var add = toCents(raw);
+      if(raw === '') return setReadout('', 'Add ' + money(minPledge) + ' or more. It is held on your card and only charged if this job wins.');
+      if(add === null) return setReadout('', 'Enter dollars and cents, like 12.50.');
+      if(add < minPledge) return setReadout('', 'The least you can add is ' + money(minPledge) + '.');
+      return setReadout(money(add), ' goes behind this job. It is only charged if the job wins.');
+    }
     if(raw === '') return setReadout('', 'Even a 1¢ winning bid includes up to one hour.');
     var c = toCents(raw);
     if(c === null) return setReadout('', 'Enter dollars and cents, like 12.50.');
@@ -1086,7 +1113,23 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       name.appendChild(badge);
     }
     var job = cell('c-job', '');
-    job.innerHTML = '<span class="hidden-job">' + LOCK + 'Hidden</span>';
+    if(bid.open){
+      /* The poster chose to show this job. Anyone can add money to it. */
+      job.innerHTML = '<span class="open-tag"></span>';
+      job.firstChild.textContent = bid.backers ? 'Open, ' + plural(bid.backers, 'backer') : 'Open';
+      var box = document.createElement('div'), text = document.createElement('p');
+      box.className = 'openjob'; text.textContent = bid.task;
+      box.appendChild(text);
+      if(open && pooling && bid.id){
+        var chip = document.createElement('button');
+        chip.type = 'button'; chip.className = 'chipbtn'; chip.textContent = 'Chip in';
+        chip.addEventListener('click', function(){ startBack({id: bid.id, task: bid.task}); });
+        box.appendChild(chip);
+      }
+      name.appendChild(box);
+    } else {
+      job.innerHTML = '<span class="hidden-job">' + LOCK + 'Hidden</span>';
+    }
     cell('c-bid num', money(bid.amountCents));
     cell('c-when', ago(bid.placedAt));
     return tr;
@@ -1107,8 +1150,11 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     alerts = Boolean(data.alerts);
     roundDay = data.day || null;
     cardKey = open && data.cardKey ? data.cardKey : null;
+    pooling = open && Boolean(data.pooling);
+    minPledge = data.minPledgeCents || 200;
+    paintChoice();
     if(cardKey) loadStripe();
-    $('notifyWrap').hidden = !alerts;
+    $('notifyWrap').hidden = !alerts || Boolean(backing);
     var bids = (data.bids || []).slice().sort(function(a, b){ return b.amountCents - a.amountCents; });
     highCents = bids.length ? bids[0].amountCents : 0;
 
@@ -1207,17 +1253,36 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     won:     function(b){ return 'You won with ' + money(b.amountCents) + '. Watch your email.'; }
   };
 
+  var BACKED = {
+    leading: function(b){ return 'The job you backed is leading at ' + money(b.totalCents); },
+    outbid:  function(b){ return 'The job you backed is behind. The high bid is ' + money(b.highCents); },
+    won:     function(b){ return 'The job you backed won. You paid ' + money(b.amountCents) + '.'; }
+  };
   function paintMine(bids){
     var box = $('mine'), tasks = {};
     saved().forEach(function(b){ tasks[b.token] = b.task; });
     box.textContent = '';
-    var shown = bids.filter(function(b){ return STANDING[b.standing] && (b.open || b.standing === 'won'); });
+    var shown = bids.filter(function(b){ return (b.kind === 'pledge' ? BACKED : STANDING)[b.standing] && (b.open || b.standing === 'won'); });
     shown.forEach(function(b){
       var row = document.createElement('div'), text = document.createElement('div');
       row.className = 'mine__row is-' + b.standing;
-      var head = document.createElement('b'); head.textContent = STANDING[b.standing](b);
-      var sub = document.createElement('span');
+      var head = document.createElement('b'), sub = document.createElement('span');
+      if(b.kind === 'pledge'){
+        head.textContent = BACKED[b.standing](b);
+        sub.textContent = 'You added ' + money(b.amountCents) + '. ' + (b.task || '');
+        text.appendChild(head); text.appendChild(sub); row.appendChild(text);
+        if(b.open && pooling && b.jobId){
+          var more = document.createElement('button');
+          more.type = 'button'; more.className = 'chipbtn'; more.textContent = 'Add more';
+          more.addEventListener('click', function(){ startBack({id: b.jobId, task: b.task || ''}); });
+          row.appendChild(more);
+        }
+        box.appendChild(row);
+        return;
+      }
+      head.textContent = STANDING[b.standing](b);
       sub.textContent = (b.standing === 'outbid' || b.standing === 'short' ? 'Your bid: ' + money(b.amountCents) + '. ' : '') +
+        (b.shared ? 'Open job' + (b.backers ? ', ' + plural(b.backers, 'backer') + ' added ' + money(b.amountCents - b.ownCents) : '') + '. ' : '') +
         (b.maxCents ? 'Auto-bid up to ' + money(b.maxCents) + '. ' : '') +
         (b.approvedMinutes ? 'Agreed time: ' + duration(b.approvedMinutes) + '. ' : '') + (tasks[b.token] || '');
       text.appendChild(head); text.appendChild(sub); row.appendChild(text);
@@ -1285,6 +1350,39 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     if(cardEl) cardEl.clear();
   }
 
+  /* ---------- secret or open, and adding money to an open job ----------
+     The poster chooses. A secret job stays hidden until the video and only its
+     poster can raise it. An open job is shown on the board and anyone can add
+     money to it; it has no hidden maximum. */
+  function paintChoice(){
+    $('visWrap').hidden = !(pooling && !raising && !backing);
+    var openJob = pooling && !raising && !backing && $('visOpen').checked;
+    $('maxField').hidden = Boolean(backing) || openJob;
+    $('notifyWrap').hidden = !alerts || Boolean(backing);   /* outbid emails are for a job's poster */
+    if($('maxField').hidden) $('max').value = '';
+  }
+  $('visSecret').addEventListener('change', function(){ paintChoice(); refresh(); });
+  $('visOpen').addEventListener('change', function(){ paintChoice(); refresh(); });
+  function startBack(job){
+    if(raising || backing) stopRaise();
+    backing = job;
+    $('task').value = job.task;
+    $('task').readOnly = true;
+    document.querySelector('#bid .chips[aria-label="Ideas"]').hidden = true;
+    $('raiseText').textContent = 'You are adding money to this job.';
+    $('raiseCancel').textContent = 'Place your own bid';
+    $('raiseBar').hidden = false;
+    $('amountLabel').textContent = 'Add';
+    $('more').hidden = true;
+    hideCard();
+    amount.value = ''; $('max').value = '';
+    msg.hidden = true;
+    btn.textContent = 'Continue';
+    paintChoice(); refresh();
+    $('bid').scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'start'});
+    amount.focus({preventScroll: true});
+  }
+
   /* ---------- raising one of them ---------- */
   function startRaise(entry, standing){
     raising = entry;
@@ -1293,6 +1391,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     document.querySelector('#bid .chips[aria-label="Ideas"]').hidden = true;
     $('raiseBar').hidden = false;
     $('more').hidden = true;
+    paintChoice();
     hideCard();   /* a raise uses the card already on the bid; the box comes back if the service asks */
     amount.value = standing && standing.standing !== 'leading' && standing.highCents ? ((standing.highCents + 1) / 100).toFixed(2) : '';
     $('max').value = '';
@@ -1302,7 +1401,11 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     amount.focus();
   }
   function stopRaise(){
-    raising = null;
+    raising = null; backing = null;
+    $('raiseText').textContent = 'You are raising your bid on this job.';
+    $('raiseCancel').textContent = 'Place a different bid';
+    $('amountLabel').textContent = 'Your bid';
+    $('more').hidden = true;
     $('task').value = '';
     $('task').readOnly = false;
     document.querySelector('#bid .chips[aria-label="Ideas"]').hidden = false;
@@ -1311,7 +1414,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     amount.value = ''; $('max').value = '';
     msg.hidden = true;
     btn.textContent = 'Continue';
-    refresh();
+    paintChoice(); refresh();
   }
   $('raiseCancel').addEventListener('click', function(){ stopRaise(); $('task').focus(); });
 
@@ -1322,7 +1425,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     msg.textContent = text;
     msg.className = 'msg' + (ok ? ' msg--ok' : '');
   }
-  function buttonLabel(){ return raising ? 'Raise bid' : ($('more').hidden ? 'Continue' : 'Place bid'); }
+  function buttonLabel(){ return raising ? 'Raise bid' : ($('more').hidden ? 'Continue' : (backing ? 'Add money' : 'Place bid')); }
 
   form.addEventListener('submit', function(e){
     e.preventDefault();
@@ -1331,13 +1434,14 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     var cents = toCents(amount.value.trim());
     var maxRaw = $('max').value.trim(), maxCents = maxRaw === '' ? null : toCents(maxRaw);
     if(!raising && task.length < 10){ $('task').focus(); return say('Describe the job in a few more words.'); }
+    if(backing && (cents === null || cents < minPledge)){ amount.focus(); return say('The least you can add is ' + money(minPledge) + '.'); }
     if(cents === null || cents < 1){ amount.focus(); return say('Enter a bid of at least $0.01.'); }
     if(maxRaw !== '' && (maxCents === null || maxCents < cents)){ $('max').focus(); return say('Your maximum has to be at least your bid.'); }
     if(!raising && $('more').hidden){     /* step two: who is bidding */
       $('more').hidden = false;
       showCard();
       msg.hidden = true;
-      btn.textContent = 'Place bid';
+      btn.textContent = backing ? 'Add money' : 'Place bid';
       $('who').focus();
       return;
     }
@@ -1350,7 +1454,10 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
 
     var body = raising
       ? {token: raising.token, amountCents: cents, maxCents: maxCents}
-      : {task: task, name: name, email: email, amountCents: cents, maxCents: maxCents, notify: alerts && $('notify').checked};
+      : backing
+        ? {job: backing.id, name: name, email: email, amountCents: cents}
+        : {task: task, name: name, email: email, amountCents: cents, maxCents: maxCents, notify: alerts && $('notify').checked,
+           open: pooling && $('visOpen').checked};
     btn.disabled = true; btn.textContent = 'Sending';
     if(cardKey && !$('cardWrap').hidden){
       if(!stripe || !cardEl) return stop('The card box is still loading. Try again in a moment.');
@@ -1377,7 +1484,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     }).then(function(r){ return r.json().then(function(d){ return {ok: r.ok, d: d}; }); });
   }
   function send(body, task){
-    post('/bids', body)
+    post(backing ? '/pledges' : '/bids', body)
       .then(function(res){ return answer(res, task); })
       .catch(function(){ say('That did not go through. Check your connection and try again.'); })
       .then(function(){ stop(); });
@@ -1392,12 +1499,18 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       say(d.message || 'Your bank wants you to confirm this card.', true);
       btn.textContent = 'Waiting for your bank';
       return stripe.confirmCardPayment(d.clientSecret)
-        .then(function(){ return post('/bids/confirm', {token: d.token}); })
+        .then(function(){ return post(d.pledge ? '/pledges/confirm' : '/bids/confirm', {token: d.token}); })
         .then(function(next){ return answer(next, task); });
     }
     if(d.verdict === 'card' || d.verdict === 'declined'){
       showCard();
       return say(d.message || 'Add a card to place this bid.');
+    }
+    if(d.verdict === 'pledged'){
+      if(d.token) remember(d.token, task);
+      stopRaise();   /* back to a clean form; the message stays */
+      say(d.message || 'Your money is in.', true);
+      return load();
     }
     var landed = d.verdict === 'qualified' || d.verdict === 'held';
     say(d.message || (res.ok ? 'Your bid is in.' : 'That did not go through. Please try again.'), landed);
@@ -1415,6 +1528,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     document.querySelector('#bid .chips[aria-label="Ideas"]').hidden = true;
     $('raiseBar').hidden = false;
     $('more').hidden = true;
+    paintChoice();
     hideCard();
   }
 

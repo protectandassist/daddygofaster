@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   money, minCentsFor, coveredMinutes, timeAllowance, approveDuration, describeMinutes, validateBid, decide,
   localParts, zonedToUtc, dayShift, nominalAuction, extendedClose, pickWinner, applyScreen, raiseVerdict, resolveStandings, validateMax, validateRaise, LIMITS, REFUSALS, HELD_MESSAGE,
-  holdTarget, extraHold, captureSlice,
+  holdTarget, extraHold, captureSlice, validatePledge,
 } from '../src/rules.js';
 
 const TZ = 'America/Chicago';
@@ -264,4 +264,16 @@ test('the winner is charged the winning amount, not everything held', () => {
   assert.equal(captureSlice(50, 10), 0); // ten cents left over is let go
   assert.equal(captureSlice(1000, 0), 0);
   assert.equal(captureSlice(1000, -5), 0);
+});
+
+test('money added to an open job: a real name and email, and at least $2', () => {
+  const ok = { name: 'Bea', email: 'Bea@Example.com', amountCents: 500 };
+  assert.deepEqual(validatePledge(ok), { ok: true, value: { name: 'Bea', email: 'bea@example.com', amountCents: 500 } });
+  assert.equal(validatePledge({ ...ok, amountCents: 199 }).ok, false); // under the minimum the card fee eats it
+  assert.equal(validatePledge({ ...ok, amountCents: 200 }).ok, true);
+  assert.equal(validatePledge({ ...ok, amountCents: 12.5 }).ok, false);
+  assert.equal(validatePledge({ ...ok, amountCents: LIMITS.maxCents + 1 }).ok, false);
+  assert.equal(validatePledge({ ...ok, email: 'nope' }).ok, false);
+  assert.equal(validatePledge({ ...ok, name: 'x' }).ok, false);
+  assert.equal(validatePledge(null).ok, false);
 });
