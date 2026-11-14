@@ -6,6 +6,10 @@
 //          POST /pledges         add money to someone's open job
 //          POST /pledges/confirm finish that after the bank asked the cardholder to confirm
 //          POST /mine            how the bids this browser placed are standing
+//          POST /auth/start      email a sign-in link;  POST /auth/finish  use it;  POST /auth/end  sign out
+//          GET  /me              who is signed in, their votes, and where they can comment
+//          POST /votes           vote for an open job, or take the vote back (signed in)
+//          GET  /comments        comments on an open job;  POST /comments  add one (signed in, with money on it)
 //          GET  /stop            turn off outbid emails for one bid
 // Owner:   GET  /admin           the owner's page (asks for the admin key)
 //          *    /admin/api/...   needs "Authorization: Bearer <admin key>"
@@ -27,6 +31,9 @@ import {
   sha256, randomHex, sameText, getSetting, setSetting, deleteSetting, seal, providerKey,
   storeAdminKey, adminKeyIsSet, adminKeyMatches,
 } from './store.js';
+import {
+  signInOn, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, recentComments, removeComment,
+} from './social.js';
 import ADMIN_HTML from './admin.html';
 
 const IP_BIDS_PER_HOUR = 30;
@@ -207,7 +214,10 @@ async function getBoard(env, s, now) {
   if (!s.open) return { status: 'soon', bids: [], alerts: false };
   const a = await currentAuction(env, s, now);
   const { results } = await env.DB.prepare(
-    "SELECT name, amount_cents, created_at, shared, pid, task, backers FROM bids WHERE day = ? AND status = 'qualified' ORDER BY amount_cents DESC, created_at ASC, id ASC LIMIT 50",
+    `SELECT name, amount_cents, created_at, shared, pid, task, backers,
+            (SELECT COUNT(*) FROM votes v WHERE v.bid_id = bids.id) AS votes,
+            (SELECT COUNT(*) FROM comments c WHERE c.bid_id = bids.id AND c.status = 'shown') AS comments
+     FROM bids WHERE day = ? AND status = 'qualified' ORDER BY amount_cents DESC, created_at ASC, id ASC LIMIT 50`,
   ).bind(a.day).all();
   return {
     status: a.status === 'open' ? 'open' : 'closed',
@@ -217,12 +227,13 @@ async function getBoard(env, s, now) {
     cardKey: cardKeys(env)?.publishable ?? null, // set when a bid needs a card; the page shows the card box
     pooling: Boolean(cardKeys(env)), // can people add money to an open job? It needs card holds.
     minPledgeCents: LIMITS.minPledgeCents,
+    signIn: await signInOn(env, s), // can people sign in? It needs the email key.
     // A secret job gives name, amount and time only: the job itself never leaves the database
     // here. An open job, which its poster chose to show, also gives the job, a public
     // handle to add money to, and how many people have. Never an email or a maximum.
     bids: results.map((b) => ({
       name: b.name, amountCents: b.amount_cents, placedAt: new Date(b.created_at).toISOString(),
-      ...(b.shared ? { open: true, id: b.pid, task: b.task, backers: b.backers } : { open: false }),
+      ...(b.shared ? { open: true, id: b.pid, task: b.task, backers: b.backers, votes: b.votes, comments: b.comments } : { open: false }),
     })),
   };
 }
@@ -665,6 +676,7 @@ async function adminState(env, s, now, showJobs) {
     settings: { ...TIME_POLICY, timeZone: s.tz, closeHour: s.closeHour, maxBidsPerDay: s.maxPerDay },
     auction: auction ? { day: auction.day, status: auction.status, closesAt: new Date(auction.closes_at).toISOString() } : null,
     bids: bids.map((b) => adminBid(b, s, showJobs, cardsOn ? cards : null)),
+    comments: auction ? await recentComments(env, auction.day) : [],
     previous,
   };
 }
@@ -738,6 +750,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
   let m;
   if (request.method === 'GET' && path === '/admin/api/state') return [200, await adminState(env, s, now, url.searchParams.get('jobs') === '1')];
   if (request.method === 'POST' && (m = /^\/admin\/api\/bids\/(\d+)\/decide$/.exec(path))) return adminDecide(request, env, s, ctx, Number(m[1]), now);
+  if (request.method === 'POST' && (m = /^\/admin\/api\/comments\/(\d+)\/remove$/.exec(path))) return removeComment(env, Number(m[1]));
   if (request.method === 'POST' && (m = /^\/admin\/api\/auctions\/(\d{4}-\d{2}-\d{2})\/close$/.exec(path))) {
     if (!(await closeAuction(env, m[1], now))) return [409, { message: 'That round is not open.' }];
     // Charge the winner and release the other holds now, so the owner sees the result.
@@ -772,7 +785,17 @@ async function adminRoute(request, env, s, ctx, path, now) {
 
 // ---- entry ------------------------------------------------------------------------
 
-const PUBLIC = new Set(['/board', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine']);
+const PUBLIC = new Set(['/board', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/me', '/votes', '/comments']);
+// Signing in, votes and comments: [method, path] to handler. Each answers [status, body].
+const SOCIAL = {
+  'POST /auth/start': (request, env, s, now) => authStart(request, env, s, now),
+  'POST /auth/finish': (request, env, s, now) => authFinish(request, env, now),
+  'POST /auth/end': (request, env, s, now) => authEnd(request, env, now),
+  'GET /me': (request, env, s, now) => getMe(request, env, now),
+  'POST /votes': (request, env, s, now) => (s.open ? postVote(request, env, now) : [403, { message: 'Bidding is not open yet.' }]),
+  'GET /comments': (request, env) => getComments(env, new URL(request.url)),
+  'POST /comments': (request, env, s, now) => (s.open ? postComment(request, env, now) : [403, { message: 'Bidding is not open yet.' }]),
+};
 
 export default {
   async fetch(request, env, ctx) {
@@ -787,10 +810,15 @@ export default {
         if (request.method === 'OPTIONS') {
           return new Response(null, {
             status: 204,
-            headers: { ...cors, 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type', 'access-control-max-age': '86400' },
+            headers: { ...cors, 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type, authorization', 'access-control-max-age': '86400' },
           });
         }
         if (path === '/board' && request.method === 'GET') return json(await getBoard(env, s, now), 200, cors);
+        const social = SOCIAL[request.method + ' ' + path];
+        if (social) {
+          const [status, body] = await social(request, env, s, now);
+          return json(body, status, cors);
+        }
         if (path === '/bids' && request.method === 'POST') {
           const [status, body] = await postBid(request, env, s, ctx, now);
           return json(body, status, cors);

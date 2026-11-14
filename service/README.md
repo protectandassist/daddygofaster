@@ -13,6 +13,10 @@ The site's page (`../index.html`) calls two public endpoints. The owner uses `/a
 | `POST /pledges` | anyone | Add money to someone's open job. Needs card holds to be on. |
 | `POST /pledges/confirm` | the backer's browser | Finishes that after the backer's bank asked them to confirm the card. |
 | `POST /mine` | the bidder's browser | How the bids that browser placed are standing: leading, outbid, waiting, short, won. |
+| `POST /auth/start`, `/auth/finish`, `/auth/end` | anyone | Email a sign-in link, use it, sign out. |
+| `GET /me` | signed in | Who is signed in, their votes, and the open jobs they can comment on. |
+| `POST /votes` | signed in | Vote for an open job, or take the vote back. |
+| `GET /comments`, `POST /comments` | anyone / signed in | Read an open job's comments; add one. |
 | `GET /stop` | the bidder | The link in an outbid email. Turns those emails off for that bid. |
 | `GET /admin` | owner | The owner's page. Asks for the admin key. |
 | `/admin/api/*` | owner | Needs `Authorization: Bearer <ADMIN_KEY>`. |
@@ -72,6 +76,22 @@ minimum is there because a card payment costs a fixed fee, which would eat a sma
 amount. Limits: 20 additions per email per day, 30 per network address per hour.
 
 Open jobs and added money need card holds to be on. With them off, every job is secret.
+
+## Signing in, votes and comments
+
+Looking, bidding and adding money need no account. Voting and commenting do.
+
+- **Signing in** is a link sent by email, good once and for 20 minutes. There are no
+  passwords. The link's code and the browser's session key are random and only their
+  hashes are stored. A session lasts 60 days. Signing in needs the email key; without it
+  the page shows no sign-in, votes or comments.
+- **Votes** are one per person per open job, and can be taken back. They show interest
+  only: money decides who wins, because an email address is cheap to make.
+- **Comments** are for people with money on that job: its poster, or anyone who added
+  to it, matched by the email they signed in with. Up to 280 characters, no links, 20 a
+  day. The first comment asks for a name to show. The owner removes comments in `/admin`.
+
+Nobody's email is ever shown: a comment carries the chosen name, and a vote is a count.
 
 ## Auto-bid
 

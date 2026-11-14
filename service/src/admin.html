@@ -85,6 +85,12 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       </table>
     </section>
 
+    <section class="card" id="commentsCard" hidden>
+      <h2>Comments in this auction</h2>
+      <p class="muted small">Written by people who put money on an open job. Remove anything that should not be there.</p>
+      <div id="comments"></div>
+    </section>
+
     <section class="card" id="prevCard" hidden>
       <h2 id="prevTitle"></h2>
       <div id="prev"></div>
@@ -184,6 +190,21 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       tr.appendChild(el('td', 'muted small', b.note || ''));
       tr.appendChild(el('td', 'num', money(b.amountCents)));
       body.appendChild(tr);
+    });
+
+    var notes = d.comments || [];
+    $('commentsCard').hidden = notes.length === 0;
+    $('comments').textContent = '';
+    notes.forEach(function(c){
+      var item = el('div', 'held-item'), top = el('div', 'row');
+      top.appendChild(el('b', null, c.name));
+      top.appendChild(el('span', 'muted small', 'on ' + c.on + '\'s job, ' + when(c.at)));
+      var rm = el('button', 'bad', 'Remove'); rm.style.marginLeft = 'auto';
+      rm.addEventListener('click', function(){ act('/admin/api/comments/' + c.id + '/remove'); });
+      top.appendChild(rm);
+      item.appendChild(top);
+      item.appendChild(el('div', 'job', c.text));
+      $('comments').appendChild(item);
     });
 
     var p = d.previous, box = $('prev');
