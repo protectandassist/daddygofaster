@@ -175,9 +175,28 @@ p{margin:0}
   .work__option{grid-template-columns:1fr}.work__option em{grid-row:auto;grid-column:1}}
 .idea-scene{position:relative;isolation:isolate;min-height:360px;border:1px solid var(--line-2);border-radius:14px;overflow:hidden;background:var(--bg-2)}
 .idea-scene__images{position:absolute;inset:0;z-index:-2}
-.idea-scene__images img{position:absolute;width:100%;height:100%;object-fit:cover;object-position:56% 48%;opacity:0;transform:scale(1.035);
-  transition:opacity .65s ease,transform 9s linear}
-.idea-scene__images img.is-active{opacity:1;transform:scale(1)}
+.idea-scene__images img{position:absolute;width:100%;height:100%;object-fit:cover;object-position:56% 48%;opacity:0;transform:scale(1.06);
+  transition:opacity .9s ease,object-position 1.4s ease}
+.idea-scene__images img.is-active{opacity:1}
+/* Each idea gets its own slow move across the picture, so even the same photo reads as a new shot. */
+.idea-scene__images img.is-moving{animation:ideaDrift 8s ease-out forwards}
+@keyframes ideaDrift{from{transform:scale(1.16) translate(var(--dx,0),var(--dy,0))}to{transform:scale(1.04) translate(0,0)}}
+.idea-progress{position:absolute;left:0;bottom:0;height:3px;width:0;background:var(--accent);z-index:1}
+.idea-progress.is-running{animation:ideaProgress 7s linear forwards}
+@keyframes ideaProgress{from{width:0}to{width:100%}}
+.idea-filter.is-current{border-color:var(--accent-hi)}
+.idea-filter.is-current img{opacity:1}
+@media(prefers-reduced-motion:reduce){.idea-scene__images img.is-moving,.idea-progress.is-running{animation:none}}
+/* Create an account: a link by email, no password. */
+.join{display:grid;grid-template-columns:1.2fr 1fr;gap:28px;align-items:center;padding:32px}
+.join h2{font-size:clamp(1.5rem,2.6vw,2rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin:8px 0 12px;text-wrap:balance}
+.join p{color:var(--muted)}
+.join__form{display:grid;gap:10px}
+.join__form input{width:100%;background:var(--field);border:1px solid var(--line-2);border-radius:10px;color:var(--text);font:400 1rem/1.5 var(--body);padding:12px 14px}
+.join__form input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(239,149,2,.25)}
+.join__msg{margin-top:10px;color:var(--text);font-size:.95rem}
+.join__msg:empty{display:none}
+@media(max-width:760px){.join{grid-template-columns:1fr;padding:24px}}
 .idea-scene::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
   background:linear-gradient(180deg,rgba(12,13,16,.38),transparent 35%,rgba(12,13,16,.45) 60%,rgba(12,13,16,.95))}
 .idea-scene__top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px}
@@ -485,6 +504,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       <a href="#how">How it works</a>
       <a href="#board">Today's bids</a>
       <a href="#rules">Rules</a>
+      <a href="#join" id="navJoin" hidden>Create account</a>
       <a href="https://www.youtube.com/@Torchhive" target="_blank" rel="noopener">YouTube</a>
     </nav>
     <a class="btn btn--primary btn--sm" href="#bid">Place a bid <span aria-hidden="true">↗</span></a>
@@ -495,6 +515,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         <a href="#how">How it works</a>
         <a href="#board">Today's bids</a>
         <a href="#rules">Rules</a>
+        <a href="#join" id="navJoinMobile" hidden>Create account</a>
         <a href="#sponsors">Sponsors</a>
         <a href="https://www.youtube.com/@Torchhive" target="_blank" rel="noopener">YouTube ↗</a>
       </nav>
@@ -529,6 +550,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
               <h2 id="ideaTitle">Walk five miles for one doughnut.</h2>
               <a href="#bid" id="ideaUse">Use this idea <span aria-hidden="true">↗</span></a>
             </div>
+            <span class="idea-progress" id="ideaProgress" aria-hidden="true"></span>
           </div>
           <div class="idea-controls" id="ideaControls" hidden>
             <div class="idea-filters" role="group" aria-label="Choose an idea category">
@@ -797,6 +819,27 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     </div>
   </section>
 
+  <!-- ===== CREATE AN ACCOUNT =============================== -->
+  <section class="sec" id="join" hidden>
+    <div class="wrap">
+      <div class="card join rise">
+        <div>
+          <p class="eyebrow">Free. No password.</p>
+          <h2>Create your own TorchHive account</h2>
+          <p>Vote on open jobs, comment on the ones you put money behind, and stay signed in on any device. Enter your email and we send you a link. Opening it creates your account.</p>
+        </div>
+        <div>
+          <form class="join__form" id="joinForm" novalidate>
+            <label class="visually-hidden" for="joinEmail">Your email</label>
+            <input type="email" id="joinEmail" placeholder="you@example.com" autocomplete="email">
+            <button class="btn btn--primary btn--block" type="submit">Create my account</button>
+          </form>
+          <p class="join__msg" id="joinMsg" role="status"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== SPONSORS ======================================== -->
   <section class="sec" id="sponsors">
     <div class="wrap">
@@ -977,22 +1020,70 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     {scene:'cleanup', title:'Make a cleanup gadget from junk.', task:'Spend one hour making a hand-operated litter grabber from scrap materials, then test whether it can pick up 20 clean empty cans without dropping them.'},
     {scene:'cleanup', title:'Rescue the ugliest $10 thrift find.', task:'Find an item for $10 or less at a thrift store, spend up to two hours repairing or improving it at home, and reveal the before and after. Film the project, not store staff or customers.'}
   ];
+  /* short names for the suggestion buttons under the job box, in the same order as the ideas */
+  var chipNames = ['The five-mile doughnut', 'Coin-flip walk', 'Watermelon carry', 'GPS dinosaur', '10,000 steps first', 'A to Z photo hunt',
+    'Overengineer a bell', 'Spaghetti bridge', 'Garage mini golf', 'Card tower', 'Chopstick coin sort', 'Gas station feast', 'Cardboard arcade',
+    'Toothbrush vs. patio', '100-piece cleanup', 'Fork vs. leaves', 'Junk grabber', '$10 thrift rescue'];
+  (function(){
+    /* three different suggestions each visit, one from each kind of scene when there are enough */
+    var chips = document.querySelectorAll('#bid .chips[aria-label="Ideas"] .chipbtn');
+    if(chipNames.length !== ideas.length || !chips.length) return;
+    var byScene = {}, picks = [];
+    ideas.forEach(function(idea, i){ (byScene[idea.scene] = byScene[idea.scene] || []).push(i); });
+    var scenes = Object.keys(byScene).sort(function(){ return Math.random() - .5; });
+    scenes.forEach(function(scene){ var pile = byScene[scene]; picks.push(pile.splice(Math.floor(Math.random() * pile.length), 1)[0]); });
+    var rest = [].concat.apply([], scenes.map(function(scene){ return byScene[scene]; })).sort(function(){ return Math.random() - .5; });
+    while(picks.length < chips.length && rest.length) picks.push(rest.shift());
+    Array.prototype.forEach.call(chips, function(chip, n){
+      if(picks[n] === undefined) return;
+      chip.textContent = chipNames[picks[n]];
+      chip.setAttribute('data-idea', ideas[picks[n]].task);
+    });
+  })();
   var sceneNames = {sunrise:'Take the long way', workshop:'Make it ridiculous', cleanup:'Chores with a catch'};
   var inspiration = $('inspiration'), category = 'all', deck = [], ideaIndex = -1;
   var ideaTimer = null, ideaPaused = reduce, ideaHovered = false, ideaVisible = true, workOpen = false;
   try { ideaIndex = Number(localStorage.getItem('dgfIdeaLast') || -1); } catch(e) {}
-  function shuffleDeck(){
-    deck = ideas.map(function(_, i){ return i; }).filter(function(i){ return category === 'all' || ideas[i].scene === category; });
-    for(var i = deck.length - 1; i > 0; i--){
-      var j = Math.floor(Math.random() * (i + 1)), temp = deck[i]; deck[i] = deck[j]; deck[j] = temp;
+  function mix(list){
+    for(var i = list.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1)), temp = list[i]; list[i] = list[j]; list[j] = temp;
     }
-    if(deck.length > 1 && deck[0] === ideaIndex){ var first = deck[0]; deck[0] = deck[1]; deck[1] = first; }
+    return list;
+  }
+  /* A shuffled deck, dealt so the picture changes with every idea: the three
+     kinds of scene take turns for as long as each has ideas left. */
+  function shuffleDeck(){
+    var all = ideas.map(function(_, i){ return i; }).filter(function(i){ return category === 'all' || ideas[i].scene === category; });
+    if(category !== 'all'){ deck = mix(all); }
+    else {
+      var piles = mix(Object.keys(sceneNames)).map(function(scene){ return mix(all.filter(function(i){ return ideas[i].scene === scene; })); });
+      deck = [];
+      while(piles.some(function(p){ return p.length; })){
+        piles.forEach(function(p){ if(p.length) deck.push(p.shift()); });
+      }
+    }
+    if(deck.length > 1 && (deck[0] === ideaIndex || (ideaIndex >= 0 && ideas[ideaIndex] && ideas[deck[0]].scene === ideas[ideaIndex].scene))){
+      var swap = 1;
+      while(swap < deck.length - 1 && ideas[deck[swap]].scene === ideas[deck[0]].scene) swap++;
+      var first = deck[0]; deck[0] = deck[swap]; deck[swap] = first;
+    }
+  }
+  /* where each idea's shot starts from: a different crop and drift every time */
+  var SHOTS = [['50% 40%', '-2%', '1.5%'], ['62% 55%', '2%', '-1%'], ['40% 50%', '1.5%', '2%'], ['56% 34%', '-1.5%', '-2%'], ['48% 62%', '2%', '1%'], ['66% 44%', '-2%', '-1%']];
+  var shot = 0;
+  function runProgress(on){
+    var bar = $('ideaProgress');
+    bar.classList.remove('is-running');
+    if(on){ void bar.offsetWidth; bar.classList.add('is-running'); }
   }
   function scheduleIdea(){
     clearTimeout(ideaTimer);
     var focused = inspiration.contains(document.activeElement) || $('bid').contains(document.activeElement);
     if(!ideaPaused && !ideaHovered && !focused && ideaVisible && !workOpen && !document.hidden){
-      ideaTimer = setTimeout(function(){ nextIdea(false); }, 9000);
+      ideaTimer = setTimeout(function(){ nextIdea(false); }, 7000);
+      runProgress(true);
+    } else {
+      runProgress(false);
     }
   }
   function nextIdea(announce){
@@ -1003,7 +1094,18 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     $('ideaCategory').textContent = sceneNames[idea.scene];
     var pool = ideas.filter(function(x){ return category === 'all' || x.scene === category; });
     $('ideaCount').textContent = String(pool.indexOf(idea) + 1).padStart(2, '0') + ' / ' + String(pool.length).padStart(2, '0');
-    Object.keys(sceneNames).forEach(function(scene){ $('scene-' + scene).classList.toggle('is-active', scene === idea.scene); });
+    var move = SHOTS[shot++ % SHOTS.length];
+    Object.keys(sceneNames).forEach(function(scene){
+      var img = $('scene-' + scene), on = scene === idea.scene;
+      img.classList.toggle('is-active', on);
+      if(!on) return;
+      img.style.objectPosition = move[0];
+      img.style.setProperty('--dx', move[1]); img.style.setProperty('--dy', move[2]);
+      img.classList.remove('is-moving'); void img.offsetWidth; img.classList.add('is-moving');   /* start the move again */
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.idea-filter[data-category]'), function(b){
+      b.classList.toggle('is-current', b.getAttribute('data-category') === idea.scene);
+    });
     if(!$('task').value.trim() && !raising) $('task').placeholder = idea.task;
     if(announce) $('ideaAnnouncement').textContent = 'Idea: ' + idea.title;
     try { localStorage.setItem('dgfIdeaLast', String(ideaIndex)); } catch(e) {}
@@ -1273,25 +1375,35 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   }
 
   function load(){
+    if(demo){ paint(demoData); return; }
     fetch(CONFIG.api + '/board', {headers: {'Accept': 'application/json'}})
       .then(function(r){ if(!r.ok) throw new Error('board ' + r.status); return r.json(); })
       .then(function(d){ paint(d); loadMine(); })
       .catch(function(){ /* leave the page in its not-open state */ });
   }
 
+  var demoData = null, demoThreads = {};
   if(demo){
     var now = Date.now(), min = 60000;
-    paint({
-      status: 'open',
+    demoData = {
+      status: 'open', pooling: true, minPledgeCents: 200, signIn: true,
       closesAt: new Date(now + 193 * min + 12000).toISOString(),
       bids: [
-        {name: 'mike_r',    amountCents: 4200, placedAt: new Date(now - 14 * min).toISOString()},
-        {name: 'sarahk',    amountCents: 3500, placedAt: new Date(now - 52 * min).toISOString()},
-        {name: 'tj88',      amountCents: 1250, placedAt: new Date(now - 131 * min).toISOString()},
-        {name: 'dana_w',    amountCents: 400,  placedAt: new Date(now - 190 * min).toISOString()},
-        {name: 'first_bid', amountCents: 1,    placedAt: new Date(now - 305 * min).toISOString()}
+        {name: 'mike_r',    amountCents: 4200, placedAt: new Date(now - 14 * min).toISOString(), open: true, id: 'demo00000001', backers: 6, votes: 14, comments: 2,
+         task: 'Carry one watermelon on a two-mile walk without a bag or wheels. Bring it home and cut it open at the end.'},
+        {name: 'sarahk',    amountCents: 3500, placedAt: new Date(now - 52 * min).toISOString(), open: false},
+        {name: 'tj88',      amountCents: 1250, placedAt: new Date(now - 131 * min).toISOString(), open: true, id: 'demo00000002', backers: 1, votes: 3, comments: 0,
+         task: 'Build a homemade miniature-golf hole across your garage with at least three obstacles.'},
+        {name: 'dana_w',    amountCents: 400,  placedAt: new Date(now - 190 * min).toISOString(), open: false},
+        {name: 'first_bid', amountCents: 1,    placedAt: new Date(now - 305 * min).toISOString(), open: false}
       ]
-    }, 'Sample data for preview. These are not real bids.');
+    };
+    demoThreads = {demo00000001: [
+      {name: 'Priya', text: 'In for $5. He has to keep the stickers on.', at: new Date(now - 40 * min).toISOString()},
+      {name: 'big_al', text: 'Two miles is nothing. Make it uphill.', at: new Date(now - 22 * min).toISOString()}
+    ]};
+    me = {email: 'you@example.com', name: null, votes: [], canComment: ['demo00000001']};
+    paint(demoData, 'Sample data for preview. These are not real bids. Vote, comment and chip in to try it: nothing is sent.');
   } else if(CONFIG.api){
     load();
     setInterval(function(){ if(!document.hidden) load(); }, 30000);
@@ -1422,7 +1534,28 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
      Sign-in is a link sent by email: no password. The browser keeps a session
      key and sends it with votes and comments. Votes show interest only. Comments
      come from people who have put money on that job. */
+  function demoCall(method, path, body){
+    var out = {ok: true, status: 200, d: {}}, job = body && body.job;
+    var row = job && demoData.bids.filter(function(b){ return b.id === job; })[0];
+    if(path.indexOf('/comments?job=') === 0){
+      out.d = {comments: demoThreads[path.split('=')[1]] || []};
+    } else if(path === '/comments'){
+      if(!me.name && !(body.name || '').trim()){ out.ok = false; out.status = 400; out.d = {message: 'Add a name to show beside your comment.', needName: true}; return Promise.resolve(out); }
+      var c = {name: me.name || body.name.trim(), text: body.text, at: new Date().toISOString()};
+      (demoThreads[job] = demoThreads[job] || []).push(c);
+      if(row) row.comments = (row.comments || 0) + 1;
+      out.d = {comment: c, name: c.name};
+    } else if(path === '/votes'){
+      var on = body.on !== false;
+      if(row) row.votes = Math.max(0, (row.votes || 0) + (on ? 1 : -1));
+      out.d = {job: job, voted: on, votes: row ? row.votes : 0};
+    } else if(path === '/auth/start'){
+      out.d = {message: 'This is a preview, so no email was sent. On the real page a sign-in link arrives in a minute.'};
+    }
+    return Promise.resolve(out);
+  }
   function call(method, path, body){
+    if(demo) return demoCall(method, path, body);
     var headers = {'Accept': 'application/json'};
     if(body) headers['Content-Type'] = 'application/json';
     if(session) headers['Authorization'] = 'Bearer ' + session;
@@ -1438,8 +1571,28 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     $('acctText').textContent = me ? 'Signed in as ' + me.email + '.' : 'Sign in to vote and comment.';
     $('acctBtn').textContent = me ? 'Sign out' : 'Sign in';
     if(me) $('acctForm').hidden = true;
+    /* the "Create your own TorchHive account" section, and the links to it */
+    $('join').hidden = !signInOn;
+    $('navJoin').hidden = $('navJoinMobile').hidden = !signInOn || Boolean(me);
+    $('joinForm').hidden = Boolean(me);
+    if(me) $('joinMsg').textContent = 'You are signed in as ' + me.email + '.';
+    else if($('joinMsg').getAttribute('data-kind') !== 'sent') $('joinMsg').textContent = '';
   }
+  function sendLink(email, note, form){
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ note.textContent = 'Check the email address.'; return; }
+    note.textContent = 'Sending…';
+    call('POST', '/auth/start', {email: email}).then(function(res){
+      note.setAttribute('data-kind', res.ok ? 'sent' : '');
+      note.textContent = res.d.message || (res.ok ? 'Check your email for a sign-in link.' : 'That did not go through. Try again.');
+      if(res.ok && form === $('acctForm')) form.hidden = true;
+    }).catch(function(){ note.textContent = 'That did not go through. Check your connection and try again.'; });
+  }
+  $('joinForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    sendLink($('joinEmail').value.trim(), $('joinMsg'), $('joinForm'));
+  });
   function loadMe(){
+    if(demo){ paintAcct(); return; }   /* the preview has its own pretend visitor */
     if(!session){ me = null; paintAcct(); return; }
     call('GET', '/me').then(function(res){
       if(res.ok) me = {email: res.d.email, name: res.d.name, votes: res.d.votes || [], canComment: res.d.canComment || []};
@@ -1464,13 +1617,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   });
   $('acctForm').addEventListener('submit', function(e){
     e.preventDefault();
-    var email = $('acctEmail').value.trim();
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $('acctMsg').textContent = 'Check the email address.'; return; }
-    $('acctMsg').textContent = 'Sending…';
-    call('POST', '/auth/start', {email: email}).then(function(res){
-      $('acctMsg').textContent = res.d.message || (res.ok ? 'Check your email for a sign-in link.' : 'That did not go through. Try again.');
-      if(res.ok) $('acctForm').hidden = true;
-    }).catch(function(){ $('acctMsg').textContent = 'That did not go through. Check your connection and try again.'; });
+    sendLink($('acctEmail').value.trim(), $('acctMsg'), $('acctForm'));
   });
   /* arriving from the emailed link */
   (function(){

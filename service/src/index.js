@@ -211,7 +211,8 @@ function bidReply(row, verdict, message, standing) {
 // ---- public: the board ------------------------------------------------------------
 
 async function getBoard(env, s, now) {
-  if (!s.open) return { status: 'soon', bids: [], alerts: false };
+  // Before bidding opens there is no board, but people can already make an account.
+  if (!s.open) return { status: 'soon', bids: [], alerts: false, signIn: await signInOn(env, s) };
   const a = await currentAuction(env, s, now);
   const { results } = await env.DB.prepare(
     `SELECT name, amount_cents, created_at, shared, pid, task, backers,
