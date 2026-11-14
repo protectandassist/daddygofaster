@@ -70,7 +70,7 @@ export async function releaseBidHolds(env, key, bidId, now, exceptHoldId = 0) {
 }
 
 async function captureHold(env, key, hold, cents, now) {
-  const r = await captureIntent(env, key, hold.intent_id, cents, 'dgf-cap-' + hold.id);
+  const r = await captureIntent(env, key, hold.intent_id, cents, 'dgf-cap-' + hold.intent_id);
   if (r.ok && r.data.status === 'succeeded') {
     await mark(env, hold.id, 'captured', now, r.data.amount_received ?? cents);
     return r.data.amount_received ?? cents;
@@ -94,7 +94,7 @@ export async function undoCharge(env, key, bid, now) {
   let back = 0;
   for (const h of results.slice(0, OPS_PER_RUN * 2)) {
     if (h.state !== 'captured') { await releaseHold(env, key, h, now); continue; }
-    const r = await refundIntent(env, key, h.intent_id, 'dgf-ref-' + h.id);
+    const r = await refundIntent(env, key, h.intent_id, 'dgf-ref-' + h.intent_id);
     if (!r.ok) continue;
     await mark(env, h.id, 'refunded', now);
     back += h.captured_cents || 0;
@@ -164,7 +164,7 @@ export async function chargeBackers(env, key, bid, now) {
     if (hold) got = await captureHold(env, key, hold, Math.min(hold.cents, p.cents), now);
     else if (p.customer_id && p.card_id) {
       const r = await chargeSaved(env, key, {
-        customerId: p.customer_id, cardId: p.card_id, email: p.email, cents: p.cents, day: bid.day, bidId: bid.id, idempotencyKey: `dgf-back-${p.id}-${p.cents}`,
+        customerId: p.customer_id, cardId: p.card_id, email: p.email, cents: p.cents, day: bid.day, bidId: bid.id, idempotencyKey: `dgf-back-${p.customer_id}-${p.cents}`,
       });
       if (r.ok) {
         got = r.cents;

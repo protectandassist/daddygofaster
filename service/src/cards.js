@@ -29,7 +29,7 @@ export async function stripeCall(env, key, method, path, params, idempotencyKey)
     const data = await res.json().catch(() => null);
     if (res.ok) return { ok: true, status: res.status, data, error: null };
     const error = (data && data.error) || {};
-    console.error('[CARDS]', method, path.replace(/(pi|cus|pm)_[A-Za-z0-9]+/g, '$1_…'), 'answered', res.status, error.type || '', error.code || '');
+    console.error('[CARDS]', method, path.split('/').map((part) => (part.includes('_') && part !== 'payment_intents' ? part.slice(0, 3) + '(id)' : part)).join('/'), 'answered', res.status, error.type || '', error.code || '');
     return { ok: false, status: res.status, data: null, error };
   } catch (error) {
     console.error('[CARDS] failed', method, String(error));
@@ -104,7 +104,7 @@ export async function chargeSaved(env, key, { customerId, cardId, email, cents, 
     receipt_email: email,
     'metadata[bid_id]': String(bidId),
     'metadata[day]': day,
-  }, idempotencyKey || `dgf-win-${bidId}-${cents}`);
+  }, idempotencyKey || `dgf-win-${customerId}-${cents}`);
   if (r.ok && r.data.status === 'succeeded') return { ok: true, intentId: r.data.id, cents: r.data.amount_received ?? cents };
   const left = r.ok ? r.data : r.error.payment_intent;
   if (left && left.id) await cancelIntent(env, key, left.id);
