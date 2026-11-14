@@ -3,4 +3,4 @@ Allow: /
 Disallow: /legacy/
 Disallow: /service/
 
-Sitemap: https://daddygofaster.com/sitemap.xml
+Sitemap: https://torchhive.com/sitemap.xml

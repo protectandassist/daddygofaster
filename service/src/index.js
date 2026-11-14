@@ -1,4 +1,4 @@
-// dgf-bids: the bid service behind daddygofaster.com.
+// dgf-bids: the bid service behind torchhive.com (it began as daddygofaster.com).
 //
 // Public:  GET  /board           this round's qualified bids (name, amount, time only)
 //          POST /bids            place a bid or raise one, get a verdict back
@@ -65,7 +65,7 @@ function settings(env) {
     maxPerDay: int(env.MAX_BIDS_PER_DAY, 5),
     origins: (env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean),
     model: env.SCREEN_MODEL || 'claude-opus-5-5',
-    siteUrl: (env.SITE_URL || 'https://daddygofaster.com').replace(/\/+$/, ''),
+    siteUrl: (env.SITE_URL || 'https://torchhive.com').replace(/\/+$/, ''),
     mailFrom: env.MAIL_FROM || '',
   };
 }
@@ -614,7 +614,7 @@ async function stopEmails(env, token) {
   if (ok) await env.DB.prepare('UPDATE bids SET notify = 0 WHERE token = ?').bind(token).run();
   const line = ok ? 'You will not get any more emails about this bid.' : 'That link is not valid.';
   return new Response(
-    `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>DaddyGoFaster</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#0C0D10;color:#F5F5F6;font:18px/1.5 system-ui,sans-serif;text-align:center;padding:24px"><p>${line}</p>`,
+    `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Torchhive</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#0C0D10;color:#F5F5F6;font:18px/1.5 system-ui,sans-serif;text-align:center;padding:24px"><p>${line}</p>`,
     { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } },
   );
 }

@@ -12,7 +12,7 @@ export function outbidEmail({ amountCents, highCents, siteUrl, stopUrl }) {
   return {
     subject: 'You have been outbid',
     text: [
-      'Someone has outbid you on DaddyGoFaster.',
+      'Someone has outbid you on Torchhive.',
       '',
       `Your bid: ${money(amountCents)}`,
       `High bid now: ${money(highCents)}`,

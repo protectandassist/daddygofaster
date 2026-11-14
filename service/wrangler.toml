@@ -25,13 +25,13 @@ EXTEND_MINUTES = "5"
 # Bids one email address may land per job day (tries that fall short or break a rule are capped at four times this).
 MAX_BIDS_PER_DAY = "5"
 # Sites allowed to call the public endpoints from a browser.
-ALLOWED_ORIGINS = "https://daddygofaster.com,https://www.daddygofaster.com"
+ALLOWED_ORIGINS = "https://torchhive.com,https://www.torchhive.com,https://daddygofaster.com,https://www.daddygofaster.com"
 # Claude model that screens bids once an AI key is set.
 SCREEN_MODEL = "claude-opus-5-5"
 # Where links in emails point.
-SITE_URL = "https://daddygofaster.com"
+SITE_URL = "https://torchhive.com"
 # Who outbid emails come from. The domain has to be verified with the email provider (Resend).
-MAIL_FROM = "DaddyGoFaster <alerts@mail.daddygofaster.com>"
+MAIL_FROM = "Torchhive <alerts@mail.daddygofaster.com>"
 
 # Card holds (Stripe) are on when both of these are set as Worker secrets:
 #   STRIPE_SECRET_KEY        holds, charges and releases
