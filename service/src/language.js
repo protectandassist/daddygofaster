@@ -103,6 +103,26 @@ export function badLanguage(text) {
   return null;
 }
 
+// Names that would pass someone off as the site, its owner or its staff. Read
+// with look-alikes undone ("T0rchH1ve", "adm1n") and with numbers dropped
+// ("admin2"), so the usual disguises do not get through.
+const POSES_INSIDE = ['torchhive', 'torchive', 'torchhlve', 'daddygofaster', 'protectandassist', 'administrator', 'moderator', 'official', 'customerservice', 'customersupport', 'helpdesk'];
+const POSES_WHOLE = new Set(['admin', 'admins', 'mod', 'mods', 'staff', 'support', 'owner', 'theowner', 'system', 'security', 'billing', 'payments', 'refunds']);
+const POSES_ALONE = new Set(['team', 'theteam', 'root', 'host', 'thehost', 'help']); // reserved only as the whole name: "Team Rocket" is fine
+export function posesAsSite(name) {
+  // "SiteAdmin" and "THSupport" are read as their separate words.
+  const raw = String(name ?? '').normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
+  for (const text of [plain(raw), raw.replace(/[0-9]+/g, ' ')]) {
+    const words = text.replace(/[^a-z]+/g, ' ').trim().split(' ').filter(Boolean);
+    const joined = words.join('');
+    const squeezed = joined.replace(/(.)+/g, '$1');
+    if (POSES_INSIDE.some((p) => joined.includes(p) || squeezed.includes(p.replace(/(.)+/g, '$1')))) return true;
+    if (POSES_WHOLE.has(joined) || POSES_ALONE.has(joined) || words.some((w) => POSES_WHOLE.has(w))) return true;
+    if (joined.startsWith('admin') || joined.endsWith('admin')) return true; // "admintrevor", "siteadmin"
+  }
+  return false;
+}
+
 // Mostly capital letters, in something long enough to be shouting rather than "OK" or an acronym.
 export function shouting(text) {
   const letters = String(text ?? '').replace(/[^A-Za-z]/g, '');

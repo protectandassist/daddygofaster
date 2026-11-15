@@ -1049,7 +1049,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   var alerts = false, roundDay = null, raising = null, baseTitle = document.title;
   var cardKey = null, stripe = null, cardEl = null, stripeLoading = false;
   var session = null, me = null, signInOn = false, lastBoard = null, openThread = null, drafts = {};
-  var emailLinks = false, googleId = null, pushKey = null, pushOn = false, panelOpen = false;
+  var emailLinks = false, googleId = null, pushKey = null, pushOn = false, panelOpen = false, nameTyped = false;
   try { session = localStorage.getItem('dgfSession') || null; } catch (e) {}
   var pooling = false, minPledge = 200, backing = null;   /* backing: the open job this visitor is adding money to */
 
@@ -1366,16 +1366,16 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   var skills = [
     {id:'web', name:'Websites',
       time:'Up to one hour of your help with my website: fixes, changes or advice. I will send the details.',
-      projects:[{title:'Build a simple website', note:'Up to five pages from your text and pictures.', hours:6,
-        task:'Build me a simple website of up to five pages from the text and pictures I send you.'}]},
+      projects:[{title:'Build a simple website', note:'Up to five pages from your text and pictures. Capped at three hours of work.', hours:3, capped:true,
+        task:'Build me a simple website of up to five pages from the text and pictures I send you, in no more than three hours of work.'}]},
     {id:'email', name:'Email setup',
       time:'Up to one hour of your help with my email: setup, delivery problems or advice. I will send the details.',
       projects:[{title:'Set up email on your domain', note:'Mailboxes on your own domain, set up so mail gets delivered.', hours:2,
         task:'Set up email on my own domain, with the records that keep it out of spam. I will send the domain and the mailboxes I need.'}]},
     {id:'cad', name:'3D design',
       time:'Up to one hour of your help with a 3D design: a fix, a change or advice. I will send the details.',
-      projects:[{title:'Design a 3D part', note:'A printable part from your sketch and measurements.', hours:3,
-        task:'Design a 3D-printable part from the sketch and measurements I send you, and send me the file.'}]},
+      projects:[{title:'Design a simple 3D part', note:'A simple printable part from your sketch and measurements.', hours:3,
+        task:'Design a simple 3D-printable part from the sketch and measurements I send you, and send me the file.'}]},
     {id:'other', name:'Something else',
       time:'Up to one hour of your time on something practical. I will describe exactly what I need.',
       projects:[]}
@@ -1416,7 +1416,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       function(){ useJob(skill.time, 0); }));
     skill.projects.forEach(function(p){
       var floor = projectFloor(p.hours);
-      box.appendChild(option(p.title, p.note + ' About ' + p.hours + ' hours.', floor ? 'From ' + money(floor).replace('.00', '') : 'Any bid',
+      box.appendChild(option(p.title, p.note + (p.capped ? '' : ' About ' + p.hours + ' hours.'), floor ? 'From ' + money(floor).replace('.00', '') : 'Any bid',
         function(){ useJob(p.task, floor); }));
     });
   }
@@ -2041,12 +2041,13 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     $('acctEmail').hidden = $('acctSend').hidden = !emailLinks;
     /* someone signed in without a username is asked for one straight away */
     if(me && !me.name && !me.asked){ me.asked = true; panelOpen = true; }
-    if(!me) panelOpen = false;
+    if(!me){ panelOpen = false; nameTyped = false; }
     $('acctPanel').hidden = !panelOpen;
     $('acctOpen').setAttribute('aria-expanded', panelOpen ? 'true' : 'false');
     if(me){
       $('panelHead').textContent = me.name ? 'Your account' : 'Pick your username';
-      if(document.activeElement !== $('nameInput')) $('nameInput').value = me.name || '';
+      /* never over a username someone has typed and not yet saved: pressing another button here must not lose it */
+      if(!nameTyped) $('nameInput').value = me.name || '';
       $('alertEmail').checked = Boolean(me.emailAlerts);
       if(me.name && !$('who').value) $('who').value = me.name;   /* one less thing to type on the bid form */
     }
@@ -2073,6 +2074,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   $('joinManage').addEventListener('click', function(e){ e.preventDefault(); if(me) openPanel(); });
 
   /* ---- username and email alerts ---- */
+  $('nameInput').addEventListener('input', function(){ nameTyped = true; });
   $('nameForm').addEventListener('submit', function(e){
     e.preventDefault();
     var name = $('nameInput').value.replace(/\s+/g, ' ').trim();
@@ -2082,7 +2084,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     call('POST', '/me', first ? {name: name, emailAlerts: $('alertEmail').checked} : {name: name}).then(function(res){
       if(res.status === 401){ me = null; keepSession(null); paintAcct(); return askSignIn('Sign in again.'); }
       if(!res.ok){ $('panelMsg').textContent = res.d.message || 'That did not go through. Try again.'; return; }
-      me.name = res.d.name; me.emailAlerts = res.d.emailAlerts;
+      me.name = res.d.name; me.emailAlerts = res.d.emailAlerts; nameTyped = false;
       if(first) tap('Picked a username');
       $('nameInput').blur();
       paintAcct();

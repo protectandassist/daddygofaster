@@ -287,7 +287,7 @@ test('money added to an open job: a real name and email, and at least $2', () =>
   assert.equal(validatePledge(null).ok, false);
 });
 
-import { badLanguage, shouting } from '../src/language.js';
+import { badLanguage, shouting, posesAsSite } from '../src/language.js';
 
 test('ordinary comments get through, including words that only look rude', () => {
   for (const fine of [
@@ -352,4 +352,17 @@ test('a job checked before bidding: allowed, needs a person, too long for the bi
   const no = checkReply(applyScreen({ ...allow, decision: 'refuse', category: 'humiliating' }, ctx));
   assert.deepEqual([no.verdict, no.message, no.costCents], ['refused', REFUSALS.humiliating, null]);
   assert.equal(taskKey('  Walk   FIVE miles '), 'walk five miles');
+});
+
+test('nobody can take a name that passes them off as the site or its staff', () => {
+  for (const name of ['TorchHive', 'torch hive', 'T0rchH1ve', 'Torch_Hive_Official', 'TorchHive Support', 'torchive', 'Admin', 'admin', 'ADMIN', 'adm1n', '@dmin', 'Admin2',
+    'admin_trevor', 'SiteAdmin', 'The Admin', 'Administrator', 'Moderator', 'mod', 'Mod Mike', 'Staff', 'TH Staff', 'Support', 'support team', 'Owner', 'the owner',
+    'Official Mike', 'System', 'Help Desk', 'DaddyGoFaster', 'Protect and Assist', 'Billing', 'Team', 'Host', 'TorchHlve', 'Tоrchhive']) {
+    assert.equal(posesAsSite(name), true, name);
+  }
+  for (const name of ['Mike R', 'mike_r', 'sarahk', 'Badminton Bob', 'Modesto', 'Model T', 'Helper Hank', 'Homeowner Joe', 'Teamster', 'Hostess', 'Torch', 'Hive Five',
+    'Rooter', 'Team Rocket', 'Help Wanted', 'Staffordshire', 'Supportive Sue', 'Sam Owners', 'Gary2', 'tj88', 'lena_p', 'Coach D', 'Systematic']) {
+    assert.equal(posesAsSite(name), false, name);
+  }
+  assert.equal(validateBid({ task: 'Walk to the store and back', name: 'TorchHive Admin', email: 'a@example.com', amountCents: 500 }).ok, false);
 });

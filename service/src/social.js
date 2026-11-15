@@ -10,7 +10,7 @@
 import { sha256, randomHex, providerKey } from './store.js';
 import { sendEmail } from './mail.js';
 import { LIMITS } from './rules.js';
-import { badLanguage, shouting, LANGUAGE_MESSAGES } from './language.js';
+import { badLanguage, shouting, posesAsSite, LANGUAGE_MESSAGES } from './language.js';
 import { verifyGoogle } from './google.js';
 import { setEmailAlerts } from './alerts.js';
 
@@ -143,6 +143,11 @@ function cleanName(value) {
   return name.length >= LIMITS.nameMin && name.length <= LIMITS.nameMax && NAME_OK.test(name) ? name : null;
 }
 
+// The site's own account: the address(es) in SITE_ACCOUNTS may hold a reserved name such as "TorchHive".
+function siteAccount(env, email) {
+  return String(env.SITE_ACCOUNTS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean).includes(email);
+}
+
 // Two usernames are the same when they match with capitals, spaces and punctuation
 // taken out, so "Mike R" and "mike_r" cannot both exist.
 export function nameKey(name) {
@@ -157,6 +162,8 @@ async function setName(env, user, value, now) {
   const key = nameKey(name);
   if (key.length < LIMITS.nameMin) return { message: 'Use a username with at least two letters or numbers in it.' };
   if (badLanguage(name)) return { message: 'Pick a different username.' };
+  // Nobody can pass themselves off as the site or its staff. The site's own address is the one exception.
+  if (posesAsSite(name) && !siteAccount(env, user.email)) return { message: 'That username is reserved. Pick another.' };
   if (user.name && user.name_at && now - user.name_at < NAME_CHANGE_MS) return { message: 'You changed your username today. You can change it again tomorrow.' };
   const taken = await env.DB.prepare('SELECT id FROM users WHERE name_key = ? AND id <> ?').bind(key, user.id).first();
   if (taken) return { message: 'Someone already has that username. Try another.' };

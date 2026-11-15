@@ -1,4 +1,4 @@
-import { badLanguage } from './language.js';
+import { badLanguage, posesAsSite } from './language.js';
 
 // The house rules as plain functions. Nothing in this file talks to a database,
 // the network or a clock, so every rule here is unit-tested (test/rules.test.js).
@@ -78,6 +78,7 @@ export function validateBid(body) {
     return { ok: false, error: `Use a name of ${LIMITS.nameMin} to ${LIMITS.nameMax} letters or numbers.` };
   }
   if (badLanguage(name)) return { ok: false, error: 'Pick a different name for the board.' };
+  if (posesAsSite(name)) return { ok: false, error: 'That name is reserved. Pick a different name for the board.' };
   if (email.length > LIMITS.emailMax || !EMAIL_OK.test(email)) return { ok: false, error: 'Check the email address.' };
   if (!Number.isInteger(amountCents) || amountCents < 1) return { ok: false, error: 'Enter a bid of at least $0.01.' };
   if (amountCents > LIMITS.maxCents) return { ok: false, error: `The most you can bid here is ${money(LIMITS.maxCents)}.` };
