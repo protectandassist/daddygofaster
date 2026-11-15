@@ -620,6 +620,7 @@ async function postMine(request, env) {
       shared: Boolean(bid.shared), backers: bid.backers, ownCents: bid.own_cents ?? bid.amount_cents,
       amountCents: bid.amount_cents, maxCents: bid.max_cents ?? null, minCents: bid.min_cents ?? null,
       approvedMinutes: bid.screened_by === 'owner' ? bid.est_minutes : null,
+      costCents: bid.status === 'qualified' && bid.est_cost_cents > 0 ? bid.est_cost_cents : null, // what the job costs to do, on top of the bid
       highCents: top ? top.amount_cents : 0,
       closesAt: new Date(a.closes_at).toISOString(),
     });

@@ -750,13 +750,13 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <span class="step__n" aria-hidden="true">01 / THE IDEA</span>
           <svg class="step__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11v9H4V4h9M9 15l1-5 9-9 4 4-9 9-5 1ZM17 3l4 4"/></svg>
           <h3>Place a bid</h3>
-          <p>Say what you want me to do and what you will pay for it. Bids start at one cent.</p>
+          <p>Say what you want me to do and what you will pay for it. Bids start at one cent. If your idea costs money to do, such as fares, tickets or supplies, that cost is added on top of your bid, and you are shown the amount before bidding closes.</p>
         </li>
         <li class="card step">
           <span class="step__n" aria-hidden="true">02 / THE BID</span>
           <svg class="step__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8v7a4 4 0 0 1-8 0V3ZM8 5H4v3a4 4 0 0 0 4 4M16 5h4v3a4 4 0 0 1-4 4M12 14v6M8 21h8"/></svg>
           <h3>The highest bid wins</h3>
-          <p>Bidding closes each evening. The highest approved bid wins, and only the winner pays.</p>
+          <p>Bidding closes each evening. The highest approved bid wins, and only the winner pays: their bid, plus any costs shown on it.</p>
         </li>
         <li class="card step">
           <span class="step__n" aria-hidden="true">03 / THE VIDEO</span>
@@ -851,7 +851,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       <div class="notes rise">
         <div class="card note">
           <h3>Costs are extra</h3>
-          <p>Fares, fuel, tickets and flights are added on top and paid before the job. Anything with a flight or a hotel gets a real quote first.</p>
+          <p>Fares, fuel, tickets, supplies and flights are added on top of your bid and paid before the job. You see the amount beside your bid once it is approved, before bidding closes. Anything with a flight or a hotel gets a real quote first.</p>
         </div>
         <div class="card note">
           <h3>Travel counts</h3>
@@ -1913,7 +1913,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       sub.textContent = (b.standing === 'outbid' || b.standing === 'short' ? 'Your bid: ' + money(b.amountCents) + '. ' : '') +
         (b.shared ? 'Open job' + (b.backers ? ', ' + plural(b.backers, 'backer') + ' added ' + money(b.amountCents - b.ownCents) : '') + '. ' : '') +
         (b.maxCents ? 'Auto-bid up to ' + money(b.maxCents) + '. ' : '') +
-        (b.approvedMinutes ? 'Agreed time: ' + duration(b.approvedMinutes) + '. ' : '') + (tasks[b.token] || '');
+        (b.approvedMinutes ? 'Agreed time: ' + duration(b.approvedMinutes) + '. ' : '') + (b.costCents ? 'Costs on top of your bid: about ' + money(b.costCents) + ', paid before the job if you win. ' : '') + (tasks[b.token] || '');
       text.appendChild(head); text.appendChild(sub); row.appendChild(text);
       if(b.open){
         var up = document.createElement('button');
