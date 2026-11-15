@@ -61,7 +61,7 @@ export async function authStart(request, env, s, now) {
     key: mail, from: s.mailFrom, to: email,
     subject: 'Your sign-in link',
     text: [
-      'Use this link to sign in to Torchhive:',
+      'Use this link to sign in to TorchHive:',
       '',
       `${s.siteUrl}/#signin=${code}`,
       '',

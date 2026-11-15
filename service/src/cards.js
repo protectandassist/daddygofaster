@@ -66,7 +66,7 @@ export async function createHold(env, key, { customerId, email, cardId, cents, d
     capture_method: 'manual', // a hold: nothing is charged until it is captured
     confirm: 'true',
     setup_future_usage: 'off_session', // so a raise can hold more on the same card
-    description: `Torchhive bid for ${day}`,
+    description: `TorchHive bid for ${day}`,
     receipt_email: email,
     'metadata[bid_id]': String(bidId),
     'metadata[day]': day,
@@ -100,7 +100,7 @@ export async function chargeSaved(env, key, { customerId, cardId, email, cents, 
     'payment_method_types[]': 'card',
     confirm: 'true',
     off_session: 'true',
-    description: `Torchhive winning bid for ${day}`,
+    description: `TorchHive winning bid for ${day}`,
     receipt_email: email,
     'metadata[bid_id]': String(bidId),
     'metadata[day]': day,

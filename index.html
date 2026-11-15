@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Torchhive — Bid on what I do tomorrow</title>
+<title>TorchHive — Bid on what I do tomorrow</title>
 <meta name="description" content="Each day the highest bid sets a job for me to do the next day, on camera. Bidding is free, bids start at one cent, and only the winner pays.">
 <link rel="canonical" href="https://torchhive.com/">
 <meta name="theme-color" content="#0C0D10">
@@ -184,8 +184,22 @@ p{margin:0}
 .idea-progress{position:absolute;left:0;bottom:0;height:3px;width:0;background:var(--accent);z-index:1}
 .idea-progress.is-running{animation:ideaProgress 7s linear forwards}
 @keyframes ideaProgress{from{width:0}to{width:100%}}
-.idea-filter.is-current{border-color:var(--accent-hi)}
-.idea-filter.is-current img{opacity:1}
+/* One small picture per idea: click any to jump to it, or use the arrows. */
+.idea-strip{display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none;padding:3px 2px}
+.idea-strip::-webkit-scrollbar{display:none}
+.idea-thumb{flex:0 0 auto;width:48px;height:36px;border:1px solid var(--line-2);border-radius:7px;padding:0;cursor:pointer;background-color:var(--card);
+  background-size:330%;background-repeat:no-repeat;opacity:.5;scroll-snap-align:center;transition:opacity .2s,border-color .2s,transform .2s}
+.idea-thumb:hover{opacity:1}
+.idea-thumb[aria-current="true"]{opacity:1;border:2px solid var(--accent);transform:translateY(-2px)}
+.idea-thumb:focus-visible{outline:2px solid var(--accent-hi);outline-offset:2px;opacity:1}
+.idea-nav{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;border:1px solid #ffffff40;background:rgba(12,13,16,.6);
+  color:var(--text);display:grid;place-items:center;cursor:pointer;z-index:1;opacity:0;transition:opacity .2s,background .2s,color .2s}
+.idea-scene:hover .idea-nav,.idea-nav:focus-visible{opacity:1}
+.idea-nav:hover{background:var(--accent);color:var(--accent-ink)}
+.idea-nav--prev{left:12px}.idea-nav--next{right:12px}
+.idea-nav svg{width:18px;height:18px}
+@media(hover:none){.idea-nav{opacity:.9}}
+@media(max-width:640px){.idea-controls{flex-wrap:wrap}.idea-strip{order:-1;flex:1 0 100%}.idea-control:not(.idea-control--pause){flex:1}}
 @media(prefers-reduced-motion:reduce){.idea-scene__images img.is-moving,.idea-progress.is-running{animation:none}}
 /* Create an account: a link by email, no password. */
 .join{display:grid;grid-template-columns:1.2fr 1fr;gap:28px;align-items:center;padding:32px}
@@ -236,7 +250,7 @@ p{margin:0}
   .idea-scene{min-height:clamp(320px,56vw,410px)}
   .idea-scene__caption h2{font-size:clamp(1.7rem,5.2vw,2.2rem)}
   .bid-column{position:static;padding:0}
-  .idea-filter,.idea-control{min-height:44px}.idea-filter{width:44px}.idea-control--pause{width:44px}
+  .idea-filter,.idea-control{min-height:44px}.idea-filter{width:44px}.idea-control--pause{width:44px}.idea-thumb{width:56px;height:44px}
   .hero__trail{justify-content:center;font-size:.6rem;gap:12px}
   .hero__trail span{gap:6px}
   .hero__trail i{width:20px;flex-shrink:0}
@@ -394,6 +408,38 @@ p{margin:0}
 .badge{margin-left:10px;padding:3px 9px;border-radius:999px;font-size:.74rem;font-weight:600;
   background:rgba(255,200,87,.14);color:var(--gold);vertical-align:middle}
 .board tr.is-lead{background:rgba(255,200,87,.035)}
+/* What just happened: a new bid, a raise, a new leader. */
+.board tr.fx-new{animation:rowIn .7s ease-out}
+.board tr.fx-new td,.board tr.fx-up td,.board tr.fx-lead td{animation:rowGlow 2.4s ease-out}
+.board tr.fx-lead .c-bid,.board tr.fx-up .c-bid{animation:bidPop .9s ease-out}
+@keyframes rowIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+@keyframes rowGlow{0%{background:rgba(239,149,2,.32)}100%{background:transparent}}
+@keyframes bidPop{0%{transform:scale(1)}35%{transform:scale(1.28);color:var(--accent-hi)}100%{transform:scale(1)}}
+.board .c-bid{transform-origin:right center}
+.feed{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);font-size:.88rem}
+.feed__live{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;padding:3px 10px;border-radius:999px;background:rgba(61,214,140,.12);color:var(--good);
+  font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.feed__live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--good);animation:livePulse 1.6s ease-in-out infinite}
+@keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.feed ul{list-style:none;margin:0;padding:0;display:grid;gap:5px;min-width:0;flex:1}
+.feed li{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.feed li:first-child{color:var(--text);font-weight:600}
+.feed li.is-fresh{animation:feedIn .5s ease-out}
+.feed li time{color:var(--faint);font-weight:400;margin-left:8px}
+@keyframes feedIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.stat__v.is-bump{animation:statBump 1s ease-out}
+@keyframes statBump{0%{transform:scale(1)}30%{transform:scale(1.22);text-shadow:0 0 22px rgba(239,149,2,.9)}100%{transform:scale(1);text-shadow:none}}
+.stat__v.is-urgent{color:var(--bad);animation:livePulse 1s ease-in-out infinite}
+/* The announcement when the lead changes hands. */
+.hype{position:fixed;left:50%;bottom:26px;z-index:60;transform:translate(-50%,140%);display:flex;align-items:center;gap:14px;max-width:min(92vw,520px);
+  padding:14px 20px 14px 14px;border-radius:16px;background:#1c1508;border:1px solid var(--accent);box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 40px rgba(239,149,2,.25);
+  opacity:0;transition:transform .45s cubic-bezier(.2,1.3,.4,1),opacity .3s}
+.hype.is-on{transform:translate(-50%,0);opacity:1}
+.hype img{height:44px;width:auto;flex:0 0 auto;animation:flicker 1.1s ease-in-out infinite}
+@keyframes flicker{0%,100%{transform:scale(1) rotate(-2deg)}50%{transform:scale(1.1) rotate(2deg)}}
+.hype b{display:block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-hi)}
+.hype span{display:block;font-size:1.05rem;font-weight:700;line-height:1.25}
+@media(prefers-reduced-motion:reduce){.board tr.fx-new,.board tr.fx-new td,.board tr.fx-up td,.board tr.fx-lead td,.board .c-bid,.stat__v.is-bump,.stat__v.is-urgent,.feed li.is-fresh,.hype img,.feed__live::before{animation:none}.hype{transition:opacity .2s}}
 .board tr.is-lead .c-bid{color:var(--gold)}
 @media(max-width:640px){.board .c-job,.board .c-when{display:none}}
 @media(max-width:480px){.board th,.board td{padding:14px 10px}.board .c-rank{width:2.5em}.badge{margin-left:6px;font-size:.68rem}}
@@ -499,7 +545,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
 
 <header class="top">
   <div class="wrap top__in">
-    <a class="logo" href="#top" aria-label="Torchhive home"><img class="logo__mark" src="/assets/torchhive-mark.png" width="114" height="192" alt="">Torch<b>hive</b></a>
+    <a class="logo" href="#top" aria-label="TorchHive home"><img class="logo__mark" src="/assets/torchhive-mark.png" width="114" height="192" alt="">Torch<b>Hive</b></a>
     <nav class="nav" aria-label="Sections">
       <a href="#how">How it works</a>
       <a href="#board">Today's bids</a>
@@ -550,15 +596,14 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
               <h2 id="ideaTitle">Walk five miles for one doughnut.</h2>
               <a href="#bid" id="ideaUse">Use this idea <span aria-hidden="true">↗</span></a>
             </div>
+            <button class="idea-nav idea-nav--prev" id="scenePrev" type="button" aria-label="Previous idea"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg></button>
+            <button class="idea-nav idea-nav--next" id="sceneNext" type="button" aria-label="Next idea"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg></button>
             <span class="idea-progress" id="ideaProgress" aria-hidden="true"></span>
           </div>
           <div class="idea-controls" id="ideaControls" hidden>
-            <div class="idea-filters" role="group" aria-label="Choose an idea category">
-              <button class="idea-filter idea-filter--all" type="button" data-category="all" aria-pressed="true" aria-label="All challenge ideas">All</button>
-              <button class="idea-filter" type="button" data-category="sunrise" aria-pressed="false" aria-label="Outdoor ideas" title="Outdoor ideas"><img src="/assets/idea-sunrise.webp" width="44" height="44" alt=""></button>
-              <button class="idea-filter" type="button" data-category="workshop" aria-pressed="false" aria-label="Creative challenge ideas" title="Creative challenge ideas"><img src="/assets/idea-workshop.webp" width="44" height="44" alt=""></button>
-              <button class="idea-filter" type="button" data-category="cleanup" aria-pressed="false" aria-label="Chores with a catch" title="Chores with a catch"><img src="/assets/idea-cleanup.webp" width="44" height="44" alt=""></button>
-            </div>
+            <button class="idea-control idea-control--pause" id="ideaPrev" type="button" aria-label="Previous idea" title="Previous idea"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg></button>
+            <div class="idea-strip" id="ideaStrip" role="group" aria-label="All ideas"></div>
+            <button class="idea-control idea-control--pause" id="ideaNext" type="button" aria-label="Next idea" title="Next idea"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg></button>
             <button class="idea-control" id="ideaShuffle" type="button" aria-label="Show another challenge idea"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h2c4 0 6 10 10 10h2M14 12l3 3-3 3M3 15h2c1 0 2-1 3-2M12 7c1-1 2-2 3-2h2M14 2l3 3-3 3"/></svg>Shuffle</button>
             <button class="idea-control idea-control--pause" id="ideaPause" type="button" aria-label="Pause changing ideas" title="Pause changing ideas"><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M5 4h3v12H5zM12 4h3v12h-3z"/></svg></button>
           </div>
@@ -711,7 +756,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       <div class="sec__head rise">
         <p class="eyebrow">The bid board</p>
         <h2>Today's bids</h2>
-        <p class="lead">Names and amounts are public. The jobs stay hidden until the video.</p>
+        <p class="lead">Names and amounts are public. A job stays hidden until the video unless its poster opened it up.</p>
       </div>
       <div class="card board rise">
         <div class="acct" id="acct" hidden>
@@ -722,6 +767,10 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
             <button class="chipbtn" type="submit">Email me a link</button>
           </form>
           <span class="acct__msg" id="acctMsg" role="status"></span>
+        </div>
+        <div class="feed" id="feed" hidden>
+          <span class="feed__live">Live</span>
+          <ul id="feedList" aria-live="polite" aria-label="What just happened"></ul>
         </div>
         <table id="boardTable" hidden>
           <thead>
@@ -881,11 +930,12 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     </div>
   </section>
 </main>
+<div class="hype" id="hype" role="status" aria-live="polite"><img src="/assets/torchhive-mark.png" width="114" height="192" alt=""><div><b id="hypeTitle"></b><span id="hypeText"></span></div></div>
 
 <footer class="foot">
   <div class="wrap foot__in">
-    <span class="logo"><img class="logo__mark" src="/assets/torchhive-mark.png" width="114" height="192" alt="" loading="lazy">Torch<b>hive</b></span>
-    <span class="foot__meta">&copy; 2026 Torchhive</span>
+    <span class="logo"><img class="logo__mark" src="/assets/torchhive-mark.png" width="114" height="192" alt="" loading="lazy">Torch<b>Hive</b></span>
+    <span class="foot__meta">&copy; 2026 TorchHive</span>
     <nav class="foot__links" aria-label="Footer">
       <a href="#rules">Rules</a>
       <a href="#sponsors">Sponsors</a>
@@ -1086,15 +1136,31 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       runProgress(false);
     }
   }
-  function nextIdea(announce){
-    if(!deck.length) shuffleDeck();
-    ideaIndex = deck.shift();
+  /* Every idea has its own thumbnail: a different part of its scene's photo. */
+  var FOCALS = ['10% 20%', '90% 24%', '50% 52%', '16% 84%', '86% 80%', '50% 10%', '50% 92%'];
+  var seenInScene = {}, trail = [];
+  var thumbs = ideas.map(function(idea, i){
+    var b = document.createElement('button'), n = seenInScene[idea.scene] = (seenInScene[idea.scene] || 0) + 1;
+    b.type = 'button'; b.className = 'idea-thumb';
+    b.style.backgroundImage = 'url(/assets/idea-' + idea.scene + '.webp)';
+    b.style.backgroundPosition = FOCALS[(n - 1) % FOCALS.length];
+    b.title = idea.title;
+    b.setAttribute('aria-label', 'Idea ' + (i + 1) + ': ' + idea.title);
+    b.addEventListener('click', function(){ showIdea(i, true); });
+    $('ideaStrip').appendChild(b);
+    return b;
+  });
+  /* Puts one idea on show. `back` is true when stepping backwards, so it is not added to the trail again. */
+  function showIdea(index, announce, back){
+    ideaIndex = index;
+    deck = deck.filter(function(i){ return i !== index; });   /* it will not come round again straight away */
+    if(!back && trail[trail.length - 1] !== index) trail.push(index);
+    if(trail.length > 40) trail.shift();
     var idea = ideas[ideaIndex];
     $('ideaTitle').textContent = idea.title;
     $('ideaCategory').textContent = sceneNames[idea.scene];
-    var pool = ideas.filter(function(x){ return category === 'all' || x.scene === category; });
-    $('ideaCount').textContent = String(pool.indexOf(idea) + 1).padStart(2, '0') + ' / ' + String(pool.length).padStart(2, '0');
-    var move = SHOTS[shot++ % SHOTS.length];
+    $('ideaCount').textContent = String(index + 1).padStart(2, '0') + ' / ' + String(ideas.length).padStart(2, '0');
+    var move = SHOTS[index % SHOTS.length];
     Object.keys(sceneNames).forEach(function(scene){
       var img = $('scene-' + scene), on = scene === idea.scene;
       img.classList.toggle('is-active', on);
@@ -1103,13 +1169,22 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       img.style.setProperty('--dx', move[1]); img.style.setProperty('--dy', move[2]);
       img.classList.remove('is-moving'); void img.offsetWidth; img.classList.add('is-moving');   /* start the move again */
     });
-    Array.prototype.forEach.call(document.querySelectorAll('.idea-filter[data-category]'), function(b){
-      b.classList.toggle('is-current', b.getAttribute('data-category') === idea.scene);
-    });
+    thumbs.forEach(function(t, i){ t.setAttribute('aria-current', String(i === index)); });
+    var strip = $('ideaStrip'), t = thumbs[index];
+    strip.scrollTo({left: t.offsetLeft - strip.offsetLeft - strip.clientWidth / 2 + t.offsetWidth / 2, behavior: reduce ? 'auto' : 'smooth'});
     if(!$('task').value.trim() && !raising) $('task').placeholder = idea.task;
     if(announce) $('ideaAnnouncement').textContent = 'Idea: ' + idea.title;
     try { localStorage.setItem('dgfIdeaLast', String(ideaIndex)); } catch(e) {}
     scheduleIdea();
+  }
+  function nextIdea(announce){
+    if(!deck.length) shuffleDeck();
+    showIdea(deck.shift(), announce);
+  }
+  function prevIdea(){
+    trail.pop();   /* the one on show */
+    var before = trail.length ? trail[trail.length - 1] : (ideaIndex - 1 + ideas.length) % ideas.length;
+    showIdea(before, true, true);
   }
   function paintPause(){
     var label = ideaPaused ? 'Resume changing ideas' : 'Pause changing ideas';
@@ -1119,7 +1194,23 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       : '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M5 4h3v12H5zM12 4h3v12h-3z"/></svg>';
   }
   $('ideaControls').hidden = false;
-  $('ideaShuffle').addEventListener('click', function(){ nextIdea(true); });
+  $('ideaShuffle').addEventListener('click', function(){ deck = []; nextIdea(true); });
+  [$('ideaNext'), $('sceneNext')].forEach(function(b){ b.addEventListener('click', function(){ nextIdea(true); }); });
+  [$('ideaPrev'), $('scenePrev')].forEach(function(b){ b.addEventListener('click', prevIdea); });
+  /* swipe the picture on a phone; left and right arrow keys anywhere in the box */
+  (function(){
+    var scene = document.querySelector('.idea-scene'), startX = null;
+    scene.addEventListener('touchstart', function(e){ startX = e.touches[0].clientX; }, {passive: true});
+    scene.addEventListener('touchend', function(e){
+      if(startX === null) return;
+      var dx = e.changedTouches[0].clientX - startX; startX = null;
+      if(dx > 40) prevIdea(); else if(dx < -40) nextIdea(true);
+    }, {passive: true});
+    $('panelFun').addEventListener('keydown', function(e){
+      if(e.key === 'ArrowRight'){ e.preventDefault(); nextIdea(true); }
+      else if(e.key === 'ArrowLeft'){ e.preventDefault(); prevIdea(); }
+    });
+  })();
   $('ideaPause').addEventListener('click', function(){ ideaPaused = !ideaPaused; paintPause(); scheduleIdea(); });
   Array.prototype.forEach.call(document.querySelectorAll('[data-category]'), function(button){
     button.addEventListener('click', function(){
@@ -1238,6 +1329,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   function row(bid, i){
     var tr = document.createElement('tr');
     if(i === 0) tr.className = 'is-lead';
+    if(bid._fx) tr.classList.add('fx-' + bid._fx);
     function cell(cls, text){
       var td = document.createElement('td');
       td.className = cls; td.textContent = text; tr.appendChild(td); return td;
@@ -1303,6 +1395,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     if(!closesAt) return;
     var left = closesAt - Date.now();
     $('statClock').textContent = left > 0 ? clock(left) : 'Closed';
+    $('statClock').classList.toggle('is-urgent', left > 0 && left <= 5 * 60000);
     if(left <= 0){
       clearInterval(timer);
       if(CONFIG.api && !demo) setTimeout(load, 4000);   /* the next round opens right away */
@@ -1320,7 +1413,9 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     if(cardKey) loadStripe();
     $('notifyWrap').hidden = !alerts || Boolean(backing);
     var bids = (data.bids || []).slice().sort(function(a, b){ return b.amountCents - a.amountCents; });
+    var wasHigh = highCents;
     highCents = bids.length ? bids[0].amountCents : 0;
+    var news = whatChanged(bids, data);
 
     lastBoard = data;
     signInOn = Boolean(data.signIn);
@@ -1339,8 +1434,12 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       $('boardNote').className = 'board__note' + (demo ? ' board__note--demo' : '');
     }
 
-    $('statHigh').textContent = bids.length ? money(highCents) : '—';
+    if(news.length && highCents > wasHigh && wasHigh) countUp($('statHigh'), wasHigh, highCents);
+    else $('statHigh').textContent = bids.length ? money(highCents) : '—';
     $('statCount').textContent = String(bids.length);
+    tellNews(news);
+    bids.forEach(function(b){ delete b._fx; });   /* an effect plays once */
+    if(!open){ $('feed').hidden = true; $('statClock').classList.remove('is-urgent'); }
     $('pill').className = 'pill' + (open ? ' is-open' : '');
     $('pillText').textContent = open ? 'Bidding is open' : (data.status === 'closed' ? 'Bidding is closed for today' : 'Bidding opens soon');
 
@@ -1374,6 +1473,93 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     refresh();
   }
 
+  /* ---------- the board, live ----------
+     Each look at the board is compared with the one before. Whatever changed
+     (a new bid, a raise, money added to an open job, a new leader, a longer
+     clock) is shown in the Live strip, flashed on its row, and a change of
+     leader gets an announcement. Nothing is invented: it all comes from the
+     difference between two real boards. */
+  var lastSeen = null, feedItems = [], hypeTimer = null;
+  function keysFor(bids){
+    var used = {};
+    return bids.map(function(b){
+      var k = b.open && b.id ? 'o:' + b.id : 's:' + b.name;
+      used[k] = (used[k] || 0) + 1;
+      return used[k] > 1 ? k + '#' + used[k] : k;
+    });
+  }
+  function whatChanged(bids, data){
+    var keys = keysFor(bids), now = {rows: {}, lead: keys[0] || null, closesAt: data.closesAt ? new Date(data.closesAt).getTime() : null, day: data.day || null};
+    bids.forEach(function(b, i){ now.rows[keys[i]] = {amount: b.amountCents, backers: b.backers || 0}; });
+    var before = lastSeen, news = [];
+    lastSeen = data.status === 'open' ? now : null;
+    if(data.status !== 'open') return news;
+    if(!before || before.day !== now.day){
+      /* first look: fill the strip with the most recent bids, quietly */
+      feedItems = bids.slice().sort(function(a, b){ return new Date(b.placedAt) - new Date(a.placedAt); }).slice(0, 4)
+        .map(function(b){ return {text: b.name + ' is in at ' + money(b.amountCents), at: new Date(b.placedAt).getTime()}; });
+      paintFeed(false);
+      return news;
+    }
+    bids.forEach(function(b, i){
+      var old = before.rows[keys[i]];
+      if(!old){ b._fx = 'new'; news.push({kind: 'new', text: b.name + ' is in at ' + money(b.amountCents)}); }
+      else if(b.amountCents > old.amount){
+        b._fx = 'up';
+        news.push({kind: 'up', text: b.open && (b.backers || 0) > old.backers
+          ? 'Someone put ' + money(b.amountCents - old.amount) + ' behind ' + b.name + '\'s job. Now ' + money(b.amountCents)
+          : b.name + ' raised to ' + money(b.amountCents)});
+      }
+    });
+    if(now.lead && now.lead !== before.lead){
+      bids[0]._fx = 'lead';
+      news.unshift({kind: 'lead', text: bids[0].name + (before.lead ? ' takes the lead at ' : ' opens the bidding at ') + money(bids[0].amountCents)});
+    }
+    if(now.closesAt && before.closesAt && now.closesAt - before.closesAt > 60000){
+      news.push({kind: 'clock', text: 'A late bid added ' + Math.round((now.closesAt - before.closesAt) / 60000) + ' minutes to the clock'});
+    }
+    return news;
+  }
+  function paintFeed(fresh){
+    var list = $('feedList');
+    list.textContent = '';
+    feedItems.slice(0, 4).forEach(function(item, i){
+      var li = document.createElement('li'), when = document.createElement('time');
+      li.textContent = item.text; when.textContent = ago(new Date(item.at).toISOString());
+      if(fresh && i < fresh) li.className = 'is-fresh';
+      li.appendChild(when); list.appendChild(li);
+    });
+    $('feed').hidden = !open || feedItems.length === 0;
+  }
+  function tellNews(news){
+    if(!news.length){ if(open) paintFeed(false); return; }
+    var at = Date.now();
+    feedItems = news.map(function(n){ return {text: n.text, at: at}; }).concat(feedItems).slice(0, 8);
+    paintFeed(news.length);
+    var bump = $('statHigh');
+    bump.classList.remove('is-bump'); void bump.offsetWidth; bump.classList.add('is-bump');
+    var lead = news.filter(function(n){ return n.kind === 'lead'; })[0];
+    if(lead) announce('New leader', lead.text);
+    else if(news.some(function(n){ return n.kind === 'clock'; })) announce('Clock extended', news.filter(function(n){ return n.kind === 'clock'; })[0].text);
+  }
+  function announce(title, text){
+    $('hypeTitle').textContent = title; $('hypeText').textContent = text;
+    $('hype').classList.add('is-on');
+    clearTimeout(hypeTimer);
+    hypeTimer = setTimeout(function(){ $('hype').classList.remove('is-on'); }, 4500);
+  }
+  function countUp(el, from, to){
+    if(reduce){ el.textContent = money(to); return; }
+    var start = null;
+    function step(t){
+      if(start === null) start = t;
+      var p = Math.min(1, (t - start) / 700);
+      el.textContent = money(Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))));
+      if(p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
   function load(){
     if(demo){ paint(demoData); return; }
     fetch(CONFIG.api + '/board', {headers: {'Accept': 'application/json'}})
@@ -1404,9 +1590,32 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     ]};
     me = {email: 'you@example.com', name: null, votes: [], canComment: ['demo00000001']};
     paint(demoData, 'Sample data for preview. These are not real bids. Vote, comment and chip in to try it: nothing is sent.');
+    /* every few seconds something happens in the pretend round */
+    var demoNames = ['lena_p', 'coach_d', 'rustbucket', 'ms_ortiz', 'gary2', 'nightowl', 'pat_k'], demoStep = 0;
+    setInterval(function(){
+      if(document.hidden) return;
+      var rows = demoData.bids, top = Math.max.apply(null, rows.map(function(b){ return b.amountCents; }));
+      var kind = demoStep++ % 4, pick;
+      if(kind === 0 && demoNames.length){            /* a new bidder */
+        rows.push({name: demoNames.shift(), amountCents: 300 + Math.floor(Math.random() * 2200), placedAt: new Date().toISOString(), open: false});
+      } else if(kind === 1){                          /* someone chips in on an open job */
+        pick = rows.filter(function(b){ return b.open; })[Math.floor(Math.random() * 2)];
+        pick.amountCents += 200 + Math.floor(Math.random() * 9) * 100; pick.backers += 1; pick.placedAt = new Date().toISOString();
+      } else if(kind === 2){                          /* a raise that takes the lead */
+        pick = rows.filter(function(b){ return b.amountCents < top; })[0] || rows[0];
+        pick.amountCents = top + 100 + Math.floor(Math.random() * 6) * 100; pick.placedAt = new Date().toISOString();
+      } else {                                        /* a small raise further down */
+        pick = rows[rows.length - 1];
+        pick.amountCents += 150; pick.placedAt = new Date().toISOString();
+      }
+      paint(demoData);
+    }, 6000);
   } else if(CONFIG.api){
     load();
-    setInterval(function(){ if(!document.hidden) load(); }, 30000);
+    (function watch(){
+      setTimeout(function(){ if(!document.hidden) load(); watch(); }, open ? 10000 : 30000);
+    })();
+    document.addEventListener('visibilitychange', function(){ if(!document.hidden && open) load(); });
   }
 
   /* ---------- the bids this browser has placed ----------

@@ -31,7 +31,7 @@ SCREEN_MODEL = "claude-opus-5-5"
 # Where links in emails point.
 SITE_URL = "https://torchhive.com"
 # Who outbid emails come from. The domain has to be verified with the email provider (Resend).
-MAIL_FROM = "Torchhive <alerts@mail.torchhive.com>"
+MAIL_FROM = "TorchHive <alerts@mail.torchhive.com>"
 
 # Card holds (Stripe) are on when both of these are set as Worker secrets:
 #   STRIPE_SECRET_KEY        holds, charges and releases
