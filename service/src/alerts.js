@@ -12,7 +12,7 @@
 //   result   that round is over: you won, or you did not and nothing was charged
 import { randomHex, getSetting, setSetting, providerKey } from './store.js';
 import { sendEmail } from './mail.js';
-import { money } from './rules.js';
+import { money, roundCreator } from './rules.js';
 
 const PER_RUN = 12; // notices sent per timer run: each is one email and up to three pushes
 const PUSHES_PER_PERSON = 3;
@@ -99,6 +99,13 @@ export async function pushNext(env, body) {
   try { return [200, JSON.parse(sub.pending)]; } catch { return [200, { title: 'TorchHive', body: 'There is news on your bid.' }]; }
 }
 
+// The page a round belongs to: the site's own, or a creator's. Ends where "#bid" can follow.
+export async function pageUrl(env, s, dayKey) {
+  const id = roundCreator(dayKey);
+  const c = id ? await env.DB.prepare('SELECT slug FROM creators WHERE id = ?').bind(id).first() : null;
+  return c ? `${s.siteUrl}/?c=${c.slug}` : `${s.siteUrl}/`;
+}
+
 // ---- writing notices ------------------------------------------------------------
 
 // People who can be told anything: they asked for emails, or a device of theirs has notifications on.
@@ -123,7 +130,7 @@ export async function outbidNotices(env, s, bid, highCents, now) {
   const body = [
     'Someone has taken the lead on TorchHive.', '',
     `High bid now: ${money(highCents)}`, '',
-    `Bidding is still open. To get back in front, go to ${s.siteUrl}/#bid.`,
+    `Bidding is still open. To get back in front, go to ${await pageUrl(env, s, bid.day)}#bid.`,
     ...footer(s),
   ].join('\n');
   await env.DB.prepare(
@@ -166,7 +173,7 @@ export async function roundNotices(env, s, now, cardSecret) {
     ).bind(a.day, 'Bidding closes soon', `About ${mins} minutes left. The high bid is ${money(top.c || 0)}.`, [
       `The round you have money in closes in about ${mins} minutes.`, '',
       `High bid now: ${money(top.c || 0)}`, '',
-      `See where you stand: ${s.siteUrl}/#board`,
+      `See where you stand: ${await pageUrl(env, s, a.day)}#board`,
       'A bid in the last few minutes moves the close back, so the time can run on.',
       ...footer(s),
     ].join('\n'), now).run();
@@ -199,7 +206,7 @@ export async function roundNotices(env, s, now, cardSecret) {
     await add(IN_ROUND, [], 'The round is over', 'Your bid did not win. You were not charged.', [
       'The round you had money in is over, and your bid did not win.', '',
       'You were not charged, and any hold on your card has been released.', '',
-      `The next round is open now: ${s.siteUrl}/#bid`,
+      `The next round is open now: ${await pageUrl(env, s, a.day)}#bid`,
     ]);
   }
 }

@@ -17,7 +17,7 @@ export function outbidEmail({ amountCents, highCents, siteUrl, stopUrl }) {
       `Your bid: ${money(amountCents)}`,
       `High bid now: ${money(highCents)}`,
       '',
-      `Bidding is still open. To raise your bid, go to ${siteUrl}/#bid and send the same job with a higher amount.`,
+      `Bidding is still open. To raise your bid, go to ${siteUrl}#bid and send the same job with a higher amount.`,
       '',
       'You are getting this because you asked for an email if you were outbid.',
       `To stop emails about this bid: ${stopUrl}`,

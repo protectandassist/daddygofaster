@@ -10,6 +10,8 @@ import { providerKey } from './store.js';
 import { badLanguage, posesAsSite } from './language.js';
 import { sessionUser, isAdminEmail } from './social.js';
 import { twitchChannel } from './live.js';
+import { cardKeys, createPayoutAccount, payoutSetupLink, payoutsReady, sendToCreator, readIntent } from './cards.js';
+import { payoutSplit } from './rules.js';
 
 const SLUG_OK = /^[a-z0-9](?:[a-z0-9-]{1,22})[a-z0-9]$/;
 // Addresses the site itself uses, or might.
@@ -53,7 +55,7 @@ const WITH_FOLLOWERS = 'SELECT c.*, (SELECT COUNT(*) FROM creator_follows f WHER
 // GET /creators: everyone whose page is public, most followed first.
 export async function listCreators(env) {
   const { results } = await env.DB.prepare(`${WITH_FOLLOWERS} WHERE c.status = 'live' ORDER BY followers DESC, c.id ASC LIMIT 100`).all();
-  return [200, { creators: results.map((c) => publicView(c)) }];
+  return [200, { creators: results.map((c) => publicView(c)), bidding: creatorsOpen(env) }];
 }
 
 // GET /creators/<slug>: one page. Before it is approved, only its owner and the site's owner can see it.
@@ -63,7 +65,7 @@ export async function getCreator(request, env, slug, now) {
   const mine = Boolean(c && user && c.user_id === user.id);
   if (!c || (c.status !== 'live' && !mine && !(user && isAdminEmail(env, user.email)))) return [404, { message: 'There is no page at this address.' }];
   const following = user ? Boolean(await env.DB.prepare('SELECT 1 FROM creator_follows WHERE creator_id = ? AND user_id = ?').bind(c.id, user.id).first()) : false;
-  return [200, publicView(c, { status: c.status, mine, following })];
+  return [200, publicView(c, { status: c.status, mine, following, bidding: creatorsOpen(env) && c.bidding === 1 && c.payouts_ready === 1 })];
 }
 
 // GET /me/creator: the signed-in person's own page, or null.
@@ -71,7 +73,12 @@ export async function myCreator(request, env, now) {
   const user = await sessionUser(request, env, now);
   if (!user) return [401, { message: 'Sign in first.' }];
   const c = await env.DB.prepare(`${WITH_FOLLOWERS} WHERE c.user_id = ?`).bind(user.id).first();
-  return [200, { creator: c ? publicView(c, { status: c.status }) : null }];
+  if (!c) return [200, { creator: null }];
+  const ready = await refreshPayouts(env, c);
+  const paid = await env.DB.prepare('SELECT COALESCE(SUM(paid_cents), 0) AS cents FROM payouts WHERE creator_id = ?').bind(c.id).first();
+  return [200, { creator: publicView(c, {
+    status: c.status, payouts: ready ? 'ready' : c.stripe_account ? 'started' : 'none', bidding: c.bidding === 1, biddingAllowed: creatorsOpen(env), paidCents: paid.cents,
+  }) }];
 }
 
 // POST /me/creator { slug, name, bio, youtube, tiktok, twitch }: ask for a page, or change one.
@@ -168,4 +175,125 @@ export async function decideCreator(env, s, id, action, now) {
     }
   }
   return [200, { status }];
+}
+
+// ---- bidding on a creator's page --------------------------------------------------
+
+// Creator pages can take bids only when the site says so (CREATORS_OPEN), cards are on,
+// the creator can be paid, and the creator has opened bidding.
+export function creatorsOpen(env) {
+  return env.CREATORS_OPEN === 'true' && Boolean(cardKeys(env));
+}
+
+function scopeFor(env, s, c) {
+  return {
+    ...s,
+    open: creatorsOpen(env) && c.bidding === 1 && c.payouts_ready === 1,
+    creatorId: c.id,
+    creator: { slug: c.slug, name: c.name, bio: c.bio, youtube: c.youtube ? 'https://www.youtube.com/@' + c.youtube : null },
+  };
+}
+
+// The settings a request works with when it is about a creator's page: that page's
+// own round, open or not on its own. Null when there is no such public page.
+export async function creatorScope(env, s, slug) {
+  const c = await env.DB.prepare("SELECT * FROM creators WHERE slug = ? AND status = 'live'").bind(String(slug).toLowerCase()).first();
+  return c ? scopeFor(env, s, c) : null;
+}
+
+// The signed-in person's own page, as a scope. Answers { scope, row, user } or { status, body }.
+export async function ownCreator(request, env, s, now) {
+  const user = await sessionUser(request, env, now);
+  if (!user) return { status: 401, body: { message: 'Sign in first.' } };
+  const c = await env.DB.prepare('SELECT * FROM creators WHERE user_id = ?').bind(user.id).first();
+  if (!c) return { status: 404, body: { message: 'You do not have a page yet.' } };
+  return { scope: scopeFor(env, s, c), row: c, user };
+}
+
+// POST /me/creator/payouts: start, or carry on with, getting set up to be paid. Answers
+// with a link to Stripe's own pages, where the creator gives Stripe their details.
+export async function startPayouts(request, env, s, now) {
+  const mine = await ownCreator(request, env, s, now);
+  if (!mine.scope) return [mine.status, mine.body];
+  const keys = cardKeys(env);
+  if (!keys) return [503, { message: 'Payouts are not available yet.' }];
+  const c = mine.row;
+  if (c.status !== 'live') return [409, { message: 'Your page has to be approved before you set up payouts.' }];
+  let account = c.stripe_account;
+  if (!account) {
+    account = await createPayoutAccount(env, keys.secret, { email: mine.user.email, slug: c.slug });
+    if (!account) return [502, { message: 'Stripe could not start that just now. Try again in a minute.' }];
+    await env.DB.prepare('UPDATE creators SET stripe_account = ? WHERE id = ? AND stripe_account IS NULL').bind(account, c.id).run();
+  }
+  if (await payoutsReady(env, keys.secret, account)) {
+    await env.DB.prepare('UPDATE creators SET payouts_ready = 1 WHERE id = ?').bind(c.id).run();
+    return [200, { ready: true }];
+  }
+  const url = await payoutSetupLink(env, keys.secret, account, `${s.siteUrl}/creators/?payouts=back#start`);
+  return url ? [200, { ready: false, url }] : [502, { message: 'Stripe could not start that just now. Try again in a minute.' }];
+}
+
+// Has Stripe finished checking them? Asked when the creator looks at their own page.
+async function refreshPayouts(env, c) {
+  const keys = cardKeys(env);
+  if (c.payouts_ready === 1) return true;
+  if (!keys || !c.stripe_account) return false;
+  const ready = await payoutsReady(env, keys.secret, c.stripe_account);
+  if (ready) await env.DB.prepare('UPDATE creators SET payouts_ready = 1 WHERE id = ?').bind(c.id).run();
+  return ready;
+}
+
+// POST /me/creator/bidding { on }: the creator opens or closes bidding on their page.
+// Opening tells everyone who follows the page.
+export async function setBidding(request, env, s, now) {
+  const mine = await ownCreator(request, env, s, now);
+  if (!mine.scope) return [mine.status, mine.body];
+  const c = mine.row;
+  const body = await read(request);
+  if (body?.on !== true) {
+    await env.DB.prepare('UPDATE creators SET bidding = 0 WHERE id = ?').bind(c.id).run();
+    return [200, { bidding: false, message: 'Bidding is closed on your page. A round that is already running finishes at its closing time.' }];
+  }
+  if (c.status !== 'live') return [409, { message: 'Your page has to be approved first.' }];
+  if (!creatorsOpen(env)) return [409, { message: 'Bidding on creator pages is not open yet. You will be told when it is.' }];
+  if (!(await refreshPayouts(env, c))) return [409, { message: 'Set up payouts first, so there is somewhere to send your money.' }];
+  await env.DB.prepare('UPDATE creators SET bidding = 1 WHERE id = ?').bind(c.id).run();
+  // Followers are told, once a day at most.
+  const day = new Date(now).toISOString().slice(0, 10);
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO notices (user_id, kind, ref, subject, short, body, created_at)
+     SELECT u.id, 'creator-open', ?1, ?2, ?3, ?4, ?5 FROM users u JOIN creator_follows f ON f.user_id = u.id
+     WHERE f.creator_id = ?6 AND (u.alerts = 1 OR EXISTS (SELECT 1 FROM push_subs ps WHERE ps.user_id = u.id))`,
+  ).bind(`${c.id}:${day}`, `${c.name} has opened bidding`, 'Bid on what they do next.', [
+    `${c.name} has opened bidding on TorchHive.`, '',
+    `Bid on what they do next: ${s.siteUrl}/?c=${c.slug}#bid`, '',
+    `You are getting this because you follow ${c.name} and turned on alerts in your TorchHive account.`,
+    `To stop them: ${s.apiUrl}/stop?u={stop}`,
+  ].join('\n'), now, c.id).run();
+  return [200, { bidding: true, message: 'Bidding is open on your page. Your followers are being told.' }];
+}
+
+// Run by the timer: sends each creator their share of the charges on their winning
+// jobs, once a round's money is settled. A few charges per run; each charge is paid once.
+export async function payCreators(env, key, now) {
+  const { results } = await env.DB.prepare(
+    `SELECT h.id AS hold_id, h.intent_id, h.captured_cents, b.id AS bid_id, b.day, c.id AS creator_id, c.stripe_account
+     FROM holds h JOIN bids b ON b.id = h.bid_id JOIN auctions a ON a.day = b.day JOIN creators c ON c.id = b.creator_id
+     WHERE b.creator_id > 0 AND b.win_state = 'won' AND h.state = 'captured' AND h.captured_cents > 0 AND a.money_state = 'done'
+       AND c.stripe_account IS NOT NULL AND NOT EXISTS (SELECT 1 FROM payouts p WHERE p.hold_id = h.id)
+     ORDER BY h.id LIMIT 6`,
+  ).all();
+  for (const h of results) {
+    const split = payoutSplit(h.captured_cents);
+    let transfer = null;
+    if (split.pay > 0) {
+      const seen = await readIntent(env, key, h.intent_id);
+      const charge = seen.ok ? seen.data.latest_charge : null;
+      if (!charge) continue; // try again next run
+      transfer = await sendToCreator(env, key, { cents: split.pay, accountId: h.stripe_account, chargeId: charge, group: h.day, idempotencyKey: 'dgf-pay-' + h.intent_id });
+      if (!transfer) continue; // not sent: nothing is recorded, so the next run tries again
+    }
+    await env.DB.prepare('INSERT OR IGNORE INTO payouts (hold_id, bid_id, creator_id, charged_cents, fee_cents, cut_cents, paid_cents, transfer_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(h.hold_id, h.bid_id, h.creator_id, h.captured_cents, split.fee, split.cut, split.pay, transfer, now).run();
+  }
 }

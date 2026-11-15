@@ -39,7 +39,7 @@
     <div class="card"><b>2. The highest bid wins</b><span>Bidding runs to a set time. Only the winner pays.</span></div>
     <div class="card"><b>3. It gets done on camera</b><span>The job is done and the video goes up for everyone.</span></div>
   </div>
-  <p class="note" style="margin-top:22px">Bidding on this page is not open yet. Follow to be told the moment it is. In the meantime you can bid on <a href="/">the main TorchHive page</a>.</p>
+  <p class="note" id="soon" style="margin-top:22px">Bidding on this page is not open yet. Follow to be told the moment it is. In the meantime you can bid on <a href="/">the main TorchHive page</a>.</p>
 </div></section>
 
 <section class="sec" id="missing" hidden><div class="wrap">
@@ -77,6 +77,8 @@
   call('GET', '/creators/' + slug).then(function(res){
     if(!res.ok) return missing();
     page = res.d;
+    /* bidding is open here: the bidding page is the page (unless they asked to read about the creator) */
+    if(page.bidding && !/[?&]about(?:[&=#]|$)/.test(location.search)){ location.replace('/?c=' + slug); return; }
     document.title = page.name + ' on TorchHive';
     $('name').textContent = page.name;
     $('bio').textContent = page.bio || '';
@@ -87,7 +89,15 @@
       $('status').textContent = page.status === 'pending'
         ? 'This page is waiting to be approved. Only you can see it for now.'
         : 'This page has been taken down for now. Only you can see it.';
-    } else { $('acts').hidden = false; paintFollow(); }
+    } else {
+      $('acts').hidden = false; paintFollow();
+      if(page.bidding){
+        var go = document.createElement('a');
+        go.className = 'btn'; go.href = '/?c=' + slug; go.textContent = 'Bid on what ' + page.name + ' does next';
+        $('acts').insertBefore(go, $('follow'));
+        $('soon').hidden = true;
+      }
+    }
     [['Watch on YouTube', page.youtube], ['TikTok', page.tiktok], ['Twitch', page.twitch]].forEach(function(pair){
       if(!pair[1]) return;
       var a = document.createElement('a');

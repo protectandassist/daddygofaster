@@ -39,9 +39,9 @@
   <div class="steps">
     <div class="card"><b>1. Ask for a page</b><span>Pick your address, say who you are and where you post. Each page is looked at before it goes public.</span></div>
     <div class="card"><b>2. Send people to it</b><span>Put your TorchHive link in your video descriptions and bios. Viewers follow you there to be told when bidding opens.</span></div>
-    <div class="card"><b>3. They bid, you do it</b><span>The highest bid sets the job, you do it on camera, and you are paid. TorchHive keeps 5% of each winning bid.</span></div>
+    <div class="card"><b>3. They bid, you do it</b><span>The highest bid sets the job, you do it on camera, and you are paid. Out of each winning charge comes the card processing fee (2.9% + 30¢) and TorchHive's 5%. The rest is yours.</span></div>
   </div>
-  <p class="note" style="margin-top:22px">Pages are open now. Bidding on creator pages is not open yet: it is being built. Get your page and your followers in place first, and you will be told the moment bidding opens.</p>
+  <p class="note" id="notYet" style="margin-top:22px">Pages are open now. Bidding on creator pages is not switched on yet. Get your page and your followers in place first, and you will be told the moment it is.</p>
 </div></section>
 
 <section class="sec" id="start" style="padding-top:0"><div class="wrap">
@@ -49,6 +49,17 @@
   <p id="startLead">It is free. You need a TorchHive account, which takes a minute and has no password.</p>
   <div id="needSignIn" hidden><a class="btn" href="/?account">Sign in or create an account</a></div>
   <p class="note" id="status" hidden></p>
+  <div class="card form" id="desk" hidden style="margin-bottom:18px">
+    <h3 style="font-size:1.2rem">Running your page</h3>
+    <div><b>Getting paid</b><p class="msg" id="payText" style="color:var(--muted);margin:4px 0 10px"></p><button class="btn btn--ghost" type="button" id="payBtn">Set up payouts</button></div>
+    <div><b>Bidding</b><p class="msg" id="bidText" style="color:var(--muted);margin:4px 0 10px"></p><button class="btn" type="button" id="bidBtn">Open bidding</button></div>
+    <p class="msg" id="deskMsg" role="status"></p>
+    <div id="round" hidden>
+      <b id="roundHead">This round</b>
+      <div id="roundBids" style="display:grid;gap:10px;margin-top:10px"></div>
+    </div>
+    <div id="last" hidden><b>Last winner</b><p class="msg" id="lastText" style="color:var(--muted);margin:4px 0 0"></p></div>
+  </div>
   <form class="card form" id="form" hidden novalidate>
     <label>Your page's address <small>Chosen once: it cannot be changed later, so links you share keep working.</small>
       <div class="addr"><span>torchhive.com/</span><input id="slug" maxlength="24" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="yourname"></div></label>
@@ -82,6 +93,7 @@
   call('GET', '/creators').then(function(res){
     var list = $('list'), all = (res.d && res.d.creators) || [];
     list.textContent = '';
+    if(res.d && res.d.bidding) $('notYet').hidden = true;
     all.forEach(function(c){
       var a = document.createElement('a'), b = document.createElement('b'), s = document.createElement('span'), f = document.createElement('small');
       a.className = 'card maker'; a.href = '/' + c.slug;
@@ -115,8 +127,96 @@
       var a = document.createElement('a'); a.href = '/' + c.slug; a.textContent = 'torchhive.com/' + c.slug;
       $('status').appendChild(a);
       $('status').appendChild(document.createTextNode(c.status === 'pending' ? '. You will get an email when it is public.' : '.'));
+      paintDesk(c);
     }
   }
+  /* ---- running the page: payouts, opening bidding, and the jobs waiting for a yes ---- */
+  function money(c){ return '$' + (c / 100).toFixed(2); }
+  function deskSay(text, good){ $('deskMsg').textContent = text || ''; $('deskMsg').className = 'msg' + (text ? (good ? ' is-good' : ' is-bad') : ''); }
+  function paintDesk(c){
+    $('desk').hidden = c.status !== 'live';
+    if(c.status !== 'live') return;
+    $('payText').textContent = c.payouts === 'ready'
+      ? 'Payouts are set up.' + (c.paidCents ? ' ' + money(c.paidCents) + ' has been sent to you so far.' : '')
+      : c.payouts === 'started' ? 'You started setting up payouts with Stripe but did not finish. Carry on where you left off.'
+      : 'Stripe, the card processor, pays you. It asks for your details on its own pages; TorchHive never sees your bank account.';
+    $('payBtn').hidden = c.payouts === 'ready';
+    $('payBtn').textContent = c.payouts === 'started' ? 'Carry on with payouts' : 'Set up payouts';
+    $('bidText').textContent = !c.biddingAllowed ? 'Bidding on creator pages is not switched on yet. You will be told when it is.'
+      : c.payouts !== 'ready' ? 'Set up payouts first, so there is somewhere to send your money.'
+      : c.bidding ? 'Bidding is open on your page. Send people to torchhive.com/' + c.slug
+      : 'Bidding is closed on your page. Open it when you are ready to take jobs.';
+    $('bidBtn').hidden = !c.biddingAllowed || c.payouts !== 'ready';
+    $('bidBtn').textContent = c.bidding ? 'Close bidding' : 'Open bidding';
+    $('bidBtn').className = 'btn' + (c.bidding ? ' btn--ghost' : '');
+    if(c.payouts === 'ready') loadRound();
+  }
+  function refreshMine(){
+    return call('GET', '/me/creator').then(function(res){ if(res.ok && res.d.creator){ mine = res.d.creator; paintDesk(mine); } });
+  }
+  $('payBtn').addEventListener('click', function(){
+    deskSay(''); $('payBtn').disabled = true;
+    call('POST', '/me/creator/payouts', {}).then(function(res){
+      $('payBtn').disabled = false;
+      if(!res.ok) return deskSay(res.d.message || 'That did not go through. Try again.');
+      if(res.d.url && /^https:\/\/connect\.stripe\.com\//.test(res.d.url)){ location.href = res.d.url; return; }   /* only ever to Stripe */
+      refreshMine();
+    }).catch(function(){ $('payBtn').disabled = false; deskSay('That did not go through. Check your connection and try again.'); });
+  });
+  $('bidBtn').addEventListener('click', function(){
+    deskSay(''); $('bidBtn').disabled = true;
+    call('POST', '/me/creator/bidding', {on: !mine.bidding}).then(function(res){
+      $('bidBtn').disabled = false;
+      deskSay(res.d.message || (res.ok ? '' : 'That did not go through. Try again.'), res.ok);
+      refreshMine();
+    }).catch(function(){ $('bidBtn').disabled = false; });
+  });
+  var WORDS = {qualified: 'On the board', held: 'Waiting for you', short: 'Bid too low for the job', refused: 'Refused', card: 'Card being checked', nocard: 'Card did not go through'};
+  function loadRound(){
+    call('GET', '/me/creator/round').then(function(res){
+      if(!res.ok) return;
+      var d = res.d, box = $('roundBids');
+      box.textContent = '';
+      $('round').hidden = !(d.auction && d.bids.length);
+      if(d.auction) $('roundHead').textContent = 'This round' + (d.auction.status === 'open' ? ', closing ' + new Date(d.auction.closesAt).toLocaleString([], {weekday: 'short', hour: 'numeric', minute: '2-digit'}) : '');
+      d.bids.forEach(function(b){
+        var item = document.createElement('div'), top = document.createElement('p'), who = document.createElement('b'), job = document.createElement('p');
+        item.style.cssText = 'padding:12px 14px;border:1px solid var(--line-2);border-radius:10px;background:var(--field);display:grid;gap:8px';
+        top.className = 'msg'; who.textContent = b.name + ' · ' + money(b.amountCents);
+        top.appendChild(who); top.appendChild(document.createTextNode('  ' + (WORDS[b.status] || b.status)));
+        job.className = 'msg'; job.style.color = 'var(--muted)'; job.textContent = b.task || '';
+        item.appendChild(top); item.appendChild(job);
+        if(b.status === 'held'){   /* the screen was not sure: the creator decides */
+          var row = document.createElement('div'), mins = document.createElement('input'), cost = document.createElement('input'), yes = document.createElement('button'), no = document.createElement('button');
+          row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:center';
+          mins.type = 'number'; mins.min = '1'; mins.max = String(b.maxMinutes || 60); mins.placeholder = 'Minutes it will take'; mins.style.cssText = 'flex:1 1 150px;min-width:0';
+          cost.type = 'number'; cost.min = '0'; cost.step = 'any'; cost.placeholder = 'Costs $ (if any)'; cost.style.cssText = 'flex:1 1 130px;min-width:0';
+          if(b.estCostCents) cost.value = (b.estCostCents / 100).toFixed(2);
+          yes.type = 'button'; yes.className = 'btn'; yes.textContent = 'Approve';
+          no.type = 'button'; no.className = 'btn btn--ghost'; no.textContent = 'Refuse';
+          function decide(body){
+            yes.disabled = no.disabled = true;
+            call('POST', '/me/creator/bids/' + b.id + '/decide', body).then(function(r){
+              yes.disabled = no.disabled = false;
+              if(!r.ok) return deskSay(r.d.message || 'That did not go through. Try again.');
+              deskSay(body.decision === 'approve' ? 'Approved. It is on your board.' : 'Refused. The hold on their card is released.', true);
+              loadRound();
+            }).catch(function(){ yes.disabled = no.disabled = false; });
+          }
+          yes.addEventListener('click', function(){ if(!(Number(mins.value) > 0)){ mins.focus(); return deskSay('Say how many minutes the job will take.'); } decide({decision: 'approve', estMinutes: Number(mins.value), costDollars: cost.value}); });
+          no.addEventListener('click', function(){ decide({decision: 'refuse'}); });
+          row.appendChild(mins); row.appendChild(cost); row.appendChild(yes); row.appendChild(no);
+          item.appendChild(row);
+        }
+        box.appendChild(item);
+      });
+      var w = d.previous && d.previous.winner;
+      $('last').hidden = !w;
+      if(w) $('lastText').textContent = w.name + ' won with ' + money(w.amountCents) + (w.payState === 'paid' ? ' and has paid.' : '.') + ' Reach them at ' + w.email + '. Their job: ' + (w.task || '');
+    }).catch(function(){});
+  }
+  if(/[?&]payouts=back(?:[&#]|$)/.test(location.search)) try { history.replaceState(null, '', '/creators/#start'); } catch (e) {}
+
   if(!session){ $('needSignIn').hidden = false; }
   else call('GET', '/me/creator').then(function(res){
     if(res.status === 401){ $('needSignIn').hidden = false; return; }

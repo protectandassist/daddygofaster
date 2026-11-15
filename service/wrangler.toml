@@ -36,6 +36,8 @@ SITE_URL = "https://torchhive.com"
 MAIL_FROM = "TorchHive <alerts@mail.torchhive.com>"
 # The site's own account. Only this address may hold a reserved username such as "TorchHive" or "Admin".
 SITE_ACCOUNTS = "hello@torchhive.com"
+# "true" lets creators open bidding on their own pages (they also need payouts set up). Anything else and creator pages only take followers.
+CREATORS_OPEN = "false"
 # This service's own address, for the "stop these emails" link in alert emails.
 API_URL = "https://dgf-bids.trevor-c2b.workers.dev"
 # Sign in with Google: the site's public client id from Google Cloud. Empty means the Google button is not shown.

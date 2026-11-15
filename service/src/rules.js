@@ -285,6 +285,27 @@ export function checkReply(verdict) {
   return { verdict: 'ok', ...extra, message: (costs ? 'This job is allowed.' + costs : 'This job is allowed, and there is nothing extra to pay for.') + ' Add your details to place the bid.' };
 }
 
+// A round's key: the date for the site's own page, the date and "~<creator id>" for a creator's.
+export function roundKey(date, creatorId) {
+  return creatorId ? `${date}~${creatorId}` : date;
+}
+export function roundDate(key) {
+  return String(key).slice(0, 10);
+}
+export function roundCreator(key) {
+  const at = String(key).indexOf('~');
+  return at < 0 ? 0 : Number(String(key).slice(at + 1)) || 0;
+}
+
+// What a creator is sent for one charge on a winning job: the charge, less the card
+// processing fee (2.9% + 30 cents), less the site's share.
+export const SITE_SHARE = 0.05;
+export function payoutSplit(chargedCents) {
+  const fee = Math.round(chargedCents * 0.029) + 30;
+  const cut = Math.round(chargedCents * SITE_SHARE);
+  return { fee, cut, pay: Math.max(0, chargedCents - fee - cut) };
+}
+
 // The job's words, the way they are compared: trimmed, single-spaced, lower-cased.
 export function taskKey(task) {
   return String(task ?? '').replace(/\s+/g, ' ').trim().toLowerCase();

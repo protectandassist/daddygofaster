@@ -127,3 +127,40 @@ export function captureIntent(env, key, intentId, cents, idempotencyKey) {
 export function refundIntent(env, key, intentId, idempotencyKey) {
   return stripeCall(env, key, 'POST', '/refunds', { payment_intent: intentId }, idempotencyKey);
 }
+
+// ---- paying creators (Stripe Connect) ---------------------------------------------
+// A creator gets an account with Stripe that the site can send money to. Stripe
+// collects their identity and bank details on its own pages; none of it comes here.
+
+export async function createPayoutAccount(env, key, { email, slug }) {
+  const r = await stripeCall(env, key, 'POST', '/accounts', {
+    country: 'US', email,
+    'controller[fees][payer]': 'application',          // the site pays Stripe's fees and keeps its share
+    'controller[losses][payments]': 'application',
+    'controller[stripe_dashboard][type]': 'express',
+    'capabilities[transfers][requested]': 'true',
+    'business_profile[url]': `https://torchhive.com/${slug}`,
+    'metadata[creator]': slug,
+  }, `dgf-acct-${slug}`);
+  return r.ok ? r.data.id : null;
+}
+
+// The link to Stripe's own sign-up pages for that account. It works once and for a few minutes.
+export async function payoutSetupLink(env, key, accountId, backTo) {
+  const r = await stripeCall(env, key, 'POST', '/account_links', { account: accountId, type: 'account_onboarding', refresh_url: backTo, return_url: backTo });
+  return r.ok ? r.data.url : null;
+}
+
+// Can money be sent to this account yet?
+export async function payoutsReady(env, key, accountId) {
+  const r = await stripeCall(env, key, 'GET', '/accounts/' + accountId);
+  return Boolean(r.ok && r.data.capabilities && r.data.capabilities.transfers === 'active');
+}
+
+// Sends part of one charge on to a creator. Tied to the charge, so it can go as soon as the charge is made.
+export async function sendToCreator(env, key, { cents, accountId, chargeId, group, idempotencyKey }) {
+  const r = await stripeCall(env, key, 'POST', '/transfers', {
+    amount: String(cents), currency: 'usd', destination: accountId, source_transaction: chargeId, transfer_group: group,
+  }, idempotencyKey);
+  return r.ok ? r.data.id : null;
+}

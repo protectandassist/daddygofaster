@@ -1218,6 +1218,13 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
            reached, the page stays in its not-open state and sends nothing.
      hourBlockCents  Each full block adds one hour to the included first hour. */
   var CONFIG = { api: "https://dgf-bids.trevor-c2b.workers.dev", hourBlockCents: 20000, freeUnderCents: 50 };
+  /* torchhive.com/?c=<name> is that creator's bidding page: the same page, working on their round */
+  var creatorSlug = (/[?&]c=([a-z0-9-]{3,24})(?:[&#]|$)/i.exec(location.search) || [])[1] || null;
+  if(creatorSlug) creatorSlug = creatorSlug.toLowerCase();
+  function onPage(path){
+    if(!creatorSlug || !/^\/(board|check|bids|pledges|mine|votes|comments)/.test(path)) return CONFIG.api + path;
+    return CONFIG.api + path + (path.indexOf('?') >= 0 ? '&' : '?') + 'c=' + creatorSlug;
+  }
 
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var demo = /[?&]demo\b/.test(location.search);
@@ -1720,6 +1727,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     googleId = data.google || null;
     pushKey = data.pushKey || null;
     setLive(Boolean(data.live));
+    if(data.creator) wearCreator(data.creator);
     paintAcct();
     if(wantAccount && signInOn && !session){ wantAccount = false; askSignIn(''); }   /* sent here to sign in */
     var body = $('boardBody');
@@ -2069,8 +2077,12 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
 
   function load(){
     if(demo){ paint(demoData); demoMine(); return; }
-    fetch(CONFIG.api + '/board', {headers: {'Accept': 'application/json'}})
-      .then(function(r){ if(!r.ok) throw new Error('board ' + r.status); return r.json(); })
+    fetch(onPage('/board'), {headers: {'Accept': 'application/json'}})
+      .then(function(r){
+        if(r.status === 404 && creatorSlug){ location.replace('/c/?u=' + creatorSlug); throw new Error('no page'); }   /* no such creator */
+        if(!r.ok) throw new Error('board ' + r.status);
+        return r.json();
+      })
       .then(function(d){ paint(d); loadMine(); })
       .catch(function(){ /* leave the page in its not-open state */ });
   }
@@ -2255,7 +2267,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     var list = saved();
     if(demo){ demoMine(); return; }
     if(!CONFIG.api || !list.length){ $('mine').hidden = true; return; }
-    fetch(CONFIG.api + '/mine', {
+    fetch(onPage('/mine'), {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
       body: JSON.stringify({tokens: list.map(function(b){ return b.token; })})
@@ -2333,7 +2345,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     var headers = {'Accept': 'application/json'};
     if(body) headers['Content-Type'] = 'application/json';
     if(session) headers['Authorization'] = 'Bearer ' + session;
-    return fetch(CONFIG.api + path, {method: method, headers: headers, body: body ? JSON.stringify(body) : undefined})
+    return fetch(onPage(path), {method: method, headers: headers, body: body ? JSON.stringify(body) : undefined})
       .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(d){ return {ok: r.ok, status: r.status, d: d}; }); });
   }
   function keepSession(value){
@@ -2594,6 +2606,37 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       if(pushOn && me) call('POST', '/push/sub', {endpoint: sub.endpoint}).catch(function(){});
       paintPush(); paintTellMe();
     }).catch(function(){});
+  }
+
+  /* ---- a creator's page ----
+     The same bidding page under their name. The parts that are only about the
+     site's own channel are put away. */
+  var wearing = false;
+  function wearCreator(c){
+    if(wearing) return;
+    wearing = true;
+    document.title = 'Bid on what ' + c.name + ' does next · TorchHive';
+    try { baseTitle = document.title; } catch (e) {}
+    var ask = document.querySelector('label[for="task"]'); if(ask) ask.textContent = 'What should ' + c.name + ' do?';
+    var h1 = document.querySelector('.hero h1'), sub = document.querySelector('.hero__sub');
+    if(h1){
+      h1.textContent = '';
+      var one = document.createElement('span'), two = document.createElement('span');
+      one.textContent = 'Your idea. '; two.className = 'hero__accent'; two.textContent = c.name + ' does it.';
+      h1.appendChild(one); h1.appendChild(two);
+    }
+    if(sub){
+      sub.textContent = (c.bio ? c.bio + ' ' : '') + 'The highest bid sets the job. ';
+      var about = document.createElement('a');
+      about.href = '/c/?u=' + c.slug + '&about'; about.textContent = 'About ' + c.name; about.style.color = 'var(--accent-hi)';
+      sub.appendChild(about);
+    }
+    ['creators', 'sponsors', 'join'].forEach(function(id){ var el = $(id); if(el) el.style.display = 'none'; });
+    if($('tabWork')){ showTab(false); $('tabWork').style.display = 'none'; }
+    Array.prototype.forEach.call(document.querySelectorAll('a[href*="youtube.com/@Torchhive"]'), function(a){
+      if(c.youtube) a.href = c.youtube; else a.style.display = 'none';
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('a[href="#top"], a.logo'), function(a){ a.href = '/'; });
   }
 
   /* ---- live: the stream and its chat ----
@@ -3081,7 +3124,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     btn.disabled = false; btn.textContent = buttonLabel();
   }
   function post(path, body){
-    return fetch(CONFIG.api + path, {
+    return fetch(onPage(path), {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
       body: JSON.stringify(body)

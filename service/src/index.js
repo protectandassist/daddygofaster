@@ -20,16 +20,16 @@
 // is also what charges the winner's card and releases every other hold.
 import {
   LIMITS, TIME_POLICY, money, describeMinutes, coveredMinutes, timeAllowance, approveDuration, validateBid, validateRaise, validatePledge, applyScreen, raiseVerdict,
-  resolveStandings, HELD_MESSAGE, nominalAuction, extendedClose, dayShift, pickWinner, holdTarget, extraHold, readCostItems, checkReply, taskKey,
+  resolveStandings, HELD_MESSAGE, nominalAuction, extendedClose, dayShift, pickWinner, holdTarget, extraHold, readCostItems, checkReply, taskKey, roundKey, roundDate, roundCreator,
 } from './rules.js';
 import { cardKeys, readIntent } from './cards.js';
 import {
   MAX_CARD_FAILS, MAX_HOLDS, heldSummary, takeHold, releaseHold, releaseBidHolds, undoCharge, chargeWinner, chargeBackers, settleMoney, unsettledDays, sweepStale, costCents } from './holds.js';
 import { screenBid } from './screen.js';
 import { shouldEmail, outbidEmail, sendEmail } from './mail.js';
-import { listCreators, getCreator, myCreator, saveCreator, followCreator, adminCreators, decideCreator } from './creators.js';
+import { listCreators, getCreator, myCreator, saveCreator, followCreator, adminCreators, decideCreator, creatorScope, ownCreator, startPayouts, setBidding, payCreators } from './creators.js';
 import { liveState, setLive, getLive, postChat, recentChat, removeChat, blockChatter } from './live.js';
-import { pushKey, pushSubscribe, pushUnsubscribe, pushNext, outbidNotices, roundNotices, sendNotices, stopAlerts } from './alerts.js';
+import { pageUrl, pushKey, pushSubscribe, pushUnsubscribe, pushNext, outbidNotices, roundNotices, sendNotices, stopAlerts } from './alerts.js';
 import {
   sha256, randomHex, sameText, getSetting, setSetting, deleteSetting, seal, providerKey,
   storeAdminKey, adminKeyIsSet, adminKeyMatches,
@@ -102,8 +102,8 @@ async function chooseWinner(env, day) {
     "SELECT id, email, amount_cents, created_at FROM bids WHERE day = ? AND status = 'qualified' AND win_state IS NULL",
   ).bind(day).all();
   const { results: recent } = await env.DB.prepare(
-    "SELECT DISTINCT email FROM bids WHERE win_state = 'won' AND day <> ? AND day >= ? AND day <= ?",
-  ).bind(day, dayShift(day, -6), dayShift(day, 6)).all();
+    "SELECT DISTINCT email FROM bids WHERE win_state = 'won' AND creator_id = ? AND day <> ? AND substr(day, 1, 10) >= ? AND substr(day, 1, 10) <= ?",
+  ).bind(roundCreator(day), day, dayShift(roundDate(day), -6), dayShift(roundDate(day), 6)).all();
   const winner = pickWinner(bids, new Set(recent.map((r) => r.email)));
   if (winner) {
     await env.DB.batch([
@@ -133,11 +133,13 @@ async function settleDue(env, now) {
 // after the last one closed.
 async function currentAuction(env, s, now) {
   await settleDue(env, now);
-  const open = await env.DB.prepare("SELECT * FROM auctions WHERE status = 'open' ORDER BY closes_at LIMIT 1").first();
+  const page = s.creatorId || 0; // 0 is the site's own page
+  const open = await env.DB.prepare("SELECT * FROM auctions WHERE status = 'open' AND creator_id = ? ORDER BY closes_at LIMIT 1").bind(page).first();
   if (open) return open;
   const n = nominalAuction(now, s.tz, s.closeHour);
-  await env.DB.prepare("INSERT OR IGNORE INTO auctions (day, closes_at, status) VALUES (?, ?, 'open')").bind(n.day, n.closesAt).run();
-  return env.DB.prepare('SELECT * FROM auctions WHERE day = ?').bind(n.day).first();
+  const key = roundKey(n.day, page);
+  await env.DB.prepare("INSERT OR IGNORE INTO auctions (day, closes_at, status, creator_id) VALUES (?, ?, 'open', ?)").bind(key, n.closesAt, page).run();
+  return env.DB.prepare('SELECT * FROM auctions WHERE day = ?').bind(key).first();
 }
 
 // ---- standings: auto-bids, the clock, and outbid emails ---------------------------
@@ -191,7 +193,7 @@ async function emailOutbid(request, env, s, bid, standing, now) {
   const message = outbidEmail({
     amountCents: standing.amounts.get(bid.id) ?? bid.amount_cents,
     highCents: standing.highCents,
-    siteUrl: s.siteUrl,
+    siteUrl: await pageUrl(env, s, bid.day),
     stopUrl: new URL(request.url).origin + '/stop?t=' + bid.token,
   });
   if (await sendEmail(env, { key, from: s.mailFrom, to: bid.email, ...message })) {
@@ -236,7 +238,7 @@ async function signInWays(env, s) {
 
 async function getBoard(env, s, now) {
   // Before bidding opens there is no board, but people can already make an account.
-  if (!s.open) return { status: 'soon', bids: [], alerts: false, live: (await liveState(env)).on, ...(await signInWays(env, s)) };
+  if (!s.open) return { status: 'soon', bids: [], alerts: false, live: s.creator ? false : (await liveState(env)).on, ...(s.creator ? { creator: s.creator } : {}), ...(await signInWays(env, s)) };
   const a = await currentAuction(env, s, now);
   const { results } = await env.DB.prepare(
     `SELECT name, amount_cents, created_at, shared, pid, task, backers,
@@ -253,7 +255,8 @@ async function getBoard(env, s, now) {
     pooling: Boolean(cardKeys(env)), // can people add money to an open job? It needs card holds.
     minPledgeCents: LIMITS.minPledgeCents,
     ...(await signInWays(env, s)),
-    live: (await liveState(env)).on, // is he streaming right now? The page then shows the stream and its chat.
+    live: s.creator ? false : (await liveState(env)).on, // is he streaming right now? The page then shows the stream and its chat.
+    ...(s.creator ? { creator: s.creator } : {}), // whose page this is
     // A secret job gives name, amount and time only: the job itself never leaves the database
     // here. An open job, which its poster chose to show, also gives the job, a public
     // handle to add money to, and how many people have. Never an email or a maximum.
@@ -429,8 +432,8 @@ async function postBid(request, env, s, ctx, now) {
     env.DB.prepare("SELECT COUNT(*) AS n, SUM(CASE WHEN status IN ('qualified', 'held') THEN 1 ELSE 0 END) AS landed FROM bids WHERE email = ? AND day = ?")
       .bind(bid.email, a.day),
     env.DB.prepare('SELECT COUNT(*) AS n FROM bids WHERE ip_hash = ? AND created_at > ?').bind(ipHash, now - 3_600_000),
-    env.DB.prepare("SELECT day FROM bids WHERE email = ? AND win_state = 'won' AND day <> ? AND day >= ? LIMIT 1")
-      .bind(bid.email, a.day, dayShift(a.day, -6)),
+    env.DB.prepare("SELECT day FROM bids WHERE email = ? AND win_state = 'won' AND creator_id = ? AND day <> ? AND substr(day, 1, 10) >= ? LIMIT 1")
+      .bind(bid.email, s.creatorId || 0, a.day, dayShift(roundDate(a.day), -6)),
   ]);
   // The daily limit counts bids that landed. Tries that fell short or broke a
   // rule do not use it up, but they are capped too so the screen cannot be run up.
@@ -466,8 +469,8 @@ async function postBid(request, env, s, ctx, now) {
   const placed = verdict.amountCents ?? bid.amountCents; // an auto-bid may have lifted it to cover the job
   const inserted = await env.DB.prepare(
     `INSERT INTO bids (day, name, email, task, amount_cents, max_cents, status, est_minutes, est_cost_cents, min_cents,
-                       screen_note, screened_by, ip_hash, created_at, token, notify, card_id, next_status, shared, pid, own_cents, cost_items)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                       screen_note, screened_by, ip_hash, created_at, token, notify, card_id, next_status, shared, pid, own_cents, cost_items, creator_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).bind(
     a.day, bid.name, bid.email, bid.task, placed, bid.maxCents, wantsHold ? 'card' : verdict.status,
     verdict.estMinutes ?? null, verdict.estCostCents ?? null, verdict.minCents ?? null,
@@ -475,6 +478,7 @@ async function postBid(request, env, s, ctx, now) {
     keys ? cardId : null, wantsHold ? verdict.status : null,
     shared ? 1 : 0, shared ? randomHex(6) : null, shared ? placed : null,
     verdict.costItems && verdict.costItems.length ? JSON.stringify(verdict.costItems) : null,
+    s.creatorId || 0,
   ).run();
   const row = { id: inserted.meta.last_row_id, amount_cents: placed, max_cents: bid.maxCents, min_cents: verdict.minCents ?? null, token };
 
@@ -633,17 +637,19 @@ async function confirmPledge(request, env, s, ctx, now) {
 
 // ---- public: how this browser's bids are standing ---------------------------------
 
-async function postMine(request, env) {
+async function postMine(request, env, s) {
   const body = await request.json().catch(() => null);
   const tokens = Array.isArray(body?.tokens) ? body.tokens.filter((t) => typeof t === 'string' && /^[0-9a-f]{32}$/.test(t)).slice(0, 10) : [];
   const out = [];
   for (const token of tokens) {
     const bid = await env.DB.prepare('SELECT * FROM bids WHERE token = ?').bind(token).first();
+    if (bid && roundCreator(bid.day) !== (s.creatorId || 0)) continue; // placed on another page
     if (!bid) {
       // Not a bid: money this browser added to someone's open job.
       const pledge = await env.DB.prepare("SELECT * FROM pledges WHERE token = ? AND status IN ('active', 'paid', 'released', 'failed', 'refunded')").bind(token).first();
       if (!pledge) continue;
       const job = await env.DB.prepare('SELECT * FROM bids WHERE id = ?').bind(pledge.bid_id).first();
+      if (roundCreator(job.day) !== (s.creatorId || 0)) continue;
       const round = await env.DB.prepare('SELECT * FROM auctions WHERE day = ?').bind(job.day).first();
       const lead = await topBid(env, job.day);
       const live = round.status === 'open';
@@ -716,7 +722,7 @@ async function adminState(env, s, now, showJobs) {
   await settleDue(env, now);
   const auction = s.open
     ? await currentAuction(env, s, now)
-    : await env.DB.prepare("SELECT * FROM auctions WHERE status = 'open' ORDER BY closes_at LIMIT 1").first();
+    : await env.DB.prepare("SELECT * FROM auctions WHERE status = 'open' AND creator_id = ? ORDER BY closes_at LIMIT 1").bind(s.creatorId || 0).first();
   const bids = auction
     ? (await env.DB.prepare('SELECT * FROM bids WHERE day = ? ORDER BY amount_cents DESC, created_at ASC, id ASC').bind(auction.day).all()).results
     : [];
@@ -728,7 +734,7 @@ async function adminState(env, s, now, showJobs) {
     ).bind(auction.day).all();
     for (const r of results) cards.set(r.id, true);
   }
-  const last = await env.DB.prepare("SELECT * FROM auctions WHERE status = 'closed' ORDER BY closed_at DESC LIMIT 1").first();
+  const last = await env.DB.prepare("SELECT * FROM auctions WHERE status = 'closed' AND creator_id = ? ORDER BY closed_at DESC LIMIT 1").bind(s.creatorId || 0).first();
   let previous = null;
   if (last) {
     const w = last.winner_bid_id ? await env.DB.prepare('SELECT * FROM bids WHERE id = ?').bind(last.winner_bid_id).first() : null;
@@ -784,6 +790,23 @@ async function adminDecide(request, env, s, ctx, id, now) {
   ).bind(now, approval.minutes, costCents, approval.minCents, id).run();
   await settleStandings(request, env, s, ctx, a, before, now);
   return [200, { status: 'qualified' }];
+}
+
+// The creator's own view of their page's round: the bids (with the jobs), which are
+// waiting for them, and the last winner with the email to reach them at.
+async function creatorRound(request, env, s, now) {
+  const mine = await ownCreator(request, env, s, now);
+  if (!mine.scope) return [mine.status, mine.body];
+  const st = await adminState(env, mine.scope, now, true);
+  return [200, { open: st.open, cards: st.cards, screen: st.screen, auction: st.auction, bids: st.bids, previous: st.previous, settings: st.settings }];
+}
+
+async function creatorDecide(request, env, s, ctx, id, now) {
+  const mine = await ownCreator(request, env, s, now);
+  if (!mine.scope) return [mine.status, mine.body];
+  const bid = await env.DB.prepare('SELECT creator_id FROM bids WHERE id = ?').bind(id).first();
+  if (!bid || bid.creator_id !== mine.scope.creatorId) return [404, { message: 'No such bid on your page.' }];
+  return adminDecide(request, env, mine.scope, ctx, id, now);
 }
 
 // One-time setup. The owner's keys arrive as request headers that the caller's
@@ -921,6 +944,61 @@ const SOCIAL = {
   'POST /comments': (request, env, s, now) => (s.open ? postComment(request, env, now, s.siteUrl, s.apiUrl) : [403, { message: 'Bidding is not open yet.' }]),
 };
 
+// Everything the public can ask for. `s` is the site's own settings, or a creator's
+// page scope: the same handlers, working on that page's round.
+async function publicRoute(request, env, ctx, s, url, path, now, cors) {
+    if (path === '/a' && request.method === 'POST') {
+      await record(request, env, s, now);
+      return new Response(null, { status: 204, headers: cors });
+    }
+    if (path === '/board' && request.method === 'GET') return json(await getBoard(env, s, now), 200, cors);
+    // Creator pages: the list, one page, following it, and a person's own page.
+    let cm, dm;
+    if (request.method !== 'OPTIONS' && (path === '/creators' || path === '/me/creator' || path.startsWith('/me/creator/') || (cm = /^\/creators\/([a-z0-9-]{3,24})(\/follow)?$/i.exec(path)))) {
+      const out = path === '/creators' && request.method === 'GET' ? await listCreators(env)
+        : path === '/me/creator' && request.method === 'GET' ? await myCreator(request, env, now)
+        : path === '/me/creator' && request.method === 'POST' ? await saveCreator(request, env, s, now)
+        : path === '/me/creator/payouts' && request.method === 'POST' ? await startPayouts(request, env, s, now)
+        : path === '/me/creator/bidding' && request.method === 'POST' ? await setBidding(request, env, s, now)
+        : path === '/me/creator/round' && request.method === 'GET' ? await creatorRound(request, env, s, now)
+        : (dm = /^\/me\/creator\/bids\/(\d+)\/decide$/.exec(path)) && request.method === 'POST' ? await creatorDecide(request, env, s, ctx, Number(dm[1]), now)
+        : cm && !cm[2] && request.method === 'GET' ? await getCreator(request, env, cm[1], now)
+        : cm && cm[2] && request.method === 'POST' ? await followCreator(request, env, cm[1], now)
+        : [405, { message: 'Method not allowed.' }];
+      return json(out[1], out[0], cors);
+    }
+    const social = SOCIAL[request.method + ' ' + path];
+    if (social) {
+      const [status, body] = await social(request, env, s, now);
+      return json(body, status, cors);
+    }
+    if (path === '/check' && request.method === 'POST') {
+      const [status, body] = await postCheck(request, env, s, now);
+      return json(body, status, cors);
+    }
+    if (path === '/bids' && request.method === 'POST') {
+      const [status, body] = await postBid(request, env, s, ctx, now);
+      return json(body, status, cors);
+    }
+    if (path === '/bids/confirm' && request.method === 'POST') {
+      const [status, body] = await confirmBid(request, env, s, ctx, now);
+      return json(body, status, cors);
+    }
+    if (path === '/pledges' && request.method === 'POST') {
+      const [status, body] = await postPledge(request, env, s, ctx, now);
+      return json(body, status, cors);
+    }
+    if (path === '/pledges/confirm' && request.method === 'POST') {
+      const [status, body] = await confirmPledge(request, env, s, ctx, now);
+      return json(body, status, cors);
+    }
+    if (path === '/mine' && request.method === 'POST') {
+      const [status, body] = await postMine(request, env, s);
+      return json(body, status, cors);
+    }
+    return json({ message: 'Method not allowed.' }, 405, cors);
+}
+
 export default {
   async fetch(request, env, ctx) {
     const s = settings(env);
@@ -930,59 +1008,21 @@ export default {
     const cors = corsHeaders(request, s);
 
     try {
-      if (PUBLIC.has(path) || path === '/creators' || path.startsWith('/creators/') || path === '/me/creator') {
+      if (PUBLIC.has(path) || path === '/creators' || path.startsWith('/creators/') || path === '/me/creator' || path.startsWith('/me/creator/')) {
         if (request.method === 'OPTIONS') {
           return new Response(null, {
             status: 204,
             headers: { ...cors, 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type, authorization', 'access-control-max-age': '86400' },
           });
         }
-        if (path === '/a' && request.method === 'POST') {
-          await record(request, env, s, now);
-          return new Response(null, { status: 204, headers: cors });
+        // "?c=<name>" puts the request on that creator's page: its own round, open or not on its own.
+        const onPage = request.method !== 'OPTIONS' ? url.searchParams.get('c') : null;
+        if (onPage) {
+          const scoped = await creatorScope(env, s, onPage);
+          if (!scoped) return json({ verdict: 'invalid', message: 'There is no page at this address.' }, 404, cors);
+          return publicRoute(request, env, ctx, scoped, url, path, now, cors);
         }
-        if (path === '/board' && request.method === 'GET') return json(await getBoard(env, s, now), 200, cors);
-        // Creator pages: the list, one page, following it, and a person's own page.
-        let cm;
-        if (request.method !== 'OPTIONS' && (path === '/creators' || path === '/me/creator' || (cm = /^\/creators\/([a-z0-9-]{3,24})(\/follow)?$/i.exec(path)))) {
-          const out = path === '/creators' && request.method === 'GET' ? await listCreators(env)
-            : path === '/me/creator' && request.method === 'GET' ? await myCreator(request, env, now)
-            : path === '/me/creator' && request.method === 'POST' ? await saveCreator(request, env, s, now)
-            : cm && !cm[2] && request.method === 'GET' ? await getCreator(request, env, cm[1], now)
-            : cm && cm[2] && request.method === 'POST' ? await followCreator(request, env, cm[1], now)
-            : [405, { message: 'Method not allowed.' }];
-          return json(out[1], out[0], cors);
-        }
-        const social = SOCIAL[request.method + ' ' + path];
-        if (social) {
-          const [status, body] = await social(request, env, s, now);
-          return json(body, status, cors);
-        }
-        if (path === '/check' && request.method === 'POST') {
-          const [status, body] = await postCheck(request, env, s, now);
-          return json(body, status, cors);
-        }
-        if (path === '/bids' && request.method === 'POST') {
-          const [status, body] = await postBid(request, env, s, ctx, now);
-          return json(body, status, cors);
-        }
-        if (path === '/bids/confirm' && request.method === 'POST') {
-          const [status, body] = await confirmBid(request, env, s, ctx, now);
-          return json(body, status, cors);
-        }
-        if (path === '/pledges' && request.method === 'POST') {
-          const [status, body] = await postPledge(request, env, s, ctx, now);
-          return json(body, status, cors);
-        }
-        if (path === '/pledges/confirm' && request.method === 'POST') {
-          const [status, body] = await confirmPledge(request, env, s, ctx, now);
-          return json(body, status, cors);
-        }
-        if (path === '/mine' && request.method === 'POST') {
-          const [status, body] = await postMine(request, env);
-          return json(body, status, cors);
-        }
-        return json({ message: 'Method not allowed.' }, 405, cors);
+        return publicRoute(request, env, ctx, s, url, path, now, cors);
       }
       if (path === '/stop' && request.method === 'GET') return stopEmails(env, url.searchParams.get('t'), url.searchParams.get('u'));
       if ((path === '/admin' || path === '/reports') && request.method === 'GET') {
@@ -1016,6 +1056,7 @@ export default {
       const key = cardKeys(env)?.secret ?? null;
       for (const day of await unsettledDays(env, now)) await settleMoney(env, key, day, now, chooseWinner);
       if (key) await sweepStale(env, key, now);
+      if (key) await payCreators(env, key, now);
       await roundNotices(env, s, now, key);
       await sendNotices(env, s, now);
       if (new Date(now).getUTCMinutes() === 7) {
