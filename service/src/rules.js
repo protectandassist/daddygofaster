@@ -263,6 +263,31 @@ export const REFUSALS = {
   other: 'That job is not allowed under the house rules.',
 };
 
+// What someone is told when their job is checked before they bid. `verdict` is
+// what applyScreen made of the screen's answer, or null when a person has to look.
+//   ok       allowed: go on to place the bid
+//   review   a person will look after the bid is placed: go on
+//   short    allowed, but this bid is too low for a job that long
+//   refused  not allowed: the bid cannot be placed
+export function checkReply(verdict) {
+  const costs = verdict && verdict.estCostCents > 0
+    ? ` It has costs of ${money(verdict.estCostCents)}${costList(verdict.costItems)}, with taxes and fees included. They are added on top of your bid, and charged only if you win.`
+    : '';
+  const extra = verdict && verdict.estCostCents > 0 ? { costCents: verdict.estCostCents, costItems: verdict.costItems && verdict.costItems.length ? verdict.costItems : null } : { costCents: null, costItems: null };
+  if (!verdict || (verdict.status === 'held' && verdict.message === HELD_MESSAGE)) {
+    return { verdict: 'review', ...extra, message: 'This job needs a person to look at it before it can go on the board. You can place your bid now; it waits until it is approved.' };
+  }
+  if (verdict.status === 'refused') return { verdict: 'refused', costCents: null, costItems: null, message: verdict.message };
+  if (verdict.status === 'short') return { verdict: 'short', ...extra, message: verdict.message.replace(/ This job has costs of .*$/, '') + costs };
+  if (verdict.status === 'held') return { verdict: 'review', ...extra, message: 'This job is allowed. It looks longer than an hour, so I will set the time before approving it.' + costs };
+  return { verdict: 'ok', ...extra, message: (costs ? 'This job is allowed.' + costs : 'This job is allowed, and there is nothing extra to pay for.') + ' Add your details to place the bid.' };
+}
+
+// The job's words, the way they are compared: trimmed, single-spaced, lower-cased.
+export function taskKey(task) {
+  return String(task ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
 export const HELD_MESSAGE =
   'Your bid is in and waiting for a person to check it. It goes on the board once it is approved.';
 

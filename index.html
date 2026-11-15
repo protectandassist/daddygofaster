@@ -745,7 +745,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <div class="field" id="cardWrap" hidden>
             <span class="field__label" id="cardLabel">Card</span>
             <div class="cardbox" id="cardEl" role="group" aria-labelledby="cardLabel"></div>
-            <p class="field__hint">Your bid is held on this card, not charged. If you set a maximum, the hold is for your maximum. Only the winner is charged, and every other hold is released when bidding closes. If your job has costs, such as fares or tickets, the winner's card is charged those too. You are shown the amount, taxes and fees included, as soon as your bid is checked.</p>
+            <p class="field__hint">Your bid is held on this card, not charged. If you set a maximum, the hold is for your maximum. Only the winner is charged, and every other hold is released when bidding closes. If your job has costs, such as fares or tickets, the winner's card is charged those too. You are shown the amount, taxes and fees included, before you place the bid.</p>
           </div>
           <p class="msg" id="bidMsg" role="status" hidden></p>
           <button class="btn btn--primary btn--block" id="bidBtn" type="submit" hidden>Continue</button>
@@ -770,7 +770,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <span class="step__n" aria-hidden="true">01 / THE IDEA</span>
           <svg class="step__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11v9H4V4h9M9 15l1-5 9-9 4 4-9 9-5 1ZM17 3l4 4"/></svg>
           <h3>Place a bid</h3>
-          <p>Say what you want me to do and what you will pay for it. Bids start at one cent. If your idea costs money to do, such as fares, tickets or supplies, that cost is added on top of your bid, taxes and fees included, and you are shown the amount as soon as your bid is checked.</p>
+          <p>Say what you want me to do and what you will pay for it. Bids start at one cent. Your job is checked against the rules before you can place the bid. If your idea costs money to do, such as fares, tickets or supplies, that cost is added on top of your bid, taxes and fees included, and you are shown the amount before you place the bid.</p>
         </li>
         <li class="card step">
           <span class="step__n" aria-hidden="true">02 / THE BID</span>
@@ -871,7 +871,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       <div class="notes rise">
         <div class="card note">
           <h3>Costs are extra</h3>
-          <p>Fares, fuel, tickets, supplies and flights are added on top of your bid, with their taxes and fees included. You are shown the amount and what it is made of as soon as your bid is checked, and it stays beside your bid. If you win, it is charged to the same card along with your bid. Anything with a flight or a hotel gets a real quote first.</p>
+          <p>Fares, fuel, tickets, supplies and flights are added on top of your bid, with their taxes and fees included. You are shown the amount and what it is made of before you place the bid, and it stays beside your bid. If you win, it is charged to the same card along with your bid. Anything with a flight or a hotel gets a real quote first.</p>
         </div>
         <div class="card note">
           <h3>Travel counts</h3>
@@ -2472,7 +2472,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   $('raiseCancel').addEventListener('click', function(){ stopRaise(); $('task').focus(); });
 
   /* ---------- sending a bid ---------- */
-  var form = $('bid'), msg = $('bidMsg'), btn = $('bidBtn');
+  var form = $('bid'), msg = $('bidMsg'), btn = $('bidBtn'), checkedJob = null;
   function say(text, ok){
     msg.hidden = false;
     msg.textContent = text;
@@ -2490,13 +2490,40 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     if(backing && (cents === null || cents < minPledge)){ amount.focus(); return say('The least you can add is ' + money(minPledge) + '.'); }
     if(cents === null || cents < 1){ amount.focus(); return say('Enter a bid of at least $0.01.'); }
     if(maxRaw !== '' && (maxCents === null || maxCents < cents)){ $('max').focus(); return say('Your maximum has to be at least your bid.'); }
-    if(!raising && $('more').hidden){     /* step two: who is bidding */
+    if(!raising && backing && $('more').hidden){     /* adding money to a job already on the board: nothing to check */
       $('more').hidden = false;
       track('start');
       showCard();
       msg.hidden = true;
-      btn.textContent = backing ? 'Add money' : 'Place bid';
+      btn.textContent = 'Add money';
       $('who').focus();
+      return;
+    }
+    /* A new job is checked before the bid can be placed: is it allowed, and what
+       would it cost on top of the bid? Checked again if the job's words change. */
+    if(!raising && !backing && ($('more').hidden || checkedJob !== task.toLowerCase())){
+      if(demo){
+        checkedJob = task.toLowerCase();
+        $('more').hidden = false; showCard(); btn.textContent = 'Place bid';
+        return say('This is a preview. On the real page your job is checked here, and you are shown any costs before you place the bid.', true);
+      }
+      btn.disabled = true; btn.textContent = 'Checking your job';
+      say('Checking that this job is allowed, and what it would cost…', true);
+      post('/check', {task: task, amountCents: cents, maxCents: maxCents}).then(function(res){
+        var d = res.d || {};
+        if(d.verdict === 'ok' || d.verdict === 'review'){
+          checkedJob = task.toLowerCase();
+          if($('more').hidden){ $('more').hidden = false; track('start'); }
+          showCard();
+          say(d.message, true);
+          stop();
+          $('who').focus({preventScroll: true});
+          return;
+        }
+        checkedJob = null;
+        if(d.verdict === 'refused') tap('Job not allowed');
+        stop(d.message || 'That could not be checked just now. Try again in a moment.');
+      }).catch(function(){ checkedJob = null; stop('That could not be checked. Check your connection and try again.'); });
       return;
     }
     if(!raising){

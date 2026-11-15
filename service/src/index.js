@@ -20,7 +20,7 @@
 // is also what charges the winner's card and releases every other hold.
 import {
   LIMITS, TIME_POLICY, money, describeMinutes, coveredMinutes, timeAllowance, approveDuration, validateBid, validateRaise, validatePledge, applyScreen, raiseVerdict,
-  resolveStandings, HELD_MESSAGE, nominalAuction, extendedClose, dayShift, pickWinner, holdTarget, extraHold, readCostItems,
+  resolveStandings, HELD_MESSAGE, nominalAuction, extendedClose, dayShift, pickWinner, holdTarget, extraHold, readCostItems, checkReply, taskKey,
 } from './rules.js';
 import { cardKeys, readIntent } from './cards.js';
 import {
@@ -40,6 +40,8 @@ import ADMIN_HTML from './admin.html';
 import REPORTS_HTML from './reports.html';
 
 const IP_BIDS_PER_HOUR = 30;
+const IP_CHECKS_PER_HOUR = 20; // jobs one place may have checked before bidding
+const CHECK_KEEP_MS = 60 * 60_000; // how long a check's answer stands for the bid that follows
 const MAX_RAISES = 200; // per bid per round; far more than a person needs, enough to stop a script
 const MAX_BODY = 4000;
 const PLEDGES_PER_EMAIL_PER_DAY = 20;
@@ -68,6 +70,7 @@ function settings(env) {
     maxPerDay: int(env.MAX_BIDS_PER_DAY, 5),
     origins: (env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean),
     model: env.SCREEN_MODEL || 'claude-opus-5-5',
+    openaiModel: env.OPENAI_MODEL || 'gpt-4.1',
     siteUrl: (env.SITE_URL || 'https://torchhive.com').replace(/\/+$/, ''),
     mailFrom: env.MAIL_FROM || '',
     apiUrl: (env.API_URL || 'https://dgf-bids.trevor-c2b.workers.dev').replace(/\/+$/, ''),
@@ -88,6 +91,7 @@ function corsHeaders(request, s) {
 
 const mailKey = (env) => providerKey(env, 'RESEND_API_KEY', 'mail_key');
 const aiKey = (env) => providerKey(env, 'ANTHROPIC_API_KEY', 'ai_key');
+const openaiKey = (env) => providerKey(env, 'OPENAI_API_KEY', 'openai_key');
 
 // ---- rounds ---------------------------------------------------------------------
 
@@ -434,8 +438,12 @@ async function postBid(request, env, s, ctx, now) {
     return [403, { verdict: 'limit', message: 'You won within the past week. It is one win per person per week, so try again in a few days.' }];
   }
 
-  // The screen. With no key, or any failure, the bid waits for a person.
-  const answer = await screenBid(env, { name: bid.name, task: bid.task, model: s.model, apiKey: await aiKey(env) });
+  // The screen. With no key, or any failure, the bid waits for a person. The job was
+  // normally checked a moment ago, before the bidder could submit: the name is new
+  // here, so the screen runs again, but the costs stay the ones the bidder was shown.
+  let answer = await screenBid(env, { name: bid.name, task: bid.task, model: s.model, apiKey: await aiKey(env), openaiKey: await openaiKey(env), openaiModel: s.openaiModel });
+  const shown = await recentCheck(env, bid.task, now);
+  if (answer && shown) answer = { ...answer, est_cost_dollars: shown.est_cost_dollars, cost_items: shown.cost_items };
   const verdict = answer
     ? applyScreen(answer, { amountCents: bid.amountCents, maxCents: bid.maxCents })
     : { status: 'held', message: HELD_MESSAGE };
@@ -483,6 +491,41 @@ async function postBid(request, env, s, ctx, now) {
   if (verdict.status !== 'qualified') return bidReply(row, verdict.status, verdict.message, null);
   const standing = await settleStandings(request, env, s, ctx, a, before, after);
   return bidReply(row, 'qualified', verdict.message + standingMessage(row.id, placed, before, standing), standing);
+}
+
+// ---- public: checking a job before bidding on it ------------------------------------
+
+async function recentCheck(env, task, now) {
+  const row = await env.DB.prepare('SELECT answer FROM checks WHERE task_hash = ? AND created_at > ? AND answer IS NOT NULL ORDER BY id DESC LIMIT 1')
+    .bind(await sha256(taskKey(task)), now - CHECK_KEEP_MS).first();
+  if (!row) return null;
+  try { return JSON.parse(row.answer); } catch { return null; }
+}
+
+// POST /check { task, amountCents, maxCents }: is this job allowed, and what would
+// it cost on top of the bid? Asked before a bid can be submitted. Nothing is placed
+// or held here, and no name, email or card is involved.
+async function postCheck(request, env, s, now) {
+  if (!s.open) return [403, { verdict: 'closed', message: 'Bidding is not open yet.' }];
+  const body = await request.json().catch(() => null);
+  const task = String(body?.task ?? '').replace(/\s+/g, ' ').trim();
+  if (task.length < LIMITS.taskMin) return [400, { verdict: 'invalid', message: 'Describe the job in a few more words.' }];
+  if (task.length > LIMITS.taskMax) return [400, { verdict: 'invalid', message: `Keep the job to ${LIMITS.taskMax} characters.` }];
+  const amountCents = body.amountCents;
+  if (!Number.isInteger(amountCents) || amountCents < 1 || amountCents > LIMITS.maxCents) return [400, { verdict: 'invalid', message: 'Enter a bid of at least $0.01.' }];
+  const maxCents = Number.isInteger(body.maxCents) && body.maxCents >= amountCents ? body.maxCents : null;
+
+  let answer = await recentCheck(env, task, now); // the same job asked again costs nothing
+  if (!answer) {
+    const ipHash = await sha256((request.headers.get('CF-Connecting-IP') || 'unknown') + '|check');
+    const seen = await env.DB.prepare('SELECT COUNT(*) AS n FROM checks WHERE ip_hash = ? AND created_at > ?').bind(ipHash, now - 3_600_000).first();
+    if (seen.n >= IP_CHECKS_PER_HOUR) return [429, { verdict: 'limit', message: 'That is a lot of jobs checked from here. Try again in an hour.' }];
+    // No name yet: the board name is checked when the bid itself comes in.
+    answer = await screenBid(env, { name: 'Bidder', task, model: s.model, apiKey: await aiKey(env), openaiKey: await openaiKey(env), openaiModel: s.openaiModel });
+    await env.DB.prepare('INSERT INTO checks (task_hash, ip_hash, answer, created_at) VALUES (?, ?, ?, ?)')
+      .bind(await sha256(taskKey(task)), ipHash, answer ? JSON.stringify(answer) : null, now).run();
+  }
+  return [200, checkReply(answer ? applyScreen({ ...answer, name_ok: true }, { amountCents, maxCents }) : null)];
 }
 
 // ---- public: adding money to an open job ------------------------------------------
@@ -696,7 +739,7 @@ async function adminState(env, s, now, showJobs) {
   }
   return {
     open: s.open,
-    screen: (await aiKey(env)) ? 'ai' : 'manual',
+    screen: (await openaiKey(env)) || (await aiKey(env)) ? 'ai' : 'manual',
     email: s.mailFrom && (await mailKey(env)) ? 'on' : 'off',
     cards: cardsOn ? 'on' : 'off',
     settings: { ...TIME_POLICY, timeZone: s.tz, closeHour: s.closeHour, maxBidsPerDay: s.maxPerDay },
@@ -814,7 +857,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
 
 // ---- entry ------------------------------------------------------------------------
 
-const PUBLIC = new Set(['/board', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/auth/google', '/me', '/push/sub', '/push/unsub', '/push/next', '/votes', '/comments', '/comments/report', '/a']);
+const PUBLIC = new Set(['/board', '/check', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/auth/google', '/me', '/push/sub', '/push/unsub', '/push/next', '/votes', '/comments', '/comments/report', '/a']);
 // Signing in, votes and comments: [method, path] to handler. Each answers [status, body].
 const SOCIAL = {
   'POST /auth/start': (request, env, s, now) => authStart(request, env, s, now),
@@ -859,6 +902,10 @@ export default {
         const social = SOCIAL[request.method + ' ' + path];
         if (social) {
           const [status, body] = await social(request, env, s, now);
+          return json(body, status, cors);
+        }
+        if (path === '/check' && request.method === 'POST') {
+          const [status, body] = await postCheck(request, env, s, now);
           return json(body, status, cors);
         }
         if (path === '/bids' && request.method === 'POST') {
@@ -917,7 +964,10 @@ export default {
       if (key) await sweepStale(env, key, now);
       await roundNotices(env, s, now, key);
       await sendNotices(env, s, now);
-      if (new Date(now).getUTCMinutes() === 7) await tidy(env, now); // hourly: old addresses cleared, old rows dropped
+      if (new Date(now).getUTCMinutes() === 7) {
+        await tidy(env, now); // hourly: old addresses cleared, old rows dropped
+        await env.DB.prepare('DELETE FROM checks WHERE created_at < ?').bind(now - 86_400_000).run();
+      }
     } catch (error) {
       console.error('[BIDS] timer', error && error.stack ? error.stack : String(error));
     }

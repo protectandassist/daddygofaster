@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   money, minCentsFor, coveredMinutes, timeAllowance, approveDuration, describeMinutes, validateBid, decide,
-  localParts, zonedToUtc, dayShift, nominalAuction, extendedClose, pickWinner, applyScreen, raiseVerdict, resolveStandings, validateMax, validateRaise, LIMITS, REFUSALS, HELD_MESSAGE,
+  checkReply, taskKey, localParts, zonedToUtc, dayShift, nominalAuction, extendedClose, pickWinner, applyScreen, raiseVerdict, resolveStandings, validateMax, validateRaise, LIMITS, REFUSALS, HELD_MESSAGE,
   holdTarget, extraHold, captureSlice, validatePledge,
 } from '../src/rules.js';
 
@@ -332,4 +332,24 @@ test('ordinary punctuation is not mistaken for a hidden letter', () => {
     'rock&roll night', '5 stars *****', 'a** kicker maybe', 'snake_case name', 'save 50% today', '#1 fan', 'he said *wow*', 'wait—what', 'café olé']) {
     assert.equal(badLanguage(fine), null, fine);
   }
+});
+
+test('a job checked before bidding: allowed, needs a person, too long for the bid, or not allowed', () => {
+  const allow = { decision: 'allow', category: 'none', name_ok: true, est_minutes: 30, est_cost_dollars: 0, cost_items: [], needs_quote: false, reason: '' };
+  const ctx = { amountCents: 500, maxCents: null };
+  const free = checkReply(applyScreen(allow, ctx));
+  assert.deepEqual([free.verdict, free.costCents, free.costItems], ['ok', null, null]);
+  assert.match(free.message, /allowed, and there is nothing extra to pay for/);
+  const priced = checkReply(applyScreen({ ...allow, cost_items: [{ item: 'Bus fare', dollars: 5 }] }, ctx));
+  assert.deepEqual([priced.verdict, priced.costCents, priced.costItems], ['ok', 500, [{ item: 'Bus fare', cents: 500 }]]);
+  assert.match(priced.message, /This job is allowed\. It has costs of \$5\.00 \(Bus fare \$5\.00\), with taxes and fees included\. They are added on top of your bid, and charged only if you win\./);
+  assert.equal(checkReply(null).verdict, 'review'); // no screen, or it could not answer
+  assert.equal(checkReply(applyScreen({ ...allow, decision: 'unsure' }, ctx)).verdict, 'review');
+  assert.equal(checkReply(applyScreen({ ...allow, needs_quote: true }, ctx)).verdict, 'review');
+  const short = checkReply(applyScreen({ ...allow, est_minutes: 90, cost_items: [{ item: 'Bus fare', dollars: 5 }] }, ctx));
+  assert.equal(short.verdict, 'short');
+  assert.equal((short.message.match(/costs of/g) || []).length, 1);
+  const no = checkReply(applyScreen({ ...allow, decision: 'refuse', category: 'humiliating' }, ctx));
+  assert.deepEqual([no.verdict, no.message, no.costCents], ['refused', REFUSALS.humiliating, null]);
+  assert.equal(taskKey('  Walk   FIVE miles '), 'walk five miles');
 });

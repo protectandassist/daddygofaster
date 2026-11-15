@@ -1,4 +1,5 @@
-// The AI screen: one Claude call per bid. It sorts the job into allow / refuse /
+// The AI screen: one model call per bid, to OpenAI when an OpenAI key is set and
+// otherwise to Claude. It sorts the job into allow / refuse /
 // unsure and estimates time and cost. It never writes the reply the bidder sees;
 // src/rules.js turns its answer into fixed wording.
 import Anthropic from '@anthropic-ai/sdk';
@@ -56,9 +57,65 @@ decision:
 
 reason: one short sentence for the owner explaining the decision. Do not quote the job in it.`;
 
+// The same answer shape, as the JSON schema OpenAI holds the model to.
+const CATEGORIES = Screen.shape.category.options;
+const OPENAI_SCHEMA = {
+  type: 'object', additionalProperties: false,
+  required: ['decision', 'category', 'name_ok', 'est_minutes', 'est_cost_dollars', 'cost_items', 'needs_quote', 'reason'],
+  properties: {
+    decision: { type: 'string', enum: ['allow', 'refuse', 'unsure'] },
+    category: { type: 'string', enum: CATEGORIES },
+    name_ok: { type: 'boolean' },
+    est_minutes: { type: 'number' },
+    est_cost_dollars: { type: 'number' },
+    cost_items: {
+      type: 'array',
+      items: { type: 'object', additionalProperties: false, required: ['item', 'dollars'], properties: { item: { type: 'string' }, dollars: { type: 'number' } } },
+    },
+    needs_quote: { type: 'boolean' },
+    reason: { type: 'string' },
+  },
+};
+
+async function screenWithOpenAI(env, { name, task, model, key }) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 20_000);
+  try {
+    const res = await fetch((env.OPENAI_BASE_URL || 'https://api.openai.com') + '/v1/chat/completions', {
+      method: 'POST', signal: ctl.signal,
+      headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model, temperature: 0, max_tokens: 1200,
+        response_format: { type: 'json_schema', json_schema: { name: 'bid_screen', strict: true, schema: OPENAI_SCHEMA } },
+        messages: [
+          { role: 'system', content: SYSTEM },
+          { role: 'user', content: `<display_name>${name}</display_name>
+<job>${task}</job>` },
+        ],
+      }),
+    });
+    if (!res.ok) { console.error('[SCREEN] OpenAI answered', res.status); return null; }
+    const choice = (await res.json()).choices?.[0];
+    // A refusal or a cut-off answer is a reason for a person to look: the bid is held.
+    if (!choice || choice.finish_reason !== 'stop' || choice.message?.refusal || !choice.message?.content) {
+      console.warn('[SCREEN] no usable answer, finish_reason:', choice && choice.finish_reason);
+      return null;
+    }
+    const parsed = Screen.safeParse(JSON.parse(choice.message.content));
+    if (!parsed.success) { console.warn('[SCREEN] answer did not fit'); return null; }
+    return parsed.data;
+  } catch (error) {
+    console.error('[SCREEN] failed', String(error));
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Returns the screen's answer, or null when there is no key, the call fails, or
 // the model declines. Null means "hold the bid for a person", never "allow".
-export async function screenBid(env, { name, task, model, apiKey }) {
+export async function screenBid(env, { name, task, model, apiKey, openaiKey, openaiModel }) {
+  if (openaiKey) return screenWithOpenAI(env, { name, task, model: openaiModel, key: openaiKey });
   if (!apiKey) return null;
   const client = new Anthropic({
     apiKey,
