@@ -525,6 +525,26 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
 .spot__go{margin-top:auto;padding-top:20px;font-weight:600;color:var(--accent);font-size:.84rem;overflow-wrap:anywhere}
 .spot__go::after{content:" ↗";margin-left:6px}
 .spot--open{border-style:dashed;background:transparent}
+/* the Protect & Assist spot: an ad tile in that brand's own colors, with its real logo */
+.spot--ad{padding:0;gap:0;overflow:hidden}
+.ad{position:relative;flex:1;display:grid;grid-template-columns:minmax(92px,32%) 1fr;align-items:center;gap:clamp(14px,2.4vw,26px);
+  padding:clamp(22px,3vw,36px);padding-top:clamp(34px,4vw,44px);min-height:250px;color:#0B2A4A;
+  background:radial-gradient(130% 150% at 0% 0%,#FFFFFF 0%,#EDF5FD 52%,#CFE4F7 100%)}
+.ad::after{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:linear-gradient(90deg,#EF3340 0 30%,#1479C9 30% 100%)}
+.ad__tag{position:absolute;top:14px;right:14px;background:#0B2A4A;color:#fff;font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:5px 10px;border-radius:999px}
+.ad__logo{width:100%;max-width:190px;height:auto;justify-self:center;filter:drop-shadow(0 12px 18px rgba(11,42,74,.22));transition:transform .25s}
+.spot--ad:hover .ad__logo{transform:scale(1.04)}
+.ad__copy{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0}
+.ad__brand{font-weight:700;font-size:.92rem;color:#1479C9}
+.ad__head{font-family:var(--display);font-weight:800;font-size:clamp(1.55rem,3.1vw,2.3rem);line-height:1.04;letter-spacing:-.02em;color:#0B2A4A;text-wrap:balance}
+.ad__head em{font-style:normal;color:#EF3340}
+.ad__sub{color:#35506B;font-size:.98rem;line-height:1.45}
+.ad__cta{margin-top:8px;display:inline-flex;align-items:center;min-height:44px;padding:10px 18px;border-radius:10px;background:#1479C9;color:#fff;font-weight:700;font-size:.95rem;transition:background .15s}
+.ad__cta::after{content:"↗";margin-left:8px}
+.spot--ad:hover .ad__cta{background:#0F5FA3}
+.spot--ad .spot__own{margin:0;padding:12px clamp(22px,3vw,36px)}
+@media(max-width:480px){.ad{grid-template-columns:1fr;justify-items:start;min-height:0}.ad__logo{max-width:112px;justify-self:start}}
+@media(prefers-reduced-motion:reduce){.ad__logo{transition:none}.spot--ad:hover .ad__logo{transform:none}}
 
 /* ---- closing call ------------------------------------------ */
 .close{position:relative;overflow:hidden;text-align:center;padding:clamp(64px,9vw,120px) 0}
@@ -949,13 +969,18 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         <p class="lead">A sponsor gets a spot on this page and a mention in the video.</p>
       </div>
       <div class="spots rise">
-        <a class="card spot" href="https://protectandassist.com/" target="_blank" rel="noopener sponsored">
-          <svg class="spot__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 8 3v6c0 5-8 10-8 10S4 16 4 11V5l8-3ZM8 11l3 3 5-6"/></svg>
-          <span class="spot__k">Sponsor</span>
-          <h3>Protect &amp; Assist</h3>
-          <p>Help look out for an older parent with AI call screening, family alerts and care reminders.</p>
+        <a class="card spot spot--ad" href="https://protectandassist.com/" target="_blank" rel="noopener sponsored" aria-label="Sponsor: Protect &amp; Assist. Know who is calling Mom. See how it works at protectandassist.com">
+          <div class="ad">
+            <span class="ad__tag">Sponsor</span>
+            <img class="ad__logo" src="/assets/protect-assist-logo.webp" width="240" height="240" alt="Protect &amp; Assist logo" loading="lazy">
+            <div class="ad__copy">
+              <span class="ad__brand">Protect &amp; Assist</span>
+              <strong class="ad__head">Know who is <em>calling Mom.</em></strong>
+              <span class="ad__sub">AI call screening, family alerts and care reminders for an older parent.</span>
+              <span class="ad__cta">See how it works</span>
+            </div>
+          </div>
           <p class="spot__own">Protect &amp; Assist is my company.</p>
-          <span class="spot__go">Visit protectandassist.com</span>
         </a>
         <a class="card spot spot--open" href="mailto:hello@torchhive.com?subject=Sponsoring%20a%20day">
           <svg class="spot__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>
