@@ -34,7 +34,7 @@ import {
   storeAdminKey, adminKeyIsSet, adminKeyMatches,
 } from './store.js';
 import {
-  signInOn, emailLinksOn, sessionUser, namedUser, isAdminEmail, getActivity, postSeen, deleteAccount, authGoogle, postMe, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, reportComment, recentComments, removeComment, restoreComment, blockCommenter,
+  signInOn, emailLinksOn, sessionUser, namedUser, isAdminEmail, listMembers, getActivity, postSeen, deleteAccount, authGoogle, postMe, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, reportComment, recentComments, removeComment, restoreComment, blockCommenter,
 } from './social.js';
 import { record, report, tidy } from './stats.js';
 import ADMIN_HTML from './admin.html';
@@ -752,6 +752,7 @@ async function adminState(env, s, now, showJobs) {
     comments: auction ? await recentComments(env, auction.day) : [],
     live: await liveState(env),
     chat: await recentChat(env),
+    members: await listMembers(env),
     previous,
   };
 }

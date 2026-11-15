@@ -316,11 +316,11 @@ p{margin:0}
 .fine{font-size:.72rem;color:var(--faint);text-align:center;line-height:1.65}
 @media(max-width:480px){.bid__heading{padding:22px 20px 18px}.bid__stats{margin:0 20px}.bid__body{padding:22px 20px}
   .stat{padding:12px 6px}.stat__v{font-size:clamp(.85rem,3.8vw,1.05rem)}.chipbtn{min-height:40px}}
-.mine{display:grid;gap:8px}
-.mine__row{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:10px;border:1px solid var(--line-2);background:var(--field)}
-.mine__row > div{min-width:0;flex:1}
+.mine{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.mine__row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;padding:11px 13px;border-radius:10px;border:1px solid var(--line-2);background:var(--field)}
+.mine__row > div{min-width:0;flex:1 1 220px}
 .mine__row b{display:block;font-weight:600;font-size:.95rem}
-.mine__row span{display:block;color:var(--muted);font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mine__row span{color:var(--muted);font-size:.85rem;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere}
 .mine__row.is-leading,.mine__row.is-won{border-color:rgba(61,214,140,.5)}
 .mine__row.is-leading b,.mine__row.is-won b{color:var(--good)}
 .mine__row.is-outbid,.mine__row.is-short{border-color:rgba(242,109,114,.55)}
@@ -453,6 +453,20 @@ button.sheet__item:hover{border-color:var(--accent)}
 .live__badge{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#ff6b70}
 .live__badge::before{content:"";width:9px;height:9px;border-radius:50%;background:#ff3b42;animation:flicker 1.1s ease-in-out infinite}
 .live__links{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.sec--live{padding-top:clamp(20px,3vw,34px);padding-bottom:clamp(20px,3vw,34px);border-bottom:1px solid var(--line)}
+.sec--live .sec__head{margin-bottom:16px}
+.sec--live .sec__head h2{font-size:clamp(1.5rem,3vw,2.1rem)}
+/* under the high bid: the job that is winning, and what a visitor can do about it */
+.leader{margin:14px 26px 0;padding:13px 15px;border:1px solid rgba(239,149,2,.38);border-radius:12px;background:rgba(239,149,2,.06);display:grid;gap:9px}
+.leader__top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px}
+.leader__k{font-size:.7rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--accent-hi)}
+.leader__top b{font-weight:700}
+.leader__top .num{margin-left:auto;font-weight:700;color:var(--accent-hi)}
+.leader p{margin:0;color:var(--muted);font-size:.9rem;line-height:1.45;overflow-wrap:anywhere}
+.leader__acts{display:flex;flex-wrap:wrap;gap:8px}
+.leader__acts:empty{display:none}
+.leader__acts .chipbtn{color:var(--text)}
+@media(max-width:560px){.leader{margin-left:18px;margin-right:18px}}
 .chat{display:flex;flex-direction:column;min-height:300px;max-height:min(70vh,560px);padding:0;overflow:hidden}
 @media(max-width:860px){.chat{max-height:420px}}
 .chat__head{padding:12px 16px;border-bottom:1px solid var(--line);font-weight:700;font-size:.95rem}
@@ -703,6 +717,34 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
 
 <main id="top">
 
+  <!-- ===== LIVE NOW ======================================== -->
+  <section class="sec sec--live" id="live" hidden>
+    <div class="wrap">
+      <div class="sec__head">
+        <p class="live__badge">Live now</p>
+        <h2>Watch it happen</h2>
+        <p class="lead" id="liveLead">I am live right now. Watch here, talk in the chat, and bid below.</p>
+      </div>
+      <div class="live">
+        <div>
+          <div class="live__video" id="liveVideo"></div>
+          <div class="live__links" id="liveLinks"></div>
+          <p class="fine" id="liveClose" hidden></p>
+        </div>
+        <div class="card chat">
+          <div class="chat__head">Live chat</div>
+          <div class="chat__list" id="chatList" aria-live="polite" aria-label="Live chat"></div>
+          <form class="chat__form" id="chatForm" novalidate>
+            <input type="text" id="chatName" maxlength="24" placeholder="Pick a username" aria-label="Pick a username" hidden>
+            <input type="text" id="chatText" maxlength="200" placeholder="Say something" aria-label="Your message" autocomplete="off">
+            <button class="chipbtn chipbtn--go" type="submit" id="chatSend">Send</button>
+            <span class="chat__msg" id="chatMsg" role="status"></span>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== HERO ============================================ -->
   <section class="hero">
     <div class="wrap hero__in">
@@ -778,6 +820,11 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <div class="stat"><div class="stat__k">High bid</div><div class="stat__v stat__v--hot num" id="statHigh">&mdash;</div></div>
           <div class="stat"><div class="stat__k">Bids</div><div class="stat__v num" id="statCount">&mdash;</div></div>
           <div class="stat"><div class="stat__k" id="statClockLabel">Opens</div><div class="stat__v num" id="statClock">Soon</div></div>
+        </div>
+        <div class="leader" id="leader" hidden>
+          <div class="leader__top"><span class="leader__k">Winning right now</span><b id="leaderWho"></b><span class="num" id="leaderAmt"></span></div>
+          <p id="leaderJob"></p>
+          <div class="leader__acts" id="leaderActs"></div>
         </div>
         <div class="bid__body">
           <div class="mine" id="mine" aria-live="polite" hidden></div>
@@ -882,34 +929,6 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   </section>
 
   <!-- ===== THE BOARD ======================================= -->
-  <!-- ===== LIVE NOW ======================================== -->
-  <section class="sec" id="live" hidden>
-    <div class="wrap">
-      <div class="sec__head">
-        <p class="live__badge">Live now</p>
-        <h2>Watch it happen</h2>
-        <p class="lead" id="liveLead">I am live right now. Watch here, talk in the chat, and bid below.</p>
-      </div>
-      <div class="live">
-        <div>
-          <div class="live__video" id="liveVideo"></div>
-          <div class="live__links" id="liveLinks"></div>
-          <p class="fine" id="liveClose" hidden></p>
-        </div>
-        <div class="card chat">
-          <div class="chat__head">Live chat</div>
-          <div class="chat__list" id="chatList" aria-live="polite" aria-label="Live chat"></div>
-          <form class="chat__form" id="chatForm" novalidate>
-            <input type="text" id="chatName" maxlength="24" placeholder="Pick a username" aria-label="Pick a username" hidden>
-            <input type="text" id="chatText" maxlength="200" placeholder="Say something" aria-label="Your message" autocomplete="off">
-            <button class="chipbtn chipbtn--go" type="submit" id="chatSend">Send</button>
-            <span class="chat__msg" id="chatMsg" role="status"></span>
-          </form>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <section class="sec sec--alt" id="board">
     <div class="wrap">
       <div class="sec__head rise">
@@ -1700,6 +1719,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     if(news.length && highCents > wasHigh && wasHigh) countUp($('statHigh'), wasHigh, highCents);
     else $('statHigh').textContent = bids.length ? money(highCents) : '—';
     $('statCount').textContent = String(bids.length);
+    paintLeader(bids);
     tellNews(news);
     bids.forEach(function(b){ delete b._fx; });   /* an effect plays once */
     if(!open){ $('feed').hidden = true; $('statClock').classList.remove('is-urgent'); }
@@ -1730,7 +1750,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     paintTellMe();
 
     $('leadWrap').hidden = !(open && bids.length);
-    if(open && bids.length) $('leadChip').textContent = 'Take the lead: ' + money(highCents + 1);
+    if(open && bids.length) $('leadChip').textContent = 'Just enough to lead: ' + money(highCents + 1);
     $('boardCta').textContent = open && bids.length ? 'Beat the high bid' : 'Place a bid';
     $('dockK').textContent = bids.length ? 'High bid' : 'Reserve';
     $('dockV').textContent = bids.length ? money(highCents) : '50¢';
@@ -1783,6 +1803,35 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       news.push({kind: 'clock', text: 'A late bid added ' + Math.round((now.closesAt - before.closesAt) / 60000) + ' minutes to the clock'});
     }
     return news;
+  }
+  /* The job in front, right under the high bid. An open job can be voted for, backed with
+     money, or talked about from here. A secret one only says who is ahead. */
+  function paintLeader(bids){
+    var box = $('leader'), top = bids[0];
+    if(!open || !top){ box.hidden = true; return; }
+    box.hidden = false;
+    $('leaderWho').textContent = top.name;
+    $('leaderAmt').textContent = money(top.amountCents);
+    var acts = $('leaderActs');
+    acts.textContent = '';
+    function act(text, go, loud){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'chipbtn' + (loud ? ' chipbtn--go' : ''); b.textContent = text;
+      b.addEventListener('click', go);
+      acts.appendChild(b);
+    }
+    if(top.open && top.id){
+      $('leaderJob').textContent = top.task;
+      var voted = Boolean(me && me.votes.indexOf(top.id) >= 0);
+      if(pooling) act('Back it: add ' + money(minPledge) + ' or more', function(){ startBack({id: top.id, task: top.task}); }, true);
+      if(signInOn) act((voted ? 'Voted · ' : 'Vote · ') + (top.votes || 0), function(){ castVote(top.id, !voted); });
+      if(signInOn) act('Comments · ' + (top.comments || 0), function(){
+        openThread = top.id; paint(lastBoard);
+        $('board').scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'start'});
+      });
+    } else {
+      $('leaderJob').textContent = 'This job is secret until the video. Only its bidder can raise it. Outbid it to put yours in front.';
+    }
   }
   function paintFeed(fresh){
     var list = $('feedList');
@@ -1971,6 +2020,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   }
   function nudgeOutbid(highCents){
     announce('You have been outbid', 'The high bid is now ' + money(highCents) + '. Take it back with one tap.', 'out');
+    if($('bidMsg').className.indexOf('msg--ok') >= 0) $('bidMsg').hidden = true;   /* it said "you are in the lead", which is no longer so */
     try { if(navigator.vibrate) navigator.vibrate(60); } catch (e) {}
   }
   /* one more than the high bid, in a step that matches the money on the table */

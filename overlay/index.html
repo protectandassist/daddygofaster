@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>TorchHive stream overlay</title>
+<!--
+  A see-through layer to put over a live stream (a "browser source" in OBS,
+  Streamlabs or TikTok LIVE Studio). It shows the high bid, who is winning, the
+  clock, and the newest bids and chat messages as they happen.
+
+    torchhive.com/overlay/            1920x1080, for YouTube and Twitch
+    torchhive.com/overlay/?tall       1080x1920, for TikTok
+    add &chat=0 to leave the chat out, &feed=0 to leave the side list out
+    add &demo to see it moving with pretend bids
+
+  It only reads what the public site shows: names, amounts and open jobs.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:transparent;overflow:hidden}
+body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--hot:#FFB938;--good:#3dd68c}
+.stage{position:absolute;inset:0;padding:3.2vh 2.4vw;display:grid;grid-template-columns:1fr auto;grid-template-rows:1fr auto;gap:2vh 2vw;pointer-events:none}
+.card{background:rgba(12,13,16,.86);border:1px solid rgba(239,149,2,.55);border-radius:1.6vh;box-shadow:0 1.2vh 5vh rgba(0,0,0,.55),0 0 4vh rgba(239,149,2,.18)}
+
+/* bottom left: the money */
+.score{grid-column:1;grid-row:2;justify-self:start;align-self:end;display:flex;align-items:center;gap:2vh;padding:1.8vh 2.6vh 1.8vh 1.8vh;max-width:62vw}
+.score img{height:9.5vh;width:auto;flex:none;animation:flicker 1.2s ease-in-out infinite}
+.score__k{font-size:1.5vh;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--hot)}
+.score__amt{font-family:"Archivo",sans-serif;font-weight:800;font-size:7.4vh;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.score__amt.is-bump{animation:bump .7s ease-out}
+.score__who{font-size:2.1vh;font-weight:700;margin-top:.5vh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38vw}
+.score__who small{font-weight:500;color:#C9CBD3;font-size:1.8vh}
+.score__side{padding-left:2.2vh;margin-left:.4vh;border-left:1px solid rgba(255,255,255,.14);display:grid;gap:.6vh}
+.score__clock{font-family:"Archivo",sans-serif;font-weight:700;font-size:3.6vh;font-variant-numeric:tabular-nums;line-height:1}
+.score__clock.is-urgent{color:#ff6b70}
+.score__cta{font-size:1.75vh;font-weight:700;color:#1b0a02;background:var(--accent);border-radius:99px;padding:.6vh 1.5vh;white-space:nowrap;justify-self:start}
+
+/* right: what just happened, and the chat */
+.feed{grid-column:2;grid-row:1 / span 2;align-self:end;width:26vw;min-width:300px;display:flex;flex-direction:column;justify-content:flex-end;gap:1vh;max-height:78vh;overflow:hidden}
+.line{padding:1.1vh 1.5vh;border-radius:1.3vh;background:rgba(12,13,16,.82);border:1px solid rgba(255,255,255,.12);font-size:1.9vh;line-height:1.3;font-weight:500;overflow-wrap:anywhere;animation:slide .45s cubic-bezier(.2,1.2,.4,1)}
+.line b{color:var(--hot);font-weight:700;margin-right:.6vh}
+.line--bid{border-color:rgba(239,149,2,.6);background:rgba(34,24,6,.9)}
+.line--bid b{color:#fff}
+.line--lead{border-color:var(--good);background:rgba(10,34,22,.92)}
+.line--lead b{color:var(--good)}
+.line.is-old{opacity:.55}
+
+/* the big moment */
+.flash{position:absolute;left:50%;top:9vh;transform:translate(-50%,-160%);padding:1.6vh 3.2vh;text-align:center;border-color:var(--good);box-shadow:0 0 8vh rgba(61,214,140,.55);transition:transform .5s cubic-bezier(.2,1.3,.4,1),opacity .3s;opacity:0}
+.flash.is-on{transform:translate(-50%,0);opacity:1}
+.flash b{display:block;font-size:1.6vh;letter-spacing:.18em;text-transform:uppercase;color:var(--good)}
+.flash span{display:block;font-family:"Archivo",sans-serif;font-weight:800;font-size:4.2vh;margin-top:.4vh}
+.closed{font-size:2.2vh;font-weight:700}
+
+/* TikTok: tall, with everything in the lower third and nothing under the app's own buttons */
+.tall .stage{grid-template-columns:1fr;grid-template-rows:1fr auto auto;padding:6vh 4vw 20vh}
+.tall .feed{grid-column:1;grid-row:2;width:72vw;min-width:0;max-height:26vh;justify-self:start}
+.tall .score{grid-row:3;max-width:92vw;padding:1.2vh 1.8vh 1.2vh 1.2vh;gap:1.4vh}
+.tall .score img{height:6vh}
+.tall .score__amt{font-size:4.6vh}
+.tall .score__k{font-size:1.15vh}
+.tall .score__who{font-size:1.5vh;max-width:44vw}
+.tall .score__who small{font-size:1.3vh}
+.tall .score__clock{font-size:2.3vh}
+.tall .score__cta{font-size:1.25vh}
+.tall .line{font-size:1.5vh;padding:.8vh 1.2vh}
+.tall .flash{top:14vh}
+.tall .flash span{font-size:2.8vh}
+
+@keyframes flicker{50%{transform:scale(1.05) rotate(-1.5deg);filter:brightness(1.2)}}
+@keyframes bump{0%{transform:scale(1)}30%{transform:scale(1.14);color:var(--hot)}100%{transform:scale(1)}}
+@keyframes slide{from{transform:translateX(30%);opacity:0}to{transform:none;opacity:1}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="feed" id="feed"></div>
+  <div class="card score" id="score">
+    <img src="/assets/torchhive-mark.png" alt="">
+    <div>
+      <div class="score__k" id="k">High bid</div>
+      <div class="score__amt" id="amt">&mdash;</div>
+      <div class="score__who" id="who"></div>
+    </div>
+    <div class="score__side">
+      <div class="score__k" id="clockK">Closes in</div>
+      <div class="score__clock" id="clock">--:--:--</div>
+      <div class="score__cta">Bid at torchhive.com</div>
+    </div>
+  </div>
+</div>
+<div class="card flash" id="flash"><b id="flashK">New leader</b><span id="flashT"></span></div>
+<script>
+(function(){
+  var API = 'https://dgf-bids.trevor-c2b.workers.dev';
+  var q = location.search, demo = /[?&]demo\b/.test(q);
+  if(/[?&]tall\b/.test(q)) document.documentElement.className = 'tall';
+  var showChat = !/[?&]chat=0\b/.test(q), showFeed = !/[?&]feed=0\b/.test(q);
+  var $ = function(id){ return document.getElementById(id); };
+  if(!showFeed) $('feed').style.display = 'none';
+
+  function money(c){ return '$' + (c / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+  function line(kind, who, text){
+    if(!showFeed) return;
+    var p = document.createElement('div'), b = document.createElement('b');
+    p.className = 'line' + (kind ? ' line--' + kind : '');
+    b.textContent = who; p.appendChild(b); p.appendChild(document.createTextNode(text));
+    var feed = $('feed');
+    feed.appendChild(p);
+    while(feed.children.length > 7) feed.removeChild(feed.firstChild);
+    for(var i = 0; i < feed.children.length; i++) feed.children[i].classList.toggle('is-old', i < feed.children.length - 4);
+  }
+  var flashTimer = null;
+  function flash(k, t){
+    $('flashK').textContent = k; $('flashT').textContent = t;
+    $('flash').classList.add('is-on');
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(function(){ $('flash').classList.remove('is-on'); }, 5000);
+  }
+
+  var seen = null, closesAt = null, status = 'soon';
+  function paint(d){
+    var bids = (d.bids || []).slice().sort(function(a, b){ return b.amountCents - a.amountCents; });
+    var top = bids[0];
+    status = d.status; closesAt = d.closesAt ? new Date(d.closesAt).getTime() : null;
+    $('k').textContent = d.status === 'open' ? (top ? 'High bid' : 'Reserve') : 'Bidding';
+    var was = $('amt').textContent, now = d.status === 'open' ? (top ? money(top.amountCents) : '$0.50') : (d.status === 'closed' ? 'Closed' : 'Opens soon');
+    $('amt').textContent = now;
+    if(seen && was !== now){ $('amt').classList.remove('is-bump'); void $('amt').offsetWidth; $('amt').classList.add('is-bump'); }
+    $('who').textContent = '';
+    if(top){
+      $('who').appendChild(document.createTextNode(top.name + ' '));
+      var s = document.createElement('small');
+      s.textContent = top.open ? top.task : 'secret job';
+      $('who').appendChild(s);
+    } else if(d.status === 'open'){ $('who').textContent = 'No bids yet. Be first.'; }
+    /* what changed since the last look */
+    var now_ = {};
+    bids.forEach(function(b){ now_[(b.open ? 'o:' + b.id : 's:' + b.name)] = b; });
+    if(seen){
+      Object.keys(now_).forEach(function(k){
+        var b = now_[k], old = seen.rows[k];
+        if(!old) line('bid', b.name, 'is in at ' + money(b.amountCents));
+        else if(b.amountCents > old) line('bid', b.name, (b.open ? 'is up to ' : 'raised to ') + money(b.amountCents));
+      });
+      var lead = top ? (top.open ? 'o:' + top.id : 's:' + top.name) : null;
+      if(lead && lead !== seen.lead){ flash('New leader', top.name + ' · ' + money(top.amountCents)); line('lead', top.name, 'takes the lead at ' + money(top.amountCents)); }
+    }
+    var rows = {};
+    Object.keys(now_).forEach(function(k){ rows[k] = now_[k].amountCents; });
+    seen = {rows: rows, lead: top ? (top.open ? 'o:' + top.id : 's:' + top.name) : null};
+  }
+  function tick(){
+    var el = $('clock');
+    if(status !== 'open' || !closesAt){ el.textContent = '--:--:--'; $('clockK').textContent = status === 'closed' ? 'Round over' : 'Bidding'; return; }
+    var left = Math.max(0, closesAt - Date.now()), h = Math.floor(left / 3600000), m = Math.floor(left / 60000) % 60, s = Math.floor(left / 1000) % 60;
+    function two(n){ return (n < 10 ? '0' : '') + n; }
+    el.textContent = two(h) + ':' + two(m) + ':' + two(s);
+    el.classList.toggle('is-urgent', left < 300000);
+    $('clockK').textContent = 'Closes in';
+  }
+  setInterval(tick, 500);
+
+  if(demo){   /* pretend bids, so the layout can be set up before a real round */
+    var d = {status: 'open', closesAt: new Date(Date.now() + 372000).toISOString(), bids: [
+      {name: 'mike_r', amountCents: 4200, open: true, id: 'a', task: 'Carry one watermelon on a two-mile walk'},
+      {name: 'sarahk', amountCents: 3500, open: false}, {name: 'tj88', amountCents: 1250, open: false}]};
+    var names = ['lena_p', 'coach_d', 'rustbucket', 'ms_ortiz', 'gary2'], chat = [['pat_k', 'here from TikTok, what is winning?'], ['nightowl', 'do the watermelon one in the rain'], ['ms_ortiz', 'I just chipped in'], ['coach_d', 'five minutes left, somebody raise']], step = 0;
+    paint(d);
+    setInterval(function(){
+      var k = step++ % 4, top = Math.max.apply(null, d.bids.map(function(b){ return b.amountCents; }));
+      if(k === 0 && names.length) d.bids.push({name: names.shift(), amountCents: 600 + Math.floor(Math.random() * 1800), open: false});
+      else if(k === 1) d.bids[0].amountCents += 300;
+      else if(k === 2){ var p = d.bids[1 + step % (d.bids.length - 1)]; p.amountCents = top + 200 + Math.floor(Math.random() * 4) * 100; }
+      else if(showChat){ var c = chat[Math.floor(step / 4) % chat.length]; line('', c[0], c[1]); }
+      paint(d);
+    }, 3500);
+    return;
+  }
+
+  function board(){
+    fetch(API + '/board').then(function(r){ return r.json(); }).then(paint).catch(function(){});
+  }
+  var chatLast = 0, first = true;
+  function live(){
+    if(!showChat) return;
+    fetch(API + '/live' + (chatLast ? '?after=' + chatLast : '')).then(function(r){ return r.json(); }).then(function(d){
+      (d.chat || []).forEach(function(c){
+        if(c.id <= chatLast) return;
+        chatLast = c.id;
+        if(!first) line('', c.name, c.text);   /* only what is said while the overlay is up */
+      });
+      first = false;
+    }).catch(function(){});
+  }
+  board(); live();
+  setInterval(board, 5000);
+  setInterval(live, 4000);
+})();
+</script>
+</body>
+</html>

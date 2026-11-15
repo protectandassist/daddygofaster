@@ -223,6 +223,24 @@ export async function getActivity(request, env, now) {
   }];
 }
 
+// Owner: everyone with an account, newest first. Emails are shown to the owner only.
+export async function listMembers(env) {
+  const total = await env.DB.prepare("SELECT COUNT(*) AS n, SUM(alerts) AS alerts FROM users WHERE email NOT LIKE 'deleted-%@deleted.invalid'").first();
+  const { results } = await env.DB.prepare(
+    `SELECT u.id, u.email, u.name, u.created_at, u.alerts, u.blocked, u.google_sub IS NOT NULL AS google,
+            (SELECT COUNT(*) FROM push_subs p WHERE p.user_id = u.id) AS devices,
+            (SELECT MAX(s.created_at) FROM sessions s WHERE s.user_id = u.id) AS last_in
+     FROM users u WHERE u.email NOT LIKE 'deleted-%@deleted.invalid' ORDER BY u.id DESC LIMIT 200`,
+  ).all();
+  return {
+    count: total.n, withAlerts: total.alerts || 0,
+    list: results.map((u) => ({
+      email: u.email, name: u.name ?? null, joined: new Date(u.created_at).toISOString(), lastSignIn: u.last_in ? new Date(u.last_in).toISOString() : null,
+      google: Boolean(u.google), emailAlerts: u.alerts === 1, devices: u.devices, blocked: u.blocked === 1,
+    })),
+  };
+}
+
 // POST /me/seen: they have looked at their replies.
 export async function postSeen(request, env, now) {
   const user = await sessionUser(request, env, now);

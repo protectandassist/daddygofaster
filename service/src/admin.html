@@ -105,6 +105,15 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <div id="chatList"></div>
     </section>
 
+    <section class="card" id="membersCard">
+      <h2>Members <span class="muted small" id="membersCount"></span></h2>
+      <p class="muted small">Everyone with an account, newest first. Only you can see this list.</p>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>Username</th><th>Email</th><th>Joined</th><th>Last sign-in</th><th>Signs in with</th><th>Alerts</th></tr></thead>
+        <tbody id="membersBody"></tbody>
+      </table></div>
+    </section>
+
     <section class="card" id="commentsCard" hidden>
       <h2>Comments in this auction</h2>
       <p class="muted small">Written by people with an account. Swearing, slurs, attacks and shouting are turned away before they post. Reported comments come first; three reports hide one until you decide.</p>
@@ -245,6 +254,21 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       item.appendChild(top); item.appendChild(el('div', 'job', c.text));
       $('chatList').appendChild(item);
     });
+
+    var mem = d.members || {count: 0, list: []};
+    $('membersCount').textContent = mem.count + (mem.count === 1 ? ' account' : ' accounts') + ', ' + (mem.withAlerts || 0) + ' with email alerts on';
+    $('membersBody').textContent = '';
+    mem.list.forEach(function(u){
+      var tr = el('tr');
+      tr.appendChild(el('td', null, u.name || '(none yet)'));
+      tr.appendChild(el('td', null, u.email));
+      tr.appendChild(el('td', 'muted small', when(u.joined)));
+      tr.appendChild(el('td', 'muted small', u.lastSignIn ? when(u.lastSignIn) : ''));
+      tr.appendChild(el('td', 'muted small', u.google ? 'Google' : 'Email link'));
+      tr.appendChild(el('td', 'muted small', (u.emailAlerts ? 'Email' : '') + (u.emailAlerts && u.devices ? ' + ' : '') + (u.devices ? u.devices + (u.devices === 1 ? ' device' : ' devices') : '') + (u.blocked ? ' (blocked)' : '')));
+      $('membersBody').appendChild(tr);
+    });
+    if(!mem.list.length){ var none = el('tr'); var td = el('td', 'muted', 'Nobody has made an account yet.'); td.colSpan = 6; none.appendChild(td); $('membersBody').appendChild(none); }
 
     var notes = d.comments || [];
     $('commentsCard').hidden = notes.length === 0;
