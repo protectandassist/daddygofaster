@@ -7,13 +7,16 @@
 <title>TorchHive stream overlay</title>
 <!--
   A see-through layer to put over a live stream (a "browser source" in OBS,
-  Streamlabs or TikTok LIVE Studio). It shows the high bid, who is winning, the
-  clock, and the newest bids and chat messages as they happen.
+  Streamlabs or TikTok LIVE Studio). It shows the live bids as a ranked board,
+  the high bid, who is winning, the clock, and the newest bids and chat messages
+  as they happen. It reads the same board the website shows, every few seconds,
+  so the stream and the site always agree.
 
     torchhive.com/overlay/            1920x1080, for YouTube and Twitch
     torchhive.com/overlay/?tall       1080x1920, for TikTok
-    add &chat=0 to leave the chat out, &feed=0 to leave the side list out
-    add &demo to see it moving with pretend bids
+    add &chat=0 to leave the chat out, &feed=0 to leave the event lines out,
+        &board=0 to leave the ranked list out, &left to put the list on the left
+    add &demo to see it moving with pretend bids over a stand-in picture
 
   It only reads what the public site shows: names, amounts and open jobs.
 -->
@@ -23,26 +26,59 @@
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:transparent;overflow:hidden}
-body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--hot:#FFB938;--good:#3dd68c}
-.stage{position:absolute;inset:0;padding:3.2vh 2.4vw;display:grid;grid-template-columns:1fr auto;grid-template-rows:1fr auto;gap:2vh 2vw;pointer-events:none}
-.card{background:rgba(12,13,16,.86);border:1px solid rgba(239,149,2,.55);border-radius:1.6vh;box-shadow:0 1.2vh 5vh rgba(0,0,0,.55),0 0 4vh rgba(239,149,2,.18)}
+body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--hot:#FFB938;--gold:#FFC857;--good:#3dd68c;--ink:rgba(12,13,16,.88)}
+.demo body{background:radial-gradient(120% 90% at 30% 35%,#3a3f4b 0%,#1b1e26 55%,#0c0d10 100%)}
+.demo body::before{content:"Your camera shows here";position:absolute;left:36%;top:44%;transform:translate(-50%,-50%);font:700 3vh "Inter",sans-serif;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.16)}
+.stage{position:absolute;inset:0;padding:3.2vh 2.2vw;pointer-events:none}
+.card{background:var(--ink);border:1px solid rgba(239,149,2,.55);border-radius:1.6vh;box-shadow:0 1.2vh 5vh rgba(0,0,0,.55),0 0 4vh rgba(239,149,2,.18)}
+/* a honeycomb in the corner of each panel */
+.comb{position:relative;overflow:hidden}
+.comb::after{content:"";position:absolute;right:-3vh;top:-3vh;width:22vh;height:22vh;opacity:.16;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cpath d='M28 0l28 16v33L28 65 0 49V16zM28 65l28 16v16M28 65L0 81v16' fill='none' stroke='%23FFB938' stroke-width='1.6'/%3E%3C/svg%3E") 0 0/5.6vh 9.7vh;
+  -webkit-mask-image:radial-gradient(closest-side,#000,transparent);mask-image:radial-gradient(closest-side,#000,transparent)}
+
+/* right: the live bids, ranked */
+.board{position:absolute;right:2.2vw;top:3.2vh;width:25.5vw;min-width:0;padding:1.5vh 1.5vh 1.3vh}
+.left .board{right:auto;left:2.2vw}
+.board__head{display:flex;align-items:center;gap:1vh;font-size:1.45vh;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--hot);margin:0 .4vh 1.1vh}
+.board__dot{width:1.1vh;height:1.1vh;border-radius:50%;background:#ff4d55;box-shadow:0 0 1.4vh #ff4d55;animation:pulse 1.4s ease-in-out infinite}
+.board__n{margin-left:auto;color:#C9CBD3;letter-spacing:.08em}
+.rows{position:relative;display:grid;gap:.8vh}
+.row{position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:1.2vh;padding:1vh 1.3vh 1vh 1vh;border-radius:1.2vh;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);overflow:hidden;will-change:transform}
+.row__bar{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,rgba(239,149,2,.26),rgba(239,149,2,.04));transition:width .9s cubic-bezier(.2,.9,.3,1);pointer-events:none}
+.row > *:not(.row__bar){position:relative}
+.row > div{min-width:0}
+.row__rank{width:3.7vh;height:4.1vh;display:grid;place-items:center;font:800 1.9vh "Archivo",sans-serif;color:#1b0a02;background:#8f939e;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.row__name{font-weight:700;font-size:2vh;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row__job{font-size:1.45vh;font-weight:500;color:#B9BCC6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.2vh}
+.row__amt{font:800 2.5vh "Archivo",sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.row--lead{border-color:var(--gold);background:rgba(46,32,6,.9);box-shadow:0 0 2.6vh rgba(255,200,87,.35);animation:glow 2.4s ease-in-out infinite}
+.row--lead .row__rank{background:var(--gold)}
+.row--lead .row__amt{color:var(--gold);font-size:3vh}
+.row--lead .row__bar{background:linear-gradient(90deg,rgba(255,200,87,.34),rgba(255,200,87,.05))}
+.row.is-new{animation:drop .6s cubic-bezier(.2,1.3,.4,1)}
+.row.is-up .row__amt{animation:bump .8s ease-out}
+.board__more{font-size:1.4vh;font-weight:600;color:#B9BCC6;text-align:center;margin-top:.9vh}
+.board__empty{font-size:1.8vh;font-weight:600;line-height:1.4;padding:.6vh .5vh .4vh;color:#E7E8EC}
+.board__empty b{color:var(--hot)}
 
 /* bottom left: the money */
-.score{grid-column:1;grid-row:2;justify-self:start;align-self:end;display:flex;align-items:center;gap:2vh;padding:1.8vh 2.6vh 1.8vh 1.8vh;max-width:62vw}
+.score{position:absolute;left:2.2vw;bottom:3.2vh;display:flex;align-items:center;gap:2vh;padding:1.8vh 2.6vh 1.8vh 1.8vh;max-width:60vw}
 .score img{height:9.5vh;width:auto;flex:none;animation:flicker 1.2s ease-in-out infinite}
 .score__k{font-size:1.5vh;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--hot)}
 .score__amt{font-family:"Archivo",sans-serif;font-weight:800;font-size:7.4vh;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .score__amt.is-bump{animation:bump .7s ease-out}
-.score__who{font-size:2.1vh;font-weight:700;margin-top:.5vh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38vw}
+.score__who{font-size:2.1vh;font-weight:700;margin-top:.5vh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34vw}
 .score__who small{font-weight:500;color:#C9CBD3;font-size:1.8vh}
 .score__side{padding-left:2.2vh;margin-left:.4vh;border-left:1px solid rgba(255,255,255,.14);display:grid;gap:.6vh}
 .score__clock{font-family:"Archivo",sans-serif;font-weight:700;font-size:3.6vh;font-variant-numeric:tabular-nums;line-height:1}
-.score__clock.is-urgent{color:#ff6b70}
+.score__clock.is-urgent{color:#ff6b70;animation:pulse 1s ease-in-out infinite}
 .score__cta{font-size:1.75vh;font-weight:700;color:#1b0a02;background:var(--accent);border-radius:99px;padding:.6vh 1.5vh;white-space:nowrap;justify-self:start}
 
-/* right: what just happened, and the chat */
-.feed{grid-column:2;grid-row:1 / span 2;align-self:end;width:26vw;min-width:300px;display:flex;flex-direction:column;justify-content:flex-end;gap:1vh;max-height:78vh;overflow:hidden}
-.line{padding:1.1vh 1.5vh;border-radius:1.3vh;background:rgba(12,13,16,.82);border:1px solid rgba(255,255,255,.12);font-size:1.9vh;line-height:1.3;font-weight:500;overflow-wrap:anywhere;animation:slide .45s cubic-bezier(.2,1.2,.4,1)}
+/* bottom right: what just happened, and the chat */
+.feed{position:absolute;right:2.2vw;bottom:3.2vh;width:25.5vw;display:flex;flex-direction:column;justify-content:flex-end;gap:.8vh;max-height:24vh;overflow:hidden}
+.left .feed{right:auto;left:2.2vw;bottom:19vh}
+.line{padding:1vh 1.4vh;border-radius:1.2vh;background:rgba(12,13,16,.84);border:1px solid rgba(255,255,255,.12);font-size:1.75vh;line-height:1.3;font-weight:500;overflow-wrap:anywhere;animation:slide .45s cubic-bezier(.2,1.2,.4,1)}
 .line b{color:var(--hot);font-weight:700;margin-right:.6vh}
 .line--bid{border-color:rgba(239,149,2,.6);background:rgba(34,24,6,.9)}
 .line--bid b{color:#fff}
@@ -51,16 +87,26 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
 .line.is-old{opacity:.55}
 
 /* the big moment */
-.flash{position:absolute;left:50%;top:9vh;transform:translate(-50%,-160%);padding:1.6vh 3.2vh;text-align:center;border-color:var(--good);box-shadow:0 0 8vh rgba(61,214,140,.55);transition:transform .5s cubic-bezier(.2,1.3,.4,1),opacity .3s;opacity:0}
+.flash{position:absolute;left:38%;top:7vh;transform:translate(-50%,-180%);padding:1.6vh 3.4vh;text-align:center;border-color:var(--gold);box-shadow:0 0 9vh rgba(255,200,87,.6);transition:transform .5s cubic-bezier(.2,1.3,.4,1),opacity .3s;opacity:0}
 .flash.is-on{transform:translate(-50%,0);opacity:1}
-.flash b{display:block;font-size:1.6vh;letter-spacing:.18em;text-transform:uppercase;color:var(--good)}
-.flash span{display:block;font-family:"Archivo",sans-serif;font-weight:800;font-size:4.2vh;margin-top:.4vh}
-.closed{font-size:2.2vh;font-weight:700}
+.flash b{display:block;font-size:1.6vh;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
+.flash span{display:block;font-family:"Archivo",sans-serif;font-weight:800;font-size:4.4vh;margin-top:.4vh}
+.spark{position:absolute;width:1.2vh;height:1.2vh;border-radius:50%;background:var(--gold);box-shadow:0 0 1.6vh var(--hot);pointer-events:none;animation:spark .9s ease-out forwards}
 
-/* TikTok: tall, with everything in the lower third and nothing under the app's own buttons */
-.tall .stage{grid-template-columns:1fr;grid-template-rows:1fr auto auto;padding:6vh 4vw 20vh}
-.tall .feed{grid-column:1;grid-row:2;width:72vw;min-width:0;max-height:26vh;justify-self:start}
-.tall .score{grid-row:3;max-width:92vw;padding:1.2vh 1.8vh 1.2vh 1.2vh;gap:1.4vh}
+/* TikTok: tall, with everything clear of the app's own buttons */
+.tall .stage{padding:7vh 4vw 20vh}
+.tall .board{right:auto;left:4vw;top:9vh;width:62vw;padding:1vh 1vh .9vh}
+.tall .board__head{font-size:1.1vh;margin-bottom:.7vh}
+.tall .row{padding:.6vh .9vh .6vh .7vh;gap:.8vh;border-radius:.9vh}
+.tall .row__rank{width:2.5vh;height:2.8vh;font-size:1.25vh}
+.tall .row__name{font-size:1.45vh}
+.tall .row__job{font-size:1.05vh}
+.tall .row__amt{font-size:1.7vh}
+.tall .row--lead .row__amt{font-size:2vh}
+.tall .board__more{font-size:1.05vh}
+.tall .board__empty{font-size:1.35vh}
+.tall .feed{right:auto;left:4vw;bottom:31vh;width:70vw;max-height:17vh}
+.tall .score{left:4vw;bottom:20vh;max-width:92vw;padding:1.2vh 1.8vh 1.2vh 1.2vh;gap:1.4vh}
 .tall .score img{height:6vh}
 .tall .score__amt{font-size:4.6vh}
 .tall .score__k{font-size:1.15vh}
@@ -68,20 +114,29 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
 .tall .score__who small{font-size:1.3vh}
 .tall .score__clock{font-size:2.3vh}
 .tall .score__cta{font-size:1.25vh}
-.tall .line{font-size:1.5vh;padding:.8vh 1.2vh}
-.tall .flash{top:14vh}
+.tall .line{font-size:1.4vh;padding:.7vh 1.1vh}
+.tall .flash{left:50%;top:38vh}
 .tall .flash span{font-size:2.8vh}
 
 @keyframes flicker{50%{transform:scale(1.05) rotate(-1.5deg);filter:brightness(1.2)}}
-@keyframes bump{0%{transform:scale(1)}30%{transform:scale(1.14);color:var(--hot)}100%{transform:scale(1)}}
+@keyframes bump{0%{transform:scale(1)}30%{transform:scale(1.16);color:var(--hot)}100%{transform:scale(1)}}
 @keyframes slide{from{transform:translateX(30%);opacity:0}to{transform:none;opacity:1}}
+@keyframes drop{from{transform:translateY(-60%) scale(.94);opacity:0}to{transform:none;opacity:1}}
+@keyframes pulse{50%{opacity:.45}}
+@keyframes glow{50%{box-shadow:0 0 4.2vh rgba(255,200,87,.6)}}
+@keyframes spark{to{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <div class="stage">
+  <div class="card comb board" id="board">
+    <div class="board__head"><span class="board__dot"></span><span id="boardK">Live bids</span><span class="board__n" id="boardN"></span></div>
+    <div class="rows" id="rows"></div>
+    <div class="board__more" id="more" hidden></div>
+  </div>
   <div class="feed" id="feed"></div>
-  <div class="card score" id="score">
+  <div class="card comb score" id="score">
     <img src="/assets/torchhive-mark.png" alt="">
     <div>
       <div class="score__k" id="k">High bid</div>
@@ -99,13 +154,17 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
 <script>
 (function(){
   var API = 'https://dgf-bids.trevor-c2b.workers.dev';
-  var q = location.search, demo = /[?&]demo\b/.test(q);
-  if(/[?&]tall\b/.test(q)) document.documentElement.className = 'tall';
-  var showChat = !/[?&]chat=0\b/.test(q), showFeed = !/[?&]feed=0\b/.test(q);
+  var q = location.search, demo = /[?&]demo\b/.test(q), tall = /[?&]tall\b/.test(q);
+  var root = document.documentElement;
+  root.className = (tall ? 'tall ' : '') + (demo ? 'demo ' : '') + (/[?&]left\b/.test(q) ? 'left' : '');
+  var showChat = !/[?&]chat=0\b/.test(q), showFeed = !/[?&]feed=0\b/.test(q), showBoard = !/[?&]board=0\b/.test(q);
+  var MAX_ROWS = tall ? 3 : 5;
   var $ = function(id){ return document.getElementById(id); };
   if(!showFeed) $('feed').style.display = 'none';
+  if(!showBoard) $('board').style.display = 'none';
 
   function money(c){ return '$' + (c / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+  function keyOf(b){ return b.open ? 'o:' + b.id : 's:' + b.name; }
   function line(kind, who, text){
     if(!showFeed) return;
     var p = document.createElement('div'), b = document.createElement('b');
@@ -113,8 +172,8 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
     b.textContent = who; p.appendChild(b); p.appendChild(document.createTextNode(text));
     var feed = $('feed');
     feed.appendChild(p);
-    while(feed.children.length > 7) feed.removeChild(feed.firstChild);
-    for(var i = 0; i < feed.children.length; i++) feed.children[i].classList.toggle('is-old', i < feed.children.length - 4);
+    while(feed.children.length > 4) feed.removeChild(feed.firstChild);
+    for(var i = 0; i < feed.children.length; i++) feed.children[i].classList.toggle('is-old', i < feed.children.length - 2);
   }
   var flashTimer = null;
   function flash(k, t){
@@ -122,6 +181,82 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
     $('flash').classList.add('is-on');
     clearTimeout(flashTimer);
     flashTimer = setTimeout(function(){ $('flash').classList.remove('is-on'); }, 5000);
+    /* a burst of sparks from the banner */
+    var r = $('flash').getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2 + r.height * 1.6;
+    for(var i = 0; i < 18; i++){
+      var s = document.createElement('i'), a = Math.PI * 2 * i / 18, d = innerHeight * (.12 + Math.random() * .12);
+      s.className = 'spark'; s.style.left = cx + 'px'; s.style.top = cy + 'px';
+      s.style.setProperty('--dx', Math.cos(a) * d + 'px'); s.style.setProperty('--dy', Math.sin(a) * d + 'px');
+      document.body.appendChild(s);
+      setTimeout(function(n){ return function(){ n.remove(); }; }(s), 950);
+    }
+  }
+  /* the big number counts up to the new high bid */
+  var shownCents = null, countTimer = null;
+  function countTo(cents){
+    clearInterval(countTimer);
+    if(shownCents === null || cents <= shownCents){ shownCents = cents; $('amt').textContent = money(cents); return; }
+    var from = shownCents, t0 = Date.now();
+    shownCents = cents;
+    countTimer = setInterval(function(){
+      var p = Math.min(1, (Date.now() - t0) / 700), e = 1 - Math.pow(1 - p, 3);
+      $('amt').textContent = money(Math.round(from + (cents - from) * e));
+      if(p === 1) clearInterval(countTimer);
+    }, 30);
+  }
+
+  /* The ranked list. A row keeps its element as it moves, so a bid that climbs is seen sliding up past the others. */
+  var rowEls = {};
+  function paintBoard(d, bids, changed){
+    if(!showBoard) return;
+    var rows = $('rows'), open = d.status === 'open';
+    $('boardK').textContent = open ? 'Live bids' : (d.status === 'closed' ? 'Final bids' : 'Bidding opens soon');
+    $('boardN').textContent = bids.length ? bids.length + (bids.length === 1 ? ' bid' : ' bids') : '';
+    var empty = rows.querySelector('.board__empty');
+    if(!bids.length){
+      Object.keys(rowEls).forEach(function(k){ rowEls[k].remove(); delete rowEls[k]; });
+      if(!empty){ empty = document.createElement('div'); empty.className = 'board__empty'; rows.appendChild(empty); }
+      empty.textContent = '';
+      if(open){ empty.appendChild(document.createTextNode('No bids yet. The reserve is ')); var b = document.createElement('b'); b.textContent = '50¢'; empty.appendChild(b); empty.appendChild(document.createTextNode('. Be first at torchhive.com')); }
+      else empty.textContent = d.status === 'closed' ? 'This round is over. The next one opens soon.' : 'Get ready at torchhive.com';
+      $('more').hidden = true;
+      return;
+    }
+    if(empty) empty.remove();
+    var before = {};
+    Object.keys(rowEls).forEach(function(k){ before[k] = rowEls[k].getBoundingClientRect().top; });
+    var show = bids.slice(0, MAX_ROWS), topCents = show[0].amountCents || 1, keep = {};
+    show.forEach(function(b, i){
+      var k = keyOf(b), el = rowEls[k], fresh = !el;
+      if(fresh){
+        el = document.createElement('div'); el.className = 'row';
+        el.innerHTML = '<span class="row__bar"></span><span class="row__rank"></span><div><div class="row__name"></div><div class="row__job"></div></div><span class="row__amt"></span>';
+        rowEls[k] = el;
+      }
+      keep[k] = true;
+      el.classList.toggle('row--lead', i === 0);
+      el.querySelector('.row__rank').textContent = String(i + 1);
+      el.querySelector('.row__name').textContent = b.name;
+      el.querySelector('.row__job').textContent = b.open ? b.task + (b.backers ? ' · ' + b.backers + ' chipped in' : '') : 'Secret job';
+      el.querySelector('.row__amt').textContent = money(b.amountCents);
+      el.querySelector('.row__bar').style.width = Math.max(6, Math.round(100 * b.amountCents / topCents)) + '%';
+      rows.appendChild(el);   /* appending in order puts every row in its place */
+      if(fresh && changed){ el.classList.add('is-new'); setTimeout(function(){ el.classList.remove('is-new'); }, 700); }
+      if(!fresh && changed && changed[k]){ el.classList.remove('is-up'); void el.offsetWidth; el.classList.add('is-up'); }
+    });
+    Object.keys(rowEls).forEach(function(k){ if(!keep[k]){ rowEls[k].remove(); delete rowEls[k]; } });
+    /* slide each row from where it was to where it is now */
+    Object.keys(rowEls).forEach(function(k){
+      var el = rowEls[k];
+      if(before[k] === undefined) return;
+      var dy = before[k] - el.getBoundingClientRect().top;
+      if(!dy) return;
+      el.style.transition = 'none'; el.style.transform = 'translateY(' + dy + 'px)';
+      void el.offsetWidth;
+      el.style.transition = 'transform .7s cubic-bezier(.2,1.1,.3,1)'; el.style.transform = '';
+    });
+    $('more').hidden = bids.length <= MAX_ROWS;
+    if(bids.length > MAX_ROWS) $('more').textContent = '+ ' + (bids.length - MAX_ROWS) + ' more at torchhive.com';
   }
 
   var seen = null, closesAt = null, status = 'soon';
@@ -130,9 +265,13 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
     var top = bids[0];
     status = d.status; closesAt = d.closesAt ? new Date(d.closesAt).getTime() : null;
     $('k').textContent = d.status === 'open' ? (top ? 'High bid' : 'Reserve') : 'Bidding';
-    var was = $('amt').textContent, now = d.status === 'open' ? (top ? money(top.amountCents) : '$0.50') : (d.status === 'closed' ? 'Closed' : 'Opens soon');
-    $('amt').textContent = now;
-    if(seen && was !== now){ $('amt').classList.remove('is-bump'); void $('amt').offsetWidth; $('amt').classList.add('is-bump'); }
+    if(d.status === 'open' && top){
+      if(seen && shownCents !== top.amountCents){ $('amt').classList.remove('is-bump'); void $('amt').offsetWidth; $('amt').classList.add('is-bump'); }
+      countTo(top.amountCents);
+    } else {
+      clearInterval(countTimer); shownCents = null;
+      $('amt').textContent = d.status === 'open' ? '$0.50' : (d.status === 'closed' ? 'Closed' : 'Opens soon');
+    }
     $('who').textContent = '';
     if(top){
       $('who').appendChild(document.createTextNode(top.name + ' '));
@@ -141,35 +280,36 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
       $('who').appendChild(s);
     } else if(d.status === 'open'){ $('who').textContent = 'No bids yet. Be first.'; }
     /* what changed since the last look */
-    var now_ = {};
-    bids.forEach(function(b){ now_[(b.open ? 'o:' + b.id : 's:' + b.name)] = b; });
+    var now_ = {}, changed = seen ? {} : null;
+    bids.forEach(function(b){ now_[keyOf(b)] = b; });
     if(seen){
       Object.keys(now_).forEach(function(k){
         var b = now_[k], old = seen.rows[k];
         if(!old) line('bid', b.name, 'is in at ' + money(b.amountCents));
-        else if(b.amountCents > old) line('bid', b.name, (b.open ? 'is up to ' : 'raised to ') + money(b.amountCents));
+        else if(b.amountCents > old){ changed[k] = true; line('bid', b.name, (b.open ? 'is up to ' : 'raised to ') + money(b.amountCents)); }
       });
-      var lead = top ? (top.open ? 'o:' + top.id : 's:' + top.name) : null;
+      var lead = top ? keyOf(top) : null;
       if(lead && lead !== seen.lead){ flash('New leader', top.name + ' · ' + money(top.amountCents)); line('lead', top.name, 'takes the lead at ' + money(top.amountCents)); }
     }
+    paintBoard(d, bids, changed);
     var rows = {};
     Object.keys(now_).forEach(function(k){ rows[k] = now_[k].amountCents; });
-    seen = {rows: rows, lead: top ? (top.open ? 'o:' + top.id : 's:' + top.name) : null};
+    seen = {rows: rows, lead: top ? keyOf(top) : null};
   }
   function tick(){
     var el = $('clock');
-    if(status !== 'open' || !closesAt){ el.textContent = '--:--:--'; $('clockK').textContent = status === 'closed' ? 'Round over' : 'Bidding'; return; }
+    if(status !== 'open' || !closesAt){ el.textContent = '--:--:--'; el.classList.remove('is-urgent'); $('clockK').textContent = status === 'closed' ? 'Round over' : 'Bidding'; return; }
     var left = Math.max(0, closesAt - Date.now()), h = Math.floor(left / 3600000), m = Math.floor(left / 60000) % 60, s = Math.floor(left / 1000) % 60;
     function two(n){ return (n < 10 ? '0' : '') + n; }
     el.textContent = two(h) + ':' + two(m) + ':' + two(s);
     el.classList.toggle('is-urgent', left < 300000);
-    $('clockK').textContent = 'Closes in';
+    $('clockK').textContent = left < 300000 ? 'Last minutes' : 'Closes in';
   }
   setInterval(tick, 500);
 
   if(demo){   /* pretend bids, so the layout can be set up before a real round */
     var d = {status: 'open', closesAt: new Date(Date.now() + 372000).toISOString(), bids: [
-      {name: 'mike_r', amountCents: 4200, open: true, id: 'a', task: 'Carry one watermelon on a two-mile walk'},
+      {name: 'mike_r', amountCents: 4200, open: true, id: 'a', task: 'Carry one watermelon on a two-mile walk', backers: 3},
       {name: 'sarahk', amountCents: 3500, open: false}, {name: 'tj88', amountCents: 1250, open: false}]};
     var names = ['lena_p', 'coach_d', 'rustbucket', 'ms_ortiz', 'gary2'], chat = [['pat_k', 'here from TikTok, what is winning?'], ['nightowl', 'do the watermelon one in the rain'], ['ms_ortiz', 'I just chipped in'], ['coach_d', 'five minutes left, somebody raise']], step = 0;
     paint(d);
@@ -184,13 +324,14 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
     return;
   }
 
+  /* The same board the website reads, asked for every few seconds. */
   function board(){
-    fetch(API + '/board').then(function(r){ return r.json(); }).then(paint).catch(function(){});
+    fetch(API + '/board', {cache: 'no-store'}).then(function(r){ return r.json(); }).then(paint).catch(function(){});
   }
   var chatLast = 0, first = true;
   function live(){
     if(!showChat) return;
-    fetch(API + '/live' + (chatLast ? '?after=' + chatLast : '')).then(function(r){ return r.json(); }).then(function(d){
+    fetch(API + '/live' + (chatLast ? '?after=' + chatLast : ''), {cache: 'no-store'}).then(function(r){ return r.json(); }).then(function(d){
       (d.chat || []).forEach(function(c){
         if(c.id <= chatLast) return;
         chatLast = c.id;
@@ -200,7 +341,7 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
     }).catch(function(){});
   }
   board(); live();
-  setInterval(board, 5000);
+  setInterval(board, 3000);
   setInterval(live, 4000);
 })();
 </script>
