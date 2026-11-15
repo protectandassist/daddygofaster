@@ -729,8 +729,8 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           </div>
           <p class="msg" id="bidMsg" role="status" hidden></p>
           <button class="btn btn--primary btn--block" id="bidBtn" type="submit" hidden>Continue</button>
-          <a class="btn btn--primary btn--block" id="notifyBtn" href="mailto:hello@torchhive.com?subject=Tell%20me%20when%20bidding%20opens">Tell me when bidding opens</a>
-          <p class="fine" id="bidFine">Bidding is not open yet. This opens an email asking to be told when it is.</p>
+          <a class="btn btn--primary btn--block" id="notifyBtn" href="#join">Tell me when bidding opens</a>
+          <p class="fine" id="bidFine">Bidding is not open yet. Create a free account and turn on alerts to be told the moment it is.</p>
         </div>
       </form>
       </div>
@@ -2570,11 +2570,17 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
 
   /* ---------- before bidding opens: the button writes the email for them ---------- */
   $('notifyBtn').addEventListener('click', function(e){
-    if(signInOn){   /* an account's alerts do this properly: no email to write */
+    /* An account's alerts do this properly, so nobody has to write an email. The email
+       is only the fallback for when the service has answered and says sign-in is off. */
+    if(signInOn || !lastBoard){
       e.preventDefault();
       tap('Tell me when bidding opens');
       if(me) openPanel(me.emailAlerts || pushOn ? 'You are set. We will tell you the moment bidding opens.' : 'Tick "Email me alerts" to be told when bidding opens.');
-      else $('join').scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'center'});
+      else {
+        $('join').hidden = false;
+        $('join').scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'center'});
+        if(!$('joinForm').hidden) $('joinEmail').focus({preventScroll: true});
+      }
       return;
     }
     var task = $('task').value.trim(), cents = toCents(amount.value.trim());
