@@ -375,3 +375,15 @@ test('the reserve is fifty cents, so every winner can be charged', () => {
   assert.equal(validateRaise({ amountCents: 49 }).ok, false);
   assert.equal(validateRaise({ amountCents: 50 }).ok, true);
 });
+
+test('stream links: YouTube ids, Twitch channels and TikTok links are read; anything else is refused', async () => {
+  const { youtubeId, twitchChannel, tiktokLink } = await import('../src/live.js');
+  for (const link of ['https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=5', 'https://youtu.be/dQw4w9WgXcQ', 'https://www.youtube.com/live/dQw4w9WgXcQ?feature=share', 'https://m.youtube.com/watch?v=dQw4w9WgXcQ', 'dQw4w9WgXcQ']) {
+    assert.equal(youtubeId(link), 'dQw4w9WgXcQ', link);
+  }
+  for (const link of ['https://example.com/watch?v=dQw4w9WgXcQ', 'https://youtube.com.evil.example/watch?v=dQw4w9WgXcQ', 'not a link', '']) assert.equal(youtubeId(link), null, link);
+  for (const link of ['https://www.twitch.tv/TorchHive', 'https://twitch.tv/torchhive/videos', 'TorchHive', 'torchhive']) assert.equal(twitchChannel(link), 'torchhive', link);
+  for (const link of ['https://example.com/torchhive', 'https://twitch.tv.evil.example/torchhive', 'a b', 'ab', '']) assert.equal(twitchChannel(link), null, link);
+  assert.equal(tiktokLink('https://www.tiktok.com/@torchhive/live'), 'https://www.tiktok.com/@torchhive/live');
+  for (const link of ['http://www.tiktok.com/@torchhive/live', 'https://tiktok.com.evil.example/@x', 'javascript:alert(1)']) assert.equal(tiktokLink(link), null, link);
+});

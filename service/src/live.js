@@ -28,6 +28,17 @@ export function youtubeId(link) {
   return id && /^[\w-]{11}$/.test(id) ? id : null;
 }
 
+// The channel name from a Twitch link, or from the bare name, or null.
+export function twitchChannel(link) {
+  const text = String(link ?? '').trim();
+  if (/^[A-Za-z0-9_]{3,25}$/.test(text)) return text.toLowerCase();
+  try {
+    const url = new URL(text);
+    const name = /(^|\.)twitch\.tv$/.test(url.hostname) ? url.pathname.split('/').filter(Boolean)[0] : null;
+    return name && /^[A-Za-z0-9_]{3,25}$/.test(name) ? name.toLowerCase() : null;
+  } catch { return null; }
+}
+
 // A TikTok link is only ever shown as a button: TikTok does not let a live stream be put on another site.
 export function tiktokLink(link) {
   try {
@@ -39,11 +50,12 @@ export function tiktokLink(link) {
 export async function liveState(env) {
   try {
     const live = JSON.parse((await getSetting(env, 'live')) || 'null');
-    return live && live.on ? { on: true, youtube: live.youtube || null, tiktok: live.tiktok || null, since: live.since || null, fixedClose: Boolean(live.fixedClose) } : { on: false };
+    return live && live.on ? { on: true, youtube: live.youtube || null, twitch: live.twitch || null, tiktok: live.tiktok || null, since: live.since || null, fixedClose: Boolean(live.fixedClose) } : { on: false };
   } catch { return { on: false }; }
 }
 
-// Owner: POST /admin/api/live { on, youtube, tiktok, fixedClose }
+// Owner: POST /admin/api/live { on, youtube, twitch, tiktok, fixedClose }
+// YouTube and Twitch can be played on the site; TikTok can only be linked to.
 // fixedClose: while live, a late bid does not move the close back.
 export async function setLive(env, body, now) {
   if (!body || body.on !== true) {
@@ -52,14 +64,16 @@ export async function setLive(env, body, now) {
   }
   const youtube = body.youtube ? youtubeId(body.youtube) : null;
   const tiktok = body.tiktok ? tiktokLink(body.tiktok) : null;
+  const twitch = body.twitch ? twitchChannel(body.twitch) : null;
+  if (body.twitch && !twitch) return [400, { message: 'That does not look like a Twitch channel. Paste the channel link, or just its name.' }];
   if (body.youtube && !youtube) return [400, { message: 'That does not look like a YouTube link. Paste the link to the live video.' }];
   if (body.tiktok && !tiktok) return [400, { message: 'That does not look like a TikTok link.' }];
-  if (!youtube && !tiktok) return [400, { message: 'Paste the YouTube link to the live video (a TikTok link can be added too).' }];
+  if (!youtube && !twitch && !tiktok) return [400, { message: 'Paste the link to at least one stream: YouTube, Twitch or TikTok.' }];
   // Changing the links mid-stream keeps the chat that is already there.
   const before = await liveState(env);
   const fixedClose = body.fixedClose === true;
-  await setSetting(env, 'live', JSON.stringify({ on: true, youtube, tiktok, fixedClose, since: before.on && before.since ? before.since : now }), now);
-  return [200, { on: true, youtube, tiktok, fixedClose }];
+  await setSetting(env, 'live', JSON.stringify({ on: true, youtube, twitch, tiktok, fixedClose, since: before.on && before.since ? before.since : now }), now);
+  return [200, { on: true, youtube, twitch, tiktok, fixedClose }];
 }
 
 const line = (c) => ({ id: c.id, name: c.name, text: c.text, at: new Date(c.created_at).toISOString() });

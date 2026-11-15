@@ -122,8 +122,9 @@ p{margin:0}
 .hero::before{content:"";position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(ellipse at 78% 35%,rgba(239,149,2,.11),transparent 55%)}
 .hero::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.2;
-  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
-  background-size:64px 64px;mask-image:linear-gradient(90deg,transparent 30%,#000)}
+  /* a honeycomb, for the hive: one tile of hexagon edges, repeated */
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100' fill='none' stroke='%23EF9502' stroke-width='1'/%3E%3Cpath d='M28 0L28 34L0 50L0 84L28 100L56 84L56 50L28 34' fill='none' stroke='%23EF9502' stroke-width='1'/%3E%3C/svg%3E");
+  background-size:56px 100px;mask-image:linear-gradient(90deg,transparent 30%,#000)}
 .hero__in{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);
   gap:clamp(32px,5vw,64px);align-items:start;
   padding-top:clamp(32px,4vw,56px);padding-bottom:clamp(40px,5vw,64px)}
@@ -887,7 +888,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       <div class="sec__head">
         <p class="live__badge">Live now</p>
         <h2>Watch it happen</h2>
-        <p class="lead">I am live right now. Watch here, talk in the chat, and bid below.</p>
+        <p class="lead" id="liveLead">I am live right now. Watch here, talk in the chat, and bid below.</p>
       </div>
       <div class="live">
         <div>
@@ -1190,6 +1191,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   var session = null, me = null, signInOn = false, lastBoard = null, openThread = null, drafts = {};
   var emailLinks = false, googleId = null, pushKey = null, pushOn = false, panelOpen = false, nameTyped = false;
   var liveOn = false, liveShown = null, chatLast = 0, chatTimer = null, chatDemo = null;   /* the live stream and its chat */
+  var liveNow = null, liveSource = null;   /* what is streaming, and which player the viewer picked */
   var activityFor = null;   /* whose replies and bids the account sheet is showing */
   try { session = localStorage.getItem('dgfSession') || null; } catch (e) {}
   var pooling = false, minPledge = 200, backing = null;   /* backing: the open job this visitor is adding money to */
@@ -2024,11 +2026,13 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       {id: 2, name: 'big_al', text: 'Two miles is nothing. Make it uphill.', at: new Date(now - 22 * min).toISOString()}
     ]};
     me = {email: 'you@example.com', name: null, votes: []};
-    chatDemo = {on: true, youtube: null, tiktok: null, chat: [
+    var demoVideo = /[?&]live=([\w-]{11})(?:&|$)/.exec(location.search), demoTwitch = /[?&]twitch=([A-Za-z0-9_]{3,25})(?:&|$)/.exec(location.search);
+    chatDemo = {on: true, youtube: demoVideo ? demoVideo[1] : 'nr4ITJmw9Hs', twitch: demoTwitch ? demoTwitch[1] : null, tiktok: 'https://www.tiktok.com/', chat: [
       {id: 1, name: 'mike_r', text: 'Here from YouTube. Is the watermelon one still winning?'},
       {id: 2, name: 'sarahk', text: 'Not for long'},
       {id: 3, name: 'coach_d', text: 'Chipped in two dollars. Do it in the rain'}]};
     demoData.live = /[?&]live\b/.test(location.search);
+    if(demoData.live && !demoVideo) $('liveLead').textContent = 'Preview. The video is the newest upload on the TorchHive channel, standing in for a live stream; the chat is pretend.';
     paint(demoData, 'Sample data for preview. These are not real bids. Vote, comment and chip in to try it: nothing is sent.');
     /* every few seconds something happens in the pretend round */
     var demoNames = ['lena_p', 'coach_d', 'rustbucket', 'ms_ortiz', 'gary2', 'nightowl', 'pat_k'], demoStep = 0;
@@ -2273,7 +2277,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     $('acctOpen').hidden = !me;
     $('acctEmail').hidden = $('acctSend').hidden = !emailLinks;
     /* someone signed in without a username is asked for one straight away */
-    if(me && !me.name && !me.asked){ me.asked = true; panelOpen = true; }
+    if(me && !me.name && !me.asked && !demo){ me.asked = true; panelOpen = true; }   /* not in the preview: its pretend visitor would cover the page */
     if(!me) nameTyped = false;
     /* the account sheet: sign-in when signed out, everything about the account when signed in */
     $('acctSheet').hidden = !panelOpen;
@@ -2532,20 +2536,35 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     return p;
   }
   function paintLive(d){
-    var key = (d.youtube || '') + '|' + (d.tiktok || '');
+    liveNow = {youtube: d.youtube || null, twitch: d.twitch || null, tiktok: d.tiktok || null, fixedClose: Boolean(d.fixedClose)};
+    /* YouTube and Twitch can play here. With both, the viewer picks; YouTube plays first. */
+    if(liveSource !== 'twitch' || !d.twitch) liveSource = d.youtube ? 'youtube' : d.twitch ? 'twitch' : null;
+    var key = (d.youtube || '') + '|' + (d.twitch || '') + '|' + (d.tiktok || '') + '|' + liveSource;
     if(key !== liveShown){   /* the player is only rebuilt when the stream changes, or it would restart */
       liveShown = key;
       var box = $('liveVideo'), links = $('liveLinks');
       box.textContent = ''; links.textContent = '';
-      box.className = 'live__video' + (d.youtube ? '' : ' live__video--none');
-      if(d.youtube){
+      box.className = 'live__video' + (liveSource ? '' : ' live__video--none');
+      if(liveSource){
         var f = document.createElement('iframe');
-        f.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(d.youtube) + '?autoplay=1&mute=1&playsinline=1&rel=0';
+        f.src = liveSource === 'youtube'
+          ? 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(d.youtube) + '?autoplay=1&mute=1&playsinline=1&rel=0'
+          : 'https://player.twitch.tv/?channel=' + encodeURIComponent(d.twitch) + '&parent=' + encodeURIComponent(location.hostname) + '&muted=true&autoplay=true';
         f.title = 'TorchHive live stream'; f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'; f.allowFullscreen = true;
         f.referrerPolicy = 'strict-origin-when-cross-origin';
         box.appendChild(f);
+        if(d.youtube && d.twitch){   /* both are on: a switch between them */
+          [['youtube', 'Watch on YouTube'], ['twitch', 'Watch on Twitch']].forEach(function(pair){
+            var b = document.createElement('button');
+            b.type = 'button'; b.className = 'chipbtn' + (liveSource === pair[0] ? ' chipbtn--go' : ''); b.textContent = pair[1];
+            b.setAttribute('aria-pressed', String(liveSource === pair[0]));
+            if(liveSource !== pair[0]) b.style.color = 'var(--text)';
+            b.addEventListener('click', function(){ liveSource = pair[0]; tap('Switched stream'); paintLive(liveNow); });
+            links.appendChild(b);
+          });
+        }
       } else {
-        box.textContent = demo ? 'Preview: your live video plays here while you are streaming.' : 'The stream is on TikTok right now. Open it there, and keep the chat and the bidding here.';
+        box.textContent = 'The stream is on TikTok right now. Open it there, and keep the chat and the bidding here.';
       }
       function link(text, href){
         var a = document.createElement('a');
@@ -2554,6 +2573,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         links.appendChild(a);
       }
       if(d.youtube) link('Open on YouTube ↗', 'https://www.youtube.com/watch?v=' + encodeURIComponent(d.youtube));
+      if(d.twitch) link('Open on Twitch ↗', 'https://www.twitch.tv/' + encodeURIComponent(d.twitch));
       if(d.tiktok && /^https:\/\/([\w-]+\.)*tiktok\.com\//.test(d.tiktok)) link('Open on TikTok ↗', d.tiktok);
     }
     var closes = lastBoard && lastBoard.status === 'open' && lastBoard.closesAt ? new Date(lastBoard.closesAt) : null;
@@ -2590,9 +2610,11 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     liveOn = on;
     $('live').hidden = !on;
     clearInterval(chatTimer); chatTimer = null;
-    if(!on){ liveShown = null; chatLast = 0; $('liveVideo').textContent = ''; $('chatList').textContent = ''; return; }
+    if(!on){ liveShown = null; liveNow = null; liveSource = null; chatLast = 0; $('liveVideo').textContent = ''; $('chatList').textContent = ''; return; }
     tap('Saw the live stream');
     if(demo) return paintLive(chatDemo);
+    /* sent here from a stream: land on the player, not the top of the page */
+    if(location.hash === '#live') setTimeout(function(){ $('live').scrollIntoView({behavior: 'auto', block: 'start'}); }, 400);
     loadLive();
     chatTimer = setInterval(loadLive, 4000);
   }
@@ -2616,7 +2638,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       if(!me.name){ me.name = res.d.line.name; paintAcct(); }
       note.textContent = ''; $('chatText').value = '';
       tap('Sent a chat message');
-      paintLive({youtube: (liveShown || '|').split('|')[0] || null, tiktok: (liveShown || '|').split('|')[1] || null, chat: [res.d.line]});
+      paintLive({youtube: liveNow && liveNow.youtube, twitch: liveNow && liveNow.twitch, tiktok: liveNow && liveNow.tiktok, fixedClose: liveNow && liveNow.fixedClose, chat: [res.d.line]});
       $('chatList').scrollTop = $('chatList').scrollHeight;
     }).catch(function(){ $('chatSend').disabled = false; note.textContent = 'That did not go through. Check your connection and try again.'; });
   });

@@ -92,9 +92,10 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 
     <section class="card" id="liveCard">
       <h2>Going live</h2>
-      <p class="muted small" id="liveNote">When you are live, paste the link to the live video here. The site then shows the stream with a chat beside it, open to anyone with an account. TikTok cannot be shown on another site, so its link becomes a button.</p>
+      <p class="muted small" id="liveNote">When you are live, paste your stream links here. The site plays the YouTube or Twitch stream with a chat beside it, open to anyone with an account; with both, viewers pick which to watch. TikTok does not allow its live streams to be played on another site, so its link becomes a button. For your stream descriptions, send people to torchhive.com/live</p>
       <div class="row">
         <input id="liveYoutube" type="url" placeholder="YouTube link to the live video" style="flex:2 1 260px">
+        <input id="liveTwitch" type="text" placeholder="Twitch channel or link (optional)" style="flex:1 1 200px">
         <input id="liveTiktok" type="url" placeholder="TikTok link (optional)" style="flex:1 1 200px">
         <label class="small" style="flex:1 0 100%"><input type="checkbox" id="liveFixed"> Fixed close: while I am live, late bids do not add time to the clock</label>
         <label class="small" style="flex:1 0 100%">Close bidding in <input id="liveClose" type="number" min="1" max="720" step="1" placeholder="--" style="width:5.5em"> minutes (leave empty to keep the round's own closing time)</label>
@@ -221,11 +222,12 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     var live = d.live || {on: false};
     $('liveNote').textContent = live.on
       ? 'You are live on the site now. The stream and the chat are showing. End it here when the stream is over.'
-      : 'When you are live, paste the link to the live video here. The site then shows the stream with a chat beside it, open to anyone with an account. TikTok cannot be shown on another site, so its link becomes a button.';
+      : 'When you are live, paste your stream links here. The site plays the YouTube or Twitch stream with a chat beside it, open to anyone with an account; with both, viewers pick which to watch. TikTok does not allow its live streams to be played on another site, so its link becomes a button. For your stream descriptions, send people to torchhive.com/live';
     $('liveOff').hidden = !live.on;
     if(live.on){
       if(!$('liveYoutube').value && live.youtube) $('liveYoutube').value = 'https://youtu.be/' + live.youtube;
       if(!$('liveTiktok').value && live.tiktok) $('liveTiktok').value = live.tiktok;
+      if(!$('liveTwitch').value && live.twitch) $('liveTwitch').value = live.twitch;
       $('liveFixed').checked = Boolean(live.fixedClose);
       $('liveNote').textContent += live.fixedClose ? ' The close is fixed: late bids add no time.' : ' Late bids still add time to the clock.';
     }
@@ -307,7 +309,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     }
   }
 
-  $('liveOn').addEventListener('click', function(){ act('/admin/api/live', {on: true, youtube: $('liveYoutube').value.trim(), tiktok: $('liveTiktok').value.trim(), fixedClose: $('liveFixed').checked, closeInMinutes: $('liveClose').value === '' ? undefined : Number($('liveClose').value)}).then(function(){ $('liveClose').value = ''; }); });
+  $('liveOn').addEventListener('click', function(){ act('/admin/api/live', {on: true, youtube: $('liveYoutube').value.trim(), twitch: $('liveTwitch').value.trim(), tiktok: $('liveTiktok').value.trim(), fixedClose: $('liveFixed').checked, closeInMinutes: $('liveClose').value === '' ? undefined : Number($('liveClose').value)}).then(function(){ $('liveClose').value = ''; }); });
   $('liveOff').addEventListener('click', function(){ act('/admin/api/live', {on: false}); });
   function load(){
     return api('/admin/api/state?jobs=' + ($('showJobs').checked ? '1' : '0')).then(function(d){
