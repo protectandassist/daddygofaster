@@ -19,13 +19,36 @@ const WHOLE = new Set(['ass', 'asses', 'arse', 'cunt', 'cunts', 'cock', 'cocks',
 const THREATS = ['kill yourself', 'kill urself', 'kill your self', 'go die', 'hope you die', 'hope u die', 'i will kill', 'ill kill you', 'gonna kill you', 'going to kill you',
   'neck yourself', 'hang yourself', 'shoot you', 'stab you', 'beat you up', 'find where you live', 'know where you live', 'rape you', 'you should die', 'drink bleach'];
 
-const LOOKALIKE = { '@': 'a', 4: 'a', 3: 'e', 1: 'i', '!': 'i', '|': 'i', 0: 'o', $: 's', 5: 's', 7: 't', '+': 't', 8: 'b', 9: 'g' };
+// Symbols, digits and look-alike letters from other alphabets that people use in place of a letter.
+const LOOKALIKE = {
+  '@': 'a', 4: 'a', 3: 'e', 1: 'i', '!': 'i', '|': 'i', 0: 'o', $: 's', 5: 's', 7: 't', '+': 't', 8: 'b', 9: 'g',
+  '¢': 'c', '©': 'c', '€': 'e', '£': 'l', '¥': 'y', 'µ': 'u', 'μ': 'u', '®': 'r', '§': 's', 'ƒ': 'f', '¡': 'i', '×': 'x', 'ø': 'o',
+  // Cyrillic and Greek letters that look like Latin ones
+  'а': 'a', 'е': 'e', 'о': 'o', 'с': 'c', 'р': 'p', 'у': 'y', 'х': 'x', 'к': 'k', 'і': 'i', 'α': 'a', 'ο': 'o', 'ε': 'e', 'κ': 'k', 'υ': 'u',
+};
 
 function plain(text) {
   return String(text ?? '')
     .normalize('NFKD').replace(/[̀-ͯ]/g, '') // accents off
     .toLowerCase()
-    .replace(/[@4310$57+89!|]/g, (c) => LOOKALIKE[c] ?? c);
+    .replace(/[^a-z\s]/g, (c) => LOOKALIKE[c] ?? c);
+}
+
+// A symbol hiding a letter: "f**k", "sh*t", "c-nt". `token` has "?" wherever a
+// symbol stood. True when `bad` fits with one or two hidden letters and at least
+// two real ones, so a lone "a**" or "***" proves nothing.
+function fitsMasked(token, bad, whole) {
+  if (whole && token.length !== bad.length) return false;
+  for (let i = 0; i + bad.length <= token.length; i++) {
+    let hidden = 0, fits = true;
+    for (let k = 0; k < bad.length; k++) {
+      const c = token[i + k];
+      if (c === '?') hidden++;
+      else if (c !== bad[k]) { fits = false; break; }
+    }
+    if (fits && hidden >= 1 && hidden <= 2 && bad.length - hidden >= 2) return true;
+  }
+  return false;
 }
 
 // 'language' for swearing or a slur, 'threat' for an attack on someone, or null when it is fine.
@@ -59,6 +82,23 @@ export function badLanguage(text) {
       return squeezed.length >= 4 && single.includes(squeezed);
     })) return 'language';
     if (/n+i+g{2,}|f+a+g{2,}/.test(w)) return 'language';
+  }
+
+  // Symbols used to hide or split a word. Each written word is looked at twice:
+  // with masking symbols taken out ("fu_ck" -> "fuck"), and with every symbol
+  // standing for one hidden letter ("f**k", "sh*t"). Apostrophes are just dropped,
+  // so "don't" and "it's" stay ordinary words.
+  // Only the symbols people mask with count: * _ # % ^ & ~ =. A hyphen, a dash, a
+  // slash or a full stop is ordinary punctuation and simply ends the word, or
+  // "mother-in-law" and "one-hit wonder" would be caught.
+  for (const token of lowered.replace(/['’`]/g, '').split(/[^a-z*_#%^&~=]+/)) {
+    if (!/[a-z]/.test(token) || !/[*_#%^&~=]/.test(token)) continue; // no letters, or no mask: checked above or nothing to check
+    if (/^f[*_#%^&~=]{2,3}(k|er|ers|ing|ed)?$/.test(token)) return 'language'; // f***, f***ing
+    const closed = token.replace(/[*_#%^&~=]+/g, '');
+    if (WHOLE.has(closed) || INSIDE.some((bad) => closed.includes(bad))) return 'language';
+    const hiddenLetters = token.replace(/[*_#%^&~=]/g, '?');
+    if (INSIDE.some((bad) => fitsMasked(hiddenLetters, bad, false))) return 'language';
+    for (const bad of WHOLE) if (bad.length >= 4 && fitsMasked(hiddenLetters, bad, true)) return 'language';
   }
   return null;
 }

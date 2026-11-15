@@ -310,3 +310,17 @@ test('a rude name cannot go on the board', () => {
   assert.equal(validateBid({ ...bid, name: 'sh1thead' }).ok, false);
   assert.equal(validateBid({ ...bid, name: 'Sandra' }).ok, true);
 });
+
+test('symbols standing in for letters, or hiding them, do not get swearing through', () => {
+  for (const bad of ['Duk$fu¢k', 'fu*k', 'sh*t', 'f**k', 'c*nt', 'fu_ck', 'b*tch', 'f#ck you', '@sshole', 'b!t¢h', 'sh**', 'd*ckhead', 'mother f***er',
+    'F_U_C_K', 'phu¢k', 'f***ing great', 'bull$h!t', 'a55hole', 'fµck', 'fμck', 'sh%t', 'fuсk']) {
+    assert.equal(badLanguage(bad), 'language', bad);
+  }
+});
+
+test('ordinary punctuation is not mistaken for a hidden letter', () => {
+  for (const fine of ['mother-in-law says hi', 'one-hit wonder', 'dish-towel', 'well-known fact', "it's a co-op", 'U.S.A. all the way', '50/50 chance', '$5 says he quits',
+    'rock&roll night', '5 stars *****', 'a** kicker maybe', 'snake_case name', 'save 50% today', '#1 fan', 'he said *wow*', 'wait—what', 'café olé']) {
+    assert.equal(badLanguage(fine), null, fine);
+  }
+});
