@@ -6,12 +6,13 @@
 // charge carries an idempotency key, so a run that stops half way can be run again.
 import { LIMITS, captureSlice } from './rules.js';
 import { randomHex } from './store.js';
-import { createHold, chargeSaved, readIntent, cancelIntent, captureIntent, refundIntent } from './cards.js';
+import { createHold, chargeSaved, readIntent, cancelIntent, captureIntent, refundIntent, unsure } from './cards.js';
 
 export const MAX_CARD_FAILS = 5; // declined tries on one bid before it stops asking the bank
 export const MAX_HOLDS = 8; // holds on one bid before they are swapped for a single one
 const STALE_ACTION_MS = 30 * 60_000; // a bank check nobody finished
-const SETTLE_RETRY_MS = 2 * 60_000; // a settling run older than this is taken to have stopped
+export const SETTLE_RETRY_MS = 6 * 60_000; // a settling run older than this is taken to have stopped (a run's card calls are each cut off at 15 seconds)
+const WAIT = -1; // captureHold: the card company's answer is not known, so nothing was decided
 const OPS_PER_RUN = 12; // card calls in one run, to stay inside the Worker's per-request limits
 const PLEDGES_PER_RUN = 10; // backers of a winning job charged in one run
 
@@ -69,19 +70,29 @@ export async function releaseBidHolds(env, key, bidId, now, exceptHoldId = 0) {
   for (const h of results) await releaseHold(env, key, h, now);
 }
 
+// Charges `cents` of a hold. Returns what was charged, 0 when the hold is truly
+// gone, or WAIT when the card company's answer is not known. On WAIT the hold is
+// left as it is: marking it failed would send the same money to be charged a
+// second time from the saved card, and would leave the hold sitting on the card.
 async function captureHold(env, key, hold, cents, now) {
-  const r = await captureIntent(env, key, hold.intent_id, cents, 'dgf-cap-' + hold.intent_id);
+  const r = await captureIntent(env, key, hold.intent_id, cents, 'dgf-cap-' + hold.intent_id + '-' + cents);
   if (r.ok && r.data.status === 'succeeded') {
     await mark(env, hold.id, 'captured', now, r.data.amount_received ?? cents);
     return r.data.amount_received ?? cents;
   }
   const seen = await readIntent(env, key, hold.intent_id);
-  if (seen.ok && seen.data.status === 'succeeded') {
+  if (!seen.ok) return WAIT;
+  if (seen.data.status === 'succeeded') {
     await mark(env, hold.id, 'captured', now, seen.data.amount_received);
     return seen.data.amount_received;
   }
-  await mark(env, hold.id, 'failed', now);
-  return 0;
+  if (seen.data.status === 'canceled') { // the hold ran out or was let go: nothing can be taken from it
+    await mark(env, hold.id, 'released', now);
+    return 0;
+  }
+  if (unsure(r)) return WAIT; // still held, and the capture never got a real answer
+  // The capture was refused outright. Let the hold go before anything else is charged.
+  return (await releaseHold(env, key, hold, now)) ? 0 : WAIT;
 }
 
 // Gives back whatever a job was charged, the poster and every backer, and
@@ -95,7 +106,7 @@ export async function undoCharge(env, key, bid, now) {
   for (const h of results.slice(0, OPS_PER_RUN * 2)) {
     if (h.state !== 'captured') { await releaseHold(env, key, h, now); continue; }
     const r = await refundIntent(env, key, h.intent_id, 'dgf-ref-' + h.intent_id);
-    if (!r.ok) continue;
+    if (!r.ok && !(r.error && r.error.code === 'charge_already_refunded')) continue; // stays 'captured': sweepOwed tries again every minute
     await mark(env, h.id, 'refunded', now);
     back += h.captured_cents || 0;
     if (h.pledge_id) await env.DB.prepare("UPDATE pledges SET status = 'refunded' WHERE id = ?").bind(h.pledge_id).run();
@@ -124,6 +135,7 @@ export function costCents(bid) {
 //   free    the winning bid and its costs together are under 50 cents
 //   manual  this bid never had a card, so the owner collects
 //   failed  the card did not go through; anything charged was given back
+//   wait    the card company did not answer; nothing is decided, run it again
 export async function chargeWinner(env, key, bid, now) {
   const { results } = await env.DB.prepare("SELECT * FROM holds WHERE bid_id = ? AND pledge_id IS NULL AND state IN ('held', 'action', 'captured') ORDER BY cents DESC, id ASC")
     .bind(bid.id).all();
@@ -132,31 +144,67 @@ export async function chargeWinner(env, key, bid, now) {
     await env.DB.prepare('UPDATE bids SET pay_state = ?, paid_cents = ? WHERE id = ?').bind(state, paid, bid.id).run();
     return state;
   };
-  if (!results.length && !(bid.customer_id && bid.card_id)) return done('manual', null);
+  const card = Boolean(bid.customer_id && bid.card_id);
+  if (!results.length && !card) return done('manual', null);
 
   let paid = results.filter((h) => h.state === 'captured').reduce((n, h) => n + (h.captured_cents || 0), 0);
-  const free = own < LIMITS.freeUnderCents;
-  for (const h of results) {
-    if (h.state === 'captured') continue;
-    const take = free || h.state !== 'held' ? 0 : captureSlice(h.cents, own - paid);
-    if (take) paid += await captureHold(env, key, h, take, now);
-    else await releaseHold(env, key, h, now);
+  const waiting = results.filter((h) => h.state !== 'captured');
+  let made = results.length - waiting.length; // charges already on record for this bid; part of each new charge's key
+  if (own < LIMITS.freeUnderCents) {
+    for (const h of waiting) await releaseHold(env, key, h, now);
+    return done('free', 0);
   }
-  if (free) return done('free', 0);
 
-  let due = own - paid;
-  if (due >= LIMITS.freeUnderCents && bid.customer_id && bid.card_id) {
-    const r = await chargeSaved(env, key, { customerId: bid.customer_id, cardId: bid.card_id, email: bid.email, cents: due, day: bid.day, bidId: bid.id });
-    if (r.ok) {
-      await env.DB.prepare("INSERT OR IGNORE INTO holds (bid_id, intent_id, cents, state, captured_cents, created_at, settled_at) VALUES (?, ?, ?, 'captured', ?, ?, ?)")
-        .bind(bid.id, r.intentId, due, r.cents, now, now).run();
-      paid += r.cents;
-      due = own - paid;
-    }
+  // What each hold will be charged.
+  let room = own - paid;
+  const plan = waiting.map((h) => {
+    const take = h.state === 'held' ? captureSlice(h.cents, room) : 0;
+    room -= take;
+    return [h, take];
+  });
+
+  // What the holds do not cover (the job's costs, mostly) comes from the saved card,
+  // and it is asked for first. If the card says no, the holds are simply let go:
+  // nothing was charged, so there is nothing to refund and no fee is lost.
+  const fromCard = async (cents) => {
+    // The key names this bid and how many charges it already has. Asked again after no answer, it is the
+    // same key, so the card company returns the first try's result; after a recorded charge it is a new one.
+    const r = await chargeSaved(env, key, { customerId: bid.customer_id, cardId: bid.card_id, email: bid.email, cents, day: bid.day, bidId: bid.id, idempotencyKey: `dgf-win-${bid.id}-${made}-${cents}` });
+    if (r.unsure) return WAIT;
+    if (!r.ok) return 0;
+    made++;
+    await env.DB.prepare("INSERT OR IGNORE INTO holds (bid_id, intent_id, cents, state, captured_cents, created_at, settled_at) VALUES (?, ?, ?, 'captured', ?, ?, ?)")
+      .bind(bid.id, r.intentId, cents, r.cents, now, now).run();
+    return r.cents;
+  };
+  const fail = async () => {
+    await undoCharge(env, key, bid, now);
+    return done('failed', 0);
+  };
+  if (room >= LIMITS.freeUnderCents) {
+    if (!card) return fail();
+    const got = await fromCard(room);
+    if (got === WAIT) return 'wait';
+    if (!got) return fail();
+    paid += got;
   }
-  if (due < LIMITS.freeUnderCents) return done('paid', paid);
-  await undoCharge(env, key, bid, now);
-  return done('failed', 0);
+
+  for (const [h, take] of plan) {
+    if (!take) { await releaseHold(env, key, h, now); continue; }
+    const got = await captureHold(env, key, h, take, now);
+    if (got === WAIT) return 'wait';
+    if (got) made++;
+    paid += got;
+  }
+
+  // A hold that turned out to be gone: its part comes from the saved card instead.
+  if (own - paid >= LIMITS.freeUnderCents && card) {
+    const got = await fromCard(own - paid);
+    if (got === WAIT) return 'wait';
+    paid += got;
+  }
+  if (own - paid < LIMITS.freeUnderCents) return done('paid', paid);
+  return fail();
 }
 
 // Charges the people who added money to the winning job, a few per run. Each
@@ -167,14 +215,18 @@ export async function chargeWinner(env, key, bid, now) {
 export async function chargeBackers(env, key, bid, now) {
   const { results } = await env.DB.prepare("SELECT * FROM pledges WHERE bid_id = ? AND status = 'active' ORDER BY id LIMIT ?")
     .bind(bid.id, PLEDGES_PER_RUN + 1).all();
+  let unknown = 0;
   for (const p of results.slice(0, PLEDGES_PER_RUN)) {
     const hold = await env.DB.prepare("SELECT * FROM holds WHERE pledge_id = ? AND state = 'held' ORDER BY id LIMIT 1").bind(p.id).first();
     let got = 0;
-    if (hold) got = await captureHold(env, key, hold, Math.min(hold.cents, p.cents), now);
-    else if (p.customer_id && p.card_id) {
+    if (hold) {
+      got = await captureHold(env, key, hold, Math.min(hold.cents, p.cents), now);
+      if (got === WAIT) { unknown++; continue; } // no answer: this backer is tried again on the next run
+    } else if (p.customer_id && p.card_id) {
       const r = await chargeSaved(env, key, {
-        customerId: p.customer_id, cardId: p.card_id, email: p.email, cents: p.cents, day: bid.day, bidId: bid.id, idempotencyKey: `dgf-back-${p.customer_id}-${p.cents}`,
+        customerId: p.customer_id, cardId: p.card_id, email: p.email, cents: p.cents, day: bid.day, bidId: bid.id, idempotencyKey: `dgf-back-${p.id}-${p.customer_id}-${p.cents}`,
       });
+      if (r.unsure) { unknown++; continue; }
       if (r.ok) {
         got = r.cents;
         await env.DB.prepare("INSERT OR IGNORE INTO holds (bid_id, pledge_id, intent_id, cents, state, captured_cents, created_at, settled_at) VALUES (?, ?, ?, ?, 'captured', ?, ?, ?)")
@@ -186,7 +238,7 @@ export async function chargeBackers(env, key, bid, now) {
       env.DB.prepare('UPDATE bids SET paid_cents = COALESCE(paid_cents, 0) + ? WHERE id = ?').bind(got, bid.id),
     ]);
   }
-  return Math.max(0, results.length - PLEDGES_PER_RUN);
+  return Math.max(0, results.length - PLEDGES_PER_RUN) + unknown;
 }
 
 // The money for a closed round: charge the winner, pass to the next bid if that
@@ -216,6 +268,8 @@ export async function settleMoney(env, key, day, now, chooseWinner) {
     const w = await env.DB.prepare('SELECT * FROM bids WHERE id = ?').bind(winnerId).first();
     if (w.pay_state && w.pay_state !== 'failed') break;
     const state = w.pay_state || (key ? await chargeWinner(env, key, w, now) : 'manual');
+    // No answer from the card company: nobody is passed over and nobody else is charged. The next run carries on.
+    if (state === 'wait') return finish(null);
     if (state !== 'failed') break;
     // That card did not go through: the next highest bid wins, while its hold is still there.
     await env.DB.prepare("UPDATE bids SET win_state = 'passed' WHERE id = ?").bind(w.id).run();
@@ -231,8 +285,8 @@ export async function settleMoney(env, key, day, now, chooseWinner) {
   }
 
   const { results: rest } = await env.DB.prepare(
-    "SELECT h.* FROM holds h JOIN bids b ON b.id = h.bid_id WHERE b.day = ? AND h.state IN ('held', 'action') AND b.id <> ? ORDER BY h.id LIMIT ?",
-  ).bind(day, winnerId || 0, OPS_PER_RUN).all();
+    "SELECT h.* FROM holds h JOIN bids b ON b.id = h.bid_id WHERE b.day = ? AND h.state IN ('held', 'action') ORDER BY h.id LIMIT ?",
+  ).bind(day, OPS_PER_RUN).all(); // by now the winner and the winner's backers are charged, so any hold still there is one to give back
   let stuck = 0;
   for (const h of rest) if (!(await releaseHold(env, key, h, now))) stuck++;
   await env.DB.prepare("UPDATE bids SET status = 'nocard', next_status = NULL WHERE day = ? AND status = 'card'").bind(day).run();
@@ -244,12 +298,35 @@ export async function settleMoney(env, key, day, now, chooseWinner) {
   return finish('done');
 }
 
-// Closed rounds whose money is not settled yet.
+// Closed rounds whose money is not settled yet: the two that have waited longest
+// since they were last tried, so one round that cannot finish does not hold up the rest.
 export async function unsettledDays(env, now) {
   const { results } = await env.DB.prepare(
-    "SELECT day FROM auctions WHERE status = 'closed' AND (money_state IS NULL OR (money_state = 'settling' AND money_at < ?)) ORDER BY closed_at LIMIT 1",
+    "SELECT day FROM auctions WHERE status = 'closed' AND (money_state IS NULL OR (money_state = 'settling' AND money_at < ?)) ORDER BY COALESCE(money_at, 0), closed_at LIMIT 2",
   ).bind(now - SETTLE_RETRY_MS).all();
   return results.map((r) => r.day);
+}
+
+// Money that is owed back and did not go back the first time. Runs every minute.
+//   a charge on a bid that was passed over, or whose payment failed: refunded
+//   a hold still on a card after its round's money is settled: released
+export async function sweepOwed(env, key, now) {
+  const { results: owed } = await env.DB.prepare(
+    "SELECT h.*, b.pay_state AS bid_pay FROM holds h JOIN bids b ON b.id = h.bid_id JOIN auctions a ON a.day = b.day " +
+    "WHERE h.state = 'captured' AND a.status = 'closed' AND (a.money_state IS NULL OR a.money_state = 'done') AND (b.win_state = 'passed' OR b.pay_state = 'failed') ORDER BY h.id LIMIT 3",
+  ).all();
+  for (const h of owed) {
+    const r = await refundIntent(env, key, h.intent_id, 'dgf-ref-' + h.intent_id);
+    if (!r.ok && !(r.error && r.error.code === 'charge_already_refunded')) { console.error('[HOLDS] refund still owed on hold', h.id); continue; }
+    await mark(env, h.id, 'refunded', now);
+    if (h.pledge_id) await env.DB.prepare("UPDATE pledges SET status = 'refunded' WHERE id = ?").bind(h.pledge_id).run();
+    else if (h.bid_pay === 'paid') await env.DB.prepare("UPDATE bids SET pay_state = 'refunded' WHERE id = ?").bind(h.bid_id).run();
+  }
+  const { results: left } = await env.DB.prepare(
+    "SELECT h.* FROM holds h JOIN bids b ON b.id = h.bid_id JOIN auctions a ON a.day = b.day " +
+    "WHERE h.state IN ('held', 'action') AND a.status = 'closed' AND a.money_state = 'done' ORDER BY h.id LIMIT 3",
+  ).all();
+  for (const h of left) if (!(await releaseHold(env, key, h, now))) console.error('[HOLDS] hold still on a card after its round settled', h.id);
 }
 
 // Bank checks that nobody finished: release the hold and drop the bid.

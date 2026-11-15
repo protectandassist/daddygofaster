@@ -24,7 +24,7 @@ import {
 } from './rules.js';
 import { cardKeys, readIntent } from './cards.js';
 import {
-  MAX_CARD_FAILS, MAX_HOLDS, heldSummary, takeHold, releaseHold, releaseBidHolds, undoCharge, chargeWinner, chargeBackers, settleMoney, unsettledDays, sweepStale, costCents } from './holds.js';
+  MAX_CARD_FAILS, MAX_HOLDS, heldSummary, takeHold, releaseHold, releaseBidHolds, undoCharge, chargeWinner, chargeBackers, settleMoney, unsettledDays, sweepStale, sweepOwed, SETTLE_RETRY_MS, costCents } from './holds.js';
 import { screenBid } from './screen.js';
 import { shouldEmail, outbidEmail, sendEmail } from './mail.js';
 import { listCreators, getCreator, myCreator, saveCreator, followCreator, adminCreators, decideCreator, creatorScope, ownCreator, startPayouts, setBidding, payCreators } from './creators.js';
@@ -784,6 +784,9 @@ async function adminDecide(request, env, s, ctx, id, now) {
   const approval = approveDuration(bid.amount_cents, minutes);
   if (!approval.ok) return [400, { message: approval.message }];
   const costCents = Number.isFinite(Number(body.costDollars)) ? Math.max(0, Math.round(Number(body.costDollars) * 100)) : null;
+  if (costCents !== null && costCents > LIMITS.maxCostCents) {
+    return [400, { message: `Costs can be at most ${money(LIMITS.maxCostCents)}. Check the figure: it is charged to the winner's card on top of the bid.` }];
+  }
   const before = await topBid(env, a.day);
   await env.DB.prepare(
     "UPDATE bids SET status = 'qualified', screened_by = 'owner', decided_at = ?, est_minutes = ?, est_cost_cents = ?, min_cents = ?, cost_items = CASE WHEN ?3 IS est_cost_cents THEN cost_items ELSE NULL END WHERE id = ? AND status = 'held'",
@@ -890,24 +893,35 @@ async function adminRoute(request, env, s, ctx, path, now) {
     // The winner did not pay in time, or the owner declined the job: the next bid wins.
     const a = await env.DB.prepare("SELECT * FROM auctions WHERE day = ? AND status = 'closed'").bind(m[1]).first();
     if (!a || !a.winner_bid_id) return [409, { message: 'There is no winner to pass on.' }];
-    const keys = cardKeys(env);
-    const passed = await env.DB.prepare('SELECT * FROM bids WHERE id = ?').bind(a.winner_bid_id).first();
-    // Whatever the passed-over winner was charged goes back to their card.
-    const undone = keys ? await undoCharge(env, keys.secret, passed, now) : { back: 0, more: false };
-    // A job with many backers is refunded a batch at a time: press again until it is all back.
-    if (undone.more) return [200, { status: 'refunding', refundedCents: undone.back, message: 'Still refunding the backers. Press again in a moment.' }];
-    await env.DB.prepare("UPDATE bids SET win_state = 'passed' WHERE id = ?").bind(a.winner_bid_id).run();
-    const next = await chooseWinner(env, a.day);
-    let payState = null;
-    if (next && keys) {
-      const row = await env.DB.prepare('SELECT * FROM bids WHERE id = ?').bind(next.id).first();
-      payState = await chargeWinner(env, keys.secret, row, now);
-      // Its backers are charged here and, if there are many, by the timer over the next minutes.
-      if (payState !== 'failed' && (await chargeBackers(env, keys.secret, row, now))) {
-        await env.DB.prepare('UPDATE auctions SET money_state = NULL WHERE day = ?').bind(a.day).run();
+    // One at a time. A second press, or the timer settling this round, waits its turn:
+    // two of these running together would refund one winner and charge two others.
+    const claim = await env.DB.prepare(
+      "UPDATE auctions SET money_state = 'settling', money_at = ? WHERE day = ? AND status = 'closed' AND (money_state IS NULL OR money_state = 'done' OR (money_state = 'settling' AND money_at < ?))",
+    ).bind(now, a.day, now - SETTLE_RETRY_MS).run();
+    if (!claim.meta.changes) return [409, { message: 'This round is being worked on right now. Give it a minute, then look again before pressing.' }];
+    let after = a.money_state === 'done' ? 'done' : null; // what the round goes back to; null hands the rest to the timer
+    try {
+      const keys = cardKeys(env);
+      const passed = await env.DB.prepare('SELECT * FROM bids WHERE id = ?').bind(a.winner_bid_id).first();
+      // Whatever the passed-over winner was charged goes back to their card.
+      const undone = keys ? await undoCharge(env, keys.secret, passed, now) : { back: 0, more: false };
+      // A job with many backers is refunded a batch at a time: press again until it is all back.
+      if (undone.more) return [200, { status: 'refunding', refundedCents: undone.back, message: 'Still refunding the backers. Press again in a moment.' }];
+      await env.DB.prepare("UPDATE bids SET win_state = 'passed' WHERE id = ?").bind(a.winner_bid_id).run();
+      const next = await chooseWinner(env, a.day);
+      let payState = null;
+      if (next && keys) {
+        const row = await env.DB.prepare('SELECT * FROM bids WHERE id = ?').bind(next.id).first();
+        payState = await chargeWinner(env, keys.secret, row, now);
+        // The card company did not answer: the timer finishes the charge, nobody is charged twice.
+        if (payState === 'wait') after = null;
+        // Its backers are charged here and, if there are many, by the timer over the next minutes.
+        else if (payState !== 'failed' && (await chargeBackers(env, keys.secret, row, now))) after = null;
       }
+      return [200, { status: next ? 'next' : 'none-left', refundedCents: undone.back, payState, ...(payState === 'wait' ? { message: 'The card company did not answer. The charge is being tried again every minute; do not press again.' } : {}) }];
+    } finally {
+      await env.DB.prepare('UPDATE auctions SET money_state = ?, money_at = ? WHERE day = ?').bind(after, now, a.day).run();
     }
-    return [200, { status: next ? 'next' : 'none-left', refundedCents: undone.back, payState }];
   }
   return [404, { message: 'Not found.' }];
 }
@@ -1056,6 +1070,7 @@ export default {
       const key = cardKeys(env)?.secret ?? null;
       for (const day of await unsettledDays(env, now)) await settleMoney(env, key, day, now, chooseWinner);
       if (key) await sweepStale(env, key, now);
+      if (key) await sweepOwed(env, key, now); // refunds and releases that did not go through the first time
       if (key) await payCreators(env, key, now);
       await roundNotices(env, s, now, key);
       await sendNotices(env, s, now);

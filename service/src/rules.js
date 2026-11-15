@@ -12,6 +12,7 @@ export const LIMITS = {
   maxCents: 10_000_000, // $100,000
   minBidCents: 50, // the reserve: a bid has to meet it to count. It is the least a card can be charged, so every winner pays
   freeUnderCents: 50, // card minimum: a win below this is free
+  maxCostCents: 100_000, // $1,000: the most a job's costs can add to a bid. More than that needs a conversation, not a card charge
   minPledgeCents: 200, // least someone can add to an open job; below this the card fee eats it
 };
 
@@ -327,7 +328,7 @@ export function applyScreen(out, { amountCents, maxCents = null }) {
   const costItems = cleanCostItems(out.cost_items);
   // The list is the cost. A bare total with no list (an older answer) still counts.
   const cost = costItems.length ? costItems.reduce((n, c) => n + c.cents, 0) : Math.round(Number(out.est_cost_dollars) * 100);
-  const sane = Number.isFinite(minutes) && minutes > 0 && minutes <= coveredMinutes(LIMITS.maxCents) && Number.isFinite(cost) && cost >= 0;
+  const sane = Number.isFinite(minutes) && minutes > 0 && minutes <= coveredMinutes(LIMITS.maxCents) && Number.isFinite(cost) && cost >= 0 && cost <= LIMITS.maxCostCents;
   if (out.decision !== 'allow' || out.needs_quote || !sane) return { status: 'held', message: HELD_MESSAGE };
 
   const estMinutes = minutes < 1 ? minutes : Math.ceil(minutes);

@@ -18,6 +18,17 @@ export function cardKeys(env) {
   return secret && publishable ? { secret, publishable } : null;
 }
 
+const CALL_TIMEOUT_MS = 15_000;
+
+// True when a call's answer says nothing about the card: Stripe could not be
+// reached, timed out, had trouble of its own, or turned the request away for a
+// reason that is ours (the key, a lock, too many calls). The money may or may
+// not have moved, so the caller must neither give up on it nor charge again
+// some other way: it tries the same call again later, with the same key.
+export function unsure(r) {
+  return !r.ok && (r.status === 0 || r.status >= 500 || r.status === 401 || r.status === 403 || r.status === 409 || r.status === 429);
+}
+
 // One call to Stripe. Always resolves: { ok, status, data, error }.
 export async function stripeCall(env, key, method, path, params, idempotencyKey) {
   const headers = { Authorization: 'Bearer ' + key };
@@ -28,7 +39,8 @@ export async function stripeCall(env, key, method, path, params, idempotencyKey)
   }
   if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
   try {
-    const res = await fetch((env.STRIPE_API_URL || 'https://api.stripe.com') + '/v1' + path, { method, headers, body });
+    // A call that hangs is cut off, so one slow answer cannot hold a round's settlement open.
+    const res = await fetch((env.STRIPE_API_URL || 'https://api.stripe.com') + '/v1' + path, { method, headers, body, signal: AbortSignal.timeout(CALL_TIMEOUT_MS) });
     const data = await res.json().catch(() => null);
     if (res.ok) return { ok: true, status: res.status, data, error: null };
     const error = (data && data.error) || {};
@@ -60,7 +72,10 @@ export async function createHold(env, key, { customerId, email, cardId, cents, d
     if (!made.ok) return { outcome: 'error', intentId: null, customerId: null, message: CARD_TROUBLE };
     customer = made.data.id;
   }
-  const r = await stripeCall(env, key, 'POST', '/payment_intents', {
+  // The same key on a second try returns the first try's hold instead of making another,
+  // so a lost answer cannot leave a hold on the card that the database never hears about.
+  const holdKey = 'dgf-hold-' + bidId + '-' + crypto.randomUUID();
+  const params = {
     amount: String(cents),
     currency: 'usd',
     customer,
@@ -74,7 +89,9 @@ export async function createHold(env, key, { customerId, email, cardId, cents, d
     statement_descriptor_suffix: STATEMENT_TAG, // so the card statement says TorchHive beside the company name
     'metadata[bid_id]': String(bidId),
     'metadata[day]': day,
-  });
+  };
+  let r = await stripeCall(env, key, 'POST', '/payment_intents', params, holdKey);
+  if (unsure(r)) r = await stripeCall(env, key, 'POST', '/payment_intents', params, holdKey);
   if (r.ok) {
     const pi = r.data;
     if (pi.status === 'requires_capture') return { outcome: 'held', intentId: pi.id, customerId: customer };
@@ -109,8 +126,9 @@ export async function chargeSaved(env, key, { customerId, cardId, email, cents, 
     statement_descriptor_suffix: STATEMENT_TAG, // so the card statement says TorchHive beside the company name
     'metadata[bid_id]': String(bidId),
     'metadata[day]': day,
-  }, idempotencyKey || `dgf-win-${customerId}-${cents}`);
+  }, idempotencyKey || `dgf-win-${bidId}-${customerId}-${cents}`); // per bid: the same person winning the same amount another day is a new charge
   if (r.ok && r.data.status === 'succeeded') return { ok: true, intentId: r.data.id, cents: r.data.amount_received ?? cents };
+  if (unsure(r)) return { ok: false, unsure: true, intentId: null }; // unknown: the caller tries again later with the same key
   const left = r.ok ? r.data : r.error.payment_intent;
   if (left && left.id) await cancelIntent(env, key, left.id);
   return { ok: false, intentId: null };
