@@ -405,6 +405,44 @@ p{margin:0}
 .acct__form input:focus{outline:none;border-color:var(--accent)}
 .acct__msg{flex:1 0 100%;color:var(--text)}
 .acct__msg:empty{display:none}
+/* the account button in the header, and the sheet it opens */
+.acctbtn{position:relative;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:5px 13px;border-radius:999px;border:1px solid var(--line-2);background:transparent;color:var(--text);font:600 .86rem var(--body);cursor:pointer;white-space:nowrap}
+.acctbtn:hover{border-color:var(--accent)}
+.acctbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.acctbtn.is-in{padding:5px 12px 5px 6px}
+.acctbtn__face{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#1b0a02;display:grid;place-items:center;font-weight:800;font-size:.84rem;text-transform:uppercase}
+.acctbtn__dot{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;border-radius:10px;background:#ff3b42;color:#fff;font-size:.68rem;font-weight:700;display:grid;place-items:center;padding:0 5px}
+@media(max-width:720px){.acctbtn.is-in{padding:5px 6px}.acctbtn.is-in .acctbtn__label{display:none}}
+html.sheet-open{overflow:hidden}
+.sheet[hidden],.sheet [hidden]{display:none!important}
+.sheet{position:fixed;inset:0;z-index:90;display:grid;justify-items:end}
+.sheet__shade{position:absolute;inset:0;background:rgba(0,0,0,.62)}
+.sheet__box{position:relative;width:min(460px,100%);height:100%;overflow-y:auto;overscroll-behavior:contain;background:var(--bg-2);border-left:1px solid var(--line-2);padding:20px clamp(16px,4vw,24px) 28px;display:flex;flex-direction:column;gap:18px}
+.sheet__box > div:not(.sheet__top){display:flex;flex-direction:column;gap:16px}
+.sheet__top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sheet__top h2{font-size:1.35rem}
+.sheet__top .chipbtn,.sheet__end .chipbtn{color:var(--text)}
+.sheet__lead{color:var(--muted);font-size:.93rem;margin:0}
+.sheet .acct__panel{border-top:0;padding-top:0;margin-top:0;flex:0 0 auto;gap:14px}
+.sheet #panelHead{display:none}
+.sheet .acct__msg{flex:0 0 auto}
+.sheet .acct__row span{flex:1 1 100%}
+.sheet .acct__form{flex:0 0 auto}
+.sheet__sec{display:grid;gap:10px;padding-top:16px;border-top:1px solid var(--line)}
+.sheet__sec h3{font:600 .95rem/1.3 var(--body);color:var(--text);margin:0}
+.sheet__list{display:grid;gap:8px}
+.sheet__item{display:block;width:100%;text-align:left;padding:10px 12px;border-radius:10px;border:1px solid var(--line-2);background:var(--field);color:var(--text);font:400 .9rem/1.4 var(--body)}
+button.sheet__item{cursor:pointer}
+button.sheet__item:hover{border-color:var(--accent)}
+.sheet__item b{font-weight:600}
+.sheet__item small{display:block;color:var(--muted);font-size:.8rem;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet__item.is-fresh{border-color:var(--accent)}
+.sheet__item .is-good{color:var(--good)}
+.sheet__item .is-bad{color:var(--bad)}
+.sheet__none{color:var(--muted);font-size:.88rem;margin:0}
+.sheet__end{flex-direction:row!important;flex-wrap:wrap;gap:10px;padding-top:16px;border-top:1px solid var(--line)}
+.sheet__danger{color:var(--bad)!important;border-color:rgba(242,109,114,.5)}
+.thread__item--reply{margin-left:16px;padding-left:10px;border-left:2px solid var(--line-2)}
 /* Live: the stream and its chat, shown only while he is streaming */
 .live{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(280px,1fr);gap:clamp(12px,2vw,20px);align-items:stretch}
 @media(max-width:860px){.live{grid-template-columns:1fr}}
@@ -645,6 +683,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       <a href="#join" id="navJoin" hidden>Create account</a>
       <a href="https://www.youtube.com/@Torchhive" target="_blank" rel="noopener">YouTube</a>
     </nav>
+    <button class="acctbtn" type="button" id="navAcct" aria-haspopup="dialog" hidden><span class="acctbtn__face" id="navFace" hidden></span><span class="acctbtn__label" id="navLabel">Sign in</span><span class="acctbtn__dot" id="navDot" hidden></span></button>
     <a class="btn btn--primary btn--sm" href="#bid">Place a bid <span aria-hidden="true">↗</span></a>
     <details class="mobile-nav" id="mobileNav">
       <summary>Menu</summary>
@@ -882,31 +921,6 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <span id="acctText">Sign in to vote and comment.</span>
           <button class="chipbtn" type="button" id="acctOpen" aria-expanded="false" aria-controls="acctPanel" hidden>My account</button>
           <button class="chipbtn" type="button" id="acctBtn">Sign in</button>
-          <form class="acct__form" id="acctForm" hidden novalidate>
-            <div class="gbtn" id="gBtnAcct"></div>
-            <input type="email" id="acctEmail" placeholder="you@example.com" autocomplete="email" aria-label="Your email, for a sign-in link">
-            <button class="chipbtn" type="submit" id="acctSend">Email me a link</button>
-          </form>
-          <span class="acct__msg" id="acctMsg" role="status"></span>
-          <div class="acct__panel" id="acctPanel" hidden>
-            <h3 id="panelHead">Your account</h3>
-            <form class="acct__row" id="nameForm" novalidate>
-              <label for="nameInput">Username</label>
-              <input type="text" id="nameInput" maxlength="24" autocomplete="nickname" placeholder="Pick a username">
-              <button class="chipbtn" type="submit">Save</button>
-            </form>
-            <label class="check"><input type="checkbox" id="alertEmail">Email me alerts: when bidding opens, if I am outbid, when my round is about to close, and the result</label>
-            <div class="acct__row" id="pushRow" hidden>
-              <span id="pushText">Get the same alerts on this device, even when TorchHive is closed.</span>
-              <button class="chipbtn" type="button" id="pushBtn">Turn on notifications</button>
-            </div>
-            <div class="acct__row" id="ownerRow" hidden>
-              <span>You are signed in as the owner.</span>
-              <a class="chipbtn chipbtn--go" id="ownerAdmin" href="#" target="_blank" rel="noopener" style="text-decoration:none">Owner page: go live, approve bids</a>
-              <a class="chipbtn" id="ownerReports" href="#" target="_blank" rel="noopener" style="text-decoration:none;color:var(--text)">Stats</a>
-            </div>
-            <span class="acct__msg" id="panelMsg" role="status"></span>
-          </div>
         </div>
         <div class="feed" id="feed" hidden>
           <span class="feed__live">Live</span>
@@ -1082,6 +1096,60 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   </section>
 </main>
 <canvas class="fire" id="fire" aria-hidden="true"></canvas>
+<!-- ===== YOUR ACCOUNT: opened from the button in the header ===== -->
+<div class="sheet" id="acctSheet" hidden>
+  <div class="sheet__shade" id="sheetShade"></div>
+  <div class="sheet__box" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet__top">
+      <h2 id="sheetTitle">Your account</h2>
+      <button class="chipbtn" type="button" id="sheetClose">Close</button>
+    </div>
+    <div id="sheetOut">
+      <p class="sheet__lead">Sign in to vote, comment, chat and get alerts. There is no password: use Google, or we email you a link.</p>
+          <form class="acct__form" id="acctForm" novalidate>
+            <div class="gbtn" id="gBtnAcct"></div>
+            <input type="email" id="acctEmail" placeholder="you@example.com" autocomplete="email" aria-label="Your email, for a sign-in link">
+            <button class="chipbtn" type="submit" id="acctSend">Email me a link</button>
+          </form>
+          <span class="acct__msg" id="acctMsg" role="status"></span>
+    </div>
+    <div id="sheetIn" hidden>
+      <p class="sheet__lead" id="sheetWho"></p>
+          <div class="acct__panel" id="acctPanel">
+            <h3 id="panelHead">Your account</h3>
+            <form class="acct__row" id="nameForm" novalidate>
+              <label for="nameInput">Username</label>
+              <input type="text" id="nameInput" maxlength="24" autocomplete="nickname" placeholder="Pick a username">
+              <button class="chipbtn" type="submit">Save</button>
+            </form>
+            <label class="check"><input type="checkbox" id="alertEmail">Email me alerts: when bidding opens, if I am outbid, when my round is about to close, and the result</label>
+            <div class="acct__row" id="pushRow" hidden>
+              <span id="pushText">Get the same alerts on this device, even when TorchHive is closed.</span>
+              <button class="chipbtn" type="button" id="pushBtn">Turn on notifications</button>
+            </div>
+            <div class="acct__row" id="ownerRow" hidden>
+              <span>You are signed in as the owner.</span>
+              <a class="chipbtn chipbtn--go" id="ownerAdmin" href="#" target="_blank" rel="noopener" style="text-decoration:none">Owner page: go live, approve bids</a>
+              <a class="chipbtn" id="ownerReports" href="#" target="_blank" rel="noopener" style="text-decoration:none;color:var(--text)">Analytics</a>
+            </div>
+            <span class="acct__msg" id="panelMsg" role="status"></span>
+          </div>
+      <div class="sheet__sec">
+        <h3>Replies to you</h3>
+        <div class="sheet__list" id="myReplies"></div>
+      </div>
+      <div class="sheet__sec">
+        <h3>Your bids</h3>
+        <div class="sheet__list" id="myBids"></div>
+      </div>
+      <div class="sheet__end">
+        <button class="chipbtn" type="button" id="sheetSignOut">Sign out</button>
+        <button class="chipbtn sheet__danger" type="button" id="deleteAcct">Delete my account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="hype" id="hype" role="status" aria-live="polite"><img src="/assets/torchhive-mark.png" width="114" height="192" alt=""><div><b id="hypeTitle"></b><span id="hypeText"></span></div></div>
 
 <footer class="foot">
@@ -1122,6 +1190,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   var session = null, me = null, signInOn = false, lastBoard = null, openThread = null, drafts = {};
   var emailLinks = false, googleId = null, pushKey = null, pushOn = false, panelOpen = false, nameTyped = false;
   var liveOn = false, liveShown = null, chatLast = 0, chatTimer = null, chatDemo = null;   /* the live stream and its chat */
+  var activityFor = null;   /* whose replies and bids the account sheet is showing */
   try { session = localStorage.getItem('dgfSession') || null; } catch (e) {}
   var pooling = false, minPledge = 200, backing = null;   /* backing: the open job this visitor is adding money to */
 
@@ -2202,12 +2271,27 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     $('acctText').textContent = me ? 'Signed in as ' + (me.name || me.email) + '.' : 'Sign in to vote, comment and get alerts.';
     $('acctBtn').textContent = me ? 'Sign out' : 'Sign in';
     $('acctOpen').hidden = !me;
-    if(me) $('acctForm').hidden = true;
     $('acctEmail').hidden = $('acctSend').hidden = !emailLinks;
     /* someone signed in without a username is asked for one straight away */
     if(me && !me.name && !me.asked){ me.asked = true; panelOpen = true; }
-    if(!me){ panelOpen = false; nameTyped = false; }
-    $('acctPanel').hidden = !panelOpen;
+    if(!me) nameTyped = false;
+    /* the account sheet: sign-in when signed out, everything about the account when signed in */
+    $('acctSheet').hidden = !panelOpen;
+    document.documentElement.classList.toggle('sheet-open', panelOpen);
+    $('sheetOut').hidden = Boolean(me); $('sheetIn').hidden = !me;
+    $('sheetTitle').textContent = me ? (me.name ? 'Your account' : 'Pick your username') : 'Sign in';
+    if(me) $('sheetWho').textContent = 'Signed in as ' + me.email + '.';
+    /* the button in the header */
+    $('navAcct').hidden = !signInOn;
+    $('navAcct').classList.toggle('is-in', Boolean(me));
+    $('navFace').hidden = !me;
+    if(me) $('navFace').textContent = (me.name || me.email).charAt(0);
+    $('navLabel').textContent = me ? (me.name || 'Account') : 'Sign in';
+    $('navAcct').setAttribute('aria-label', me ? 'Your account' + (me.unread ? ', ' + me.unread + ' new replies' : '') : 'Sign in');
+    $('navDot').hidden = !(me && me.unread);
+    if(me && me.unread) $('navDot').textContent = me.unread > 9 ? '9+' : String(me.unread);
+    if(panelOpen && me && activityFor !== me.email){ activityFor = me.email; loadActivity(); }
+    if(!panelOpen || !me) activityFor = null;
     $('acctOpen').setAttribute('aria-expanded', panelOpen ? 'true' : 'false');
     if(me){
       $('panelHead').textContent = me.name ? 'Your account' : 'Pick your username';
@@ -2238,10 +2322,84 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   function openPanel(text){
     panelOpen = true; paintAcct();
     $('panelMsg').textContent = text || '';
-    $('acct').scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'center'});
-    if(!me.name) $('nameInput').focus({preventScroll: true});
+    if(me && !me.name) $('nameInput').focus({preventScroll: true});
   }
-  $('acctOpen').addEventListener('click', function(){ panelOpen = !panelOpen; $('panelMsg').textContent = ''; paintAcct(); if(panelOpen) tap('Opened account'); });
+  function closeSheet(){ panelOpen = false; paintAcct(); }
+  $('navAcct').addEventListener('click', function(){
+    if(me){ tap('Opened account'); openPanel(); }
+    else askSignIn('');
+  });
+  $('sheetClose').addEventListener('click', closeSheet);
+  $('sheetShade').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && panelOpen) closeSheet(); });
+  $('sheetSignOut').addEventListener('click', function(){ panelOpen = false; $('acctBtn').click(); });
+
+  /* ---- your activity: replies to you, and your bids ---- */
+  var STANDS = {leading: ['Leading', 'is-good'], outbid: ['Outbid', 'is-bad'], waiting: ['Waiting for approval', ''], short: ['Too low for the job', 'is-bad'], won: ['Won', 'is-good'], lost: ['Did not win', '']};
+  function none(box, text){ var p = document.createElement('p'); p.className = 'sheet__none'; p.textContent = text; box.appendChild(p); }
+  function paintActivity(d){
+    var replies = $('myReplies'), bids = $('myBids');
+    replies.textContent = ''; bids.textContent = '';
+    (d.replies || []).forEach(function(r){
+      var onBoard = lastBoard && (lastBoard.bids || []).some(function(b){ return b.id === r.job; });
+      var item = document.createElement(onBoard ? 'button' : 'div'), who = document.createElement('b'), sub = document.createElement('small');
+      if(onBoard) item.type = 'button';
+      item.className = 'sheet__item' + (r.fresh ? ' is-fresh' : '');
+      who.textContent = r.from;
+      item.appendChild(who); item.appendChild(document.createTextNode(' replied: ' + r.text));
+      sub.textContent = (r.yours ? 'To your comment "' + r.yours + '". ' : '') + ago(r.at);
+      item.appendChild(sub);
+      if(onBoard) item.addEventListener('click', function(){
+        closeSheet(); openThread = r.job; paint(lastBoard);
+        $('board').scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'start'});
+      });
+      replies.appendChild(item);
+    });
+    if(!replies.firstChild) none(replies, 'Nobody has replied to your comments yet.');
+    (d.bids || []).forEach(function(b){
+      var item = document.createElement('div'), top = document.createElement('b'), tag = document.createElement('span'), sub = document.createElement('small'), st = STANDS[b.standing] || ['', ''];
+      item.className = 'sheet__item';
+      top.textContent = money(b.amountCents) + ' ';
+      tag.textContent = st[0] + (b.standing === 'won' && b.paidCents ? ', paid ' + money(b.paidCents) : ''); tag.className = st[1];
+      sub.textContent = b.day + ' · ' + b.task;
+      item.appendChild(top); item.appendChild(tag); item.appendChild(sub);
+      bids.appendChild(item);
+    });
+    if(!bids.firstChild) none(bids, 'No bids yet with ' + (me ? me.email : 'this email') + '.');
+  }
+  function loadActivity(){
+    $('myReplies').textContent = ''; $('myBids').textContent = '';
+    none($('myReplies'), 'Loading…');
+    call('GET', '/me/activity').then(function(res){
+      if(!res.ok || !me) return paintActivity({});
+      paintActivity(res.d);
+      if(me.unread){   /* they have seen them now */
+        me.unread = 0; $('navDot').hidden = true;
+        call('POST', '/me/seen').catch(function(){});
+      }
+    }).catch(function(){ paintActivity({}); });
+  }
+
+  /* ---- deleting the account: two taps, so it is never an accident ---- */
+  var deleteArmed = null;
+  $('deleteAcct').addEventListener('click', function(){
+    var btn = this;
+    if(!deleteArmed){
+      btn.textContent = 'Tap again to delete it for good';
+      deleteArmed = setTimeout(function(){ deleteArmed = null; btn.textContent = 'Delete my account'; }, 6000);
+      return;
+    }
+    clearTimeout(deleteArmed); deleteArmed = null; btn.textContent = 'Delete my account';
+    if(demo){ $('panelMsg').textContent = 'This is a preview, so nothing was deleted.'; return; }
+    pushOff().then(function(){ return call('POST', '/me/delete', {confirm: true}); }).then(function(res){
+      if(!res.ok){ $('panelMsg').textContent = res.d.message || 'That did not go through. Try again.'; return; }
+      me = null; keepSession(null);
+      panelOpen = true; paintAcct();
+      $('acctMsg').textContent = 'Your account has been deleted.';
+      if(lastBoard) paint(lastBoard);
+    }).catch(function(){ $('panelMsg').textContent = 'That did not go through. Check your connection and try again.'; });
+  });
+  $('acctOpen').addEventListener('click', function(){ tap('Opened account'); openPanel(); });
   $('joinManage').addEventListener('click', function(e){ e.preventDefault(); if(me) openPanel(); });
 
   /* ---- username and email alerts ---- */
@@ -2520,7 +2678,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     if(!session){ me = null; paintAcct(); return; }
     call('GET', '/me').then(function(res){
       if(res.ok){
-        me = {email: res.d.email, name: res.d.name, emailAlerts: Boolean(res.d.emailAlerts), votes: res.d.votes || [], owner: Boolean(res.d.owner)};
+        me = {email: res.d.email, name: res.d.name, emailAlerts: Boolean(res.d.emailAlerts), votes: res.d.votes || [], owner: Boolean(res.d.owner), unread: res.d.unread || 0};
         if(!$('email').value) $('email').value = me.email;   /* one less thing to type on the bid form */
         /* a brand-new account starts with the alerts box ticked; it is only saved with the username */
         if(!me.name) me.emailAlerts = true;
@@ -2529,18 +2687,19 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       paintAcct();
       checkPush();
       if(me && fresh) openPanel(me.name ? 'You are signed in.' : 'You are signed in. Pick the username people will see.');
+      else if(!me && panelOpen) paintAcct();
       if(lastBoard) paint(lastBoard);
     }).catch(function(){});
   }
   function askSignIn(text){
+    panelOpen = true; paintAcct();
     $('acctForm').hidden = false;
     $('acctMsg').textContent = text || '';
-    $('acct').scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'center'});
-    $('acctEmail').focus({preventScroll: true});
+    if(emailLinks) $('acctEmail').focus({preventScroll: true});
   }
   $('acctBtn').addEventListener('click', function(){
     $('acctMsg').textContent = '';
-    if(!me){ $('acctForm').hidden = !$('acctForm').hidden; if(!$('acctForm').hidden) $('acctEmail').focus(); return; }
+    if(!me) return askSignIn('');
     /* signing out also stops this device's notifications: they belong to the account */
     pushOff().then(function(){ return call('POST', '/auth/end'); }).catch(function(){}).then(function(){
       me = null; keepSession(null); paintAcct();
@@ -2576,9 +2735,15 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   }
 
   function showThread(box, job){
+    var target = null, bar = null, wordsBox = null;   /* the comment being replied to, if any */
+    function setReply(c){
+      target = c;
+      if(bar){ bar.hidden = !c; bar.firstChild.textContent = c ? 'Replying to ' + c.name + '. ' : ''; }
+      if(wordsBox){ wordsBox.placeholder = c ? 'Write your reply' : 'Add a comment'; if(c) wordsBox.focus(); }
+    }
     function line(c){
       var p = document.createElement('p'), who = document.createElement('b'), when = document.createElement('time');
-      p.className = 'thread__item'; who.textContent = c.name; when.textContent = ago(c.at);
+      p.className = 'thread__item' + (c.parent ? ' thread__item--reply' : ''); who.textContent = c.name; when.textContent = ago(c.at);
       p.appendChild(who); p.appendChild(document.createTextNode(c.text)); p.appendChild(when);
       if(c.id){   /* anyone signed in can report a comment; three reports hide it until the owner looks */
         var flag = document.createElement('button');
@@ -2591,6 +2756,13 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
             if(res.ok && res.d.hidden) load();
           }).catch(function(){ flag.disabled = false; });
         });
+        var answer = document.createElement('button');
+        answer.type = 'button'; answer.className = 'thread__flag'; answer.textContent = 'Reply';
+        answer.addEventListener('click', function(){
+          if(!me) return askSignIn('Sign in to reply.');
+          setReply(c);
+        });
+        p.appendChild(answer);
         p.appendChild(flag);
       }
       return p;
@@ -2601,7 +2773,13 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       box.textContent = '';
       var list = (res.d && res.d.comments) || [];
       if(!list.length) box.appendChild(note('No comments yet.'));
-      list.forEach(function(c){ box.appendChild(line(c)); });
+      /* each comment, with the replies to it underneath */
+      var ids = {};
+      list.forEach(function(c){ ids[c.id] = true; });
+      list.filter(function(c){ return !c.parent || !ids[c.parent]; }).forEach(function(c){
+        box.appendChild(line(c.parent ? {id: c.id, name: c.name, text: c.text, at: c.at} : c));
+        list.filter(function(r){ return r.parent && r.parent === c.id; }).forEach(function(r){ box.appendChild(line(r)); });
+      });
       if(!me){
         var ask = document.createElement('button');
         ask.type = 'button'; ask.className = 'chipbtn'; ask.textContent = 'Sign in to comment';
@@ -2621,13 +2799,19 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       words.value = drafts[job] || '';
       words.addEventListener('input', function(){ drafts[job] = words.value; });
       send.type = 'submit'; send.className = 'chipbtn'; send.textContent = 'Post';
-      form.appendChild(words); form.appendChild(send); form.appendChild(said);
+      bar = note(''); bar.hidden = true; bar.appendChild(document.createTextNode(''));
+      var cancel = document.createElement('button');
+      cancel.type = 'button'; cancel.className = 'thread__flag'; cancel.style.marginLeft = '0'; cancel.textContent = 'Cancel';
+      cancel.addEventListener('click', function(){ setReply(null); });
+      bar.appendChild(cancel);
+      wordsBox = words;
+      form.appendChild(bar); form.appendChild(words); form.appendChild(send); form.appendChild(said);
       form.addEventListener('submit', function(e){
         e.preventDefault();
         var text = words.value.trim();
         if(text.length < 2){ said.textContent = 'Write a comment first.'; return; }
         send.disabled = true;
-        call('POST', '/comments', {job: job, text: text, name: nameBox ? nameBox.value.trim() : undefined}).then(function(res){
+        call('POST', '/comments', {job: job, text: text, name: nameBox ? nameBox.value.trim() : undefined, replyTo: target ? target.id : undefined}).then(function(res){
           send.disabled = false;
           if(!res.ok){ said.textContent = res.d.message || 'That did not go through. Try again.'; return; }
           drafts[job] = ''; tap('Posted a comment');

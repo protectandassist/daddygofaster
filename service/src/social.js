@@ -43,7 +43,7 @@ export async function sessionUser(request, env, now) {
   const key = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
   if (!HEX32.test(key)) return null;
   return env.DB.prepare(
-    'SELECT u.id, u.email, u.name, u.name_at, u.alerts, u.blocked, s.id AS session_id FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.key_hash = ? AND s.expires_at > ?',
+    'SELECT u.id, u.email, u.name, u.name_at, u.alerts, u.blocked, u.replies_seen_at, s.id AS session_id FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.key_hash = ? AND s.expires_at > ?',
   ).bind(await sha256(key), now).first();
 }
 
@@ -135,6 +135,8 @@ export async function getMe(request, env, now) {
   return [200, {
     email: user.email, name: user.name ?? null, emailAlerts: user.alerts === 1,
     ...(isAdminEmail(env, user.email) ? { owner: true } : {}), // the page then shows the links to the owner pages
+    unread: (await env.DB.prepare("SELECT COUNT(*) AS n FROM comments WHERE reply_user_id = ? AND user_id <> ? AND status = 'shown' AND created_at > ?")
+      .bind(user.id, user.id, user.replies_seen_at || 0).first()).n,
     votes: results.map((r) => r.pid),
   }];
 }
@@ -193,6 +195,69 @@ export async function namedUser(request, env, value, now) {
   return { user: { ...user, name: set.name } };
 }
 
+// GET /me/activity: replies to this person's comments, and the bids placed with their email.
+export async function getActivity(request, env, now) {
+  const user = await sessionUser(request, env, now);
+  if (!user) return [401, { message: 'Sign in first.' }];
+  const { results: replies } = await env.DB.prepare(
+    `SELECT c.id, c.name, c.text, c.created_at, b.pid, b.task, p.text AS yours
+     FROM comments c JOIN bids b ON b.id = c.bid_id LEFT JOIN comments p ON p.id = c.parent_id
+     WHERE c.reply_user_id = ?1 AND c.user_id <> ?1 AND c.status = 'shown' AND b.shared = 1 ORDER BY c.id DESC LIMIT 20`,
+  ).bind(user.id).all();
+  const { results: bids } = await env.DB.prepare(
+    `SELECT b.id, b.day, b.task, b.amount_cents, b.status, b.win_state, b.pay_state, b.paid_cents, a.status AS round,
+            (SELECT t.id FROM bids t WHERE t.day = b.day AND t.status = 'qualified' ORDER BY t.amount_cents DESC, t.created_at ASC, t.id ASC LIMIT 1) AS top_id
+     FROM bids b JOIN auctions a ON a.day = b.day
+     WHERE b.email = ? AND b.status IN ('qualified', 'held', 'short') ORDER BY b.id DESC LIMIT 15`,
+  ).bind(user.email).all();
+  return [200, {
+    seenAt: user.replies_seen_at || 0,
+    replies: replies.map((r) => ({ id: r.id, from: r.name, text: r.text, yours: r.yours ? String(r.yours).slice(0, 80) : null, job: r.pid, task: r.task, at: new Date(r.created_at).toISOString(), fresh: r.created_at > (user.replies_seen_at || 0) })),
+    bids: bids.map((b) => ({
+      day: b.day, task: b.task, amountCents: b.amount_cents,
+      standing: b.status === 'held' ? 'waiting' : b.status === 'short' ? 'short'
+        : b.round === 'open' ? (b.top_id === b.id ? 'leading' : 'outbid')
+        : b.win_state === 'won' ? 'won' : 'lost',
+      paidCents: b.win_state === 'won' ? b.paid_cents ?? null : null,
+    })),
+  }];
+}
+
+// POST /me/seen: they have looked at their replies.
+export async function postSeen(request, env, now) {
+  const user = await sessionUser(request, env, now);
+  if (!user) return [401, { message: 'Sign in first.' }];
+  await env.DB.prepare('UPDATE users SET replies_seen_at = ? WHERE id = ?').bind(now, user.id).run();
+  return [200, { unread: 0 }];
+}
+
+// POST /me/delete { confirm: true }: closes the account. Sign-ins, devices, votes and alerts go;
+// what they wrote comes down; the address is cut loose from the account. Records of bids and
+// payments stay, as the privacy page says. Not while they have money in an open round.
+export async function deleteAccount(request, env, now) {
+  const user = await sessionUser(request, env, now);
+  if (!user) return [401, { message: 'Sign in first.' }];
+  const body = await read(request);
+  if (body?.confirm !== true) return [400, { message: 'Confirm that you want to delete your account.' }];
+  const busy = await env.DB.prepare(
+    `SELECT (SELECT COUNT(*) FROM bids b JOIN auctions a ON a.day = b.day WHERE b.email = ?1 AND a.status = 'open' AND b.status IN ('qualified', 'held', 'card'))
+          + (SELECT COUNT(*) FROM pledges p JOIN bids b ON b.id = p.bid_id JOIN auctions a ON a.day = b.day WHERE p.email = ?1 AND a.status = 'open' AND p.status IN ('active', 'card')) AS n`,
+  ).bind(user.email).first();
+  if (busy.n) return [409, { message: 'You have money in the round that is open. Delete your account after it closes.' }];
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id),
+    env.DB.prepare('DELETE FROM push_subs WHERE user_id = ?').bind(user.id),
+    env.DB.prepare('DELETE FROM votes WHERE user_id = ?').bind(user.id),
+    env.DB.prepare('DELETE FROM notices WHERE user_id = ?').bind(user.id),
+    env.DB.prepare('DELETE FROM comment_reports WHERE user_id = ?').bind(user.id),
+    env.DB.prepare("UPDATE comments SET status = 'removed', name = 'deleted' WHERE user_id = ?").bind(user.id),
+    env.DB.prepare("UPDATE chat SET status = 'removed', name = 'deleted' WHERE user_id = ?").bind(user.id),
+    env.DB.prepare('DELETE FROM logins WHERE email = ?').bind(user.email),
+    env.DB.prepare("UPDATE users SET email = 'deleted-' || id || '@deleted.invalid', name = NULL, name_key = NULL, google_sub = NULL, alerts = 0, alerts_token = NULL WHERE id = ?").bind(user.id),
+  ]);
+  return [200, { message: 'Your account has been deleted.' }];
+}
+
 // POST /me { name?, emailAlerts? }: the account's own settings.
 export async function postMe(request, env, now) {
   const user = await sessionUser(request, env, now);
@@ -237,13 +302,13 @@ export async function getComments(env, url) {
   const job = await openJob(env, url.searchParams.get('job'));
   if (!job) return [404, { message: 'No such job.' }];
   const { results } = await env.DB.prepare(
-    "SELECT id, name, text, created_at FROM comments WHERE bid_id = ? AND status = 'shown' ORDER BY created_at DESC, id DESC LIMIT 50",
+    "SELECT id, name, text, created_at, parent_id FROM comments WHERE bid_id = ? AND status = 'shown' ORDER BY created_at DESC, id DESC LIMIT 80",
   ).bind(job.id).all();
   // Name, words and time. Never an email.
-  return [200, { comments: results.reverse().map((c) => ({ id: c.id, name: c.name, text: c.text, at: new Date(c.created_at).toISOString() })) }];
+  return [200, { comments: results.reverse().map((c) => ({ id: c.id, name: c.name, text: c.text, at: new Date(c.created_at).toISOString(), parent: c.parent_id ?? null })) }];
 }
 
-export async function postComment(request, env, now) {
+export async function postComment(request, env, now, siteUrl = 'https://torchhive.com', apiUrl = 'https://dgf-bids.trevor-c2b.workers.dev') {
   const user = await sessionUser(request, env, now);
   if (!user) return [401, { message: 'Sign in to comment.' }];
   if (user.blocked) return [403, { message: 'You can no longer comment here.' }];
@@ -272,9 +337,32 @@ export async function postComment(request, env, now) {
   const { results: mine } = await env.DB.prepare('SELECT text, created_at FROM comments WHERE user_id = ? ORDER BY created_at DESC LIMIT 5').bind(user.id).all();
   if (mine.length && now - mine[0].created_at < COMMENT_GAP_MS) return [429, { message: 'Give it a moment before posting again.' }];
   if (mine.some((c) => c.text.toLowerCase() === text.toLowerCase())) return [400, { message: 'You already said that.' }];
-  const made = await env.DB.prepare('INSERT INTO comments (bid_id, user_id, name, text, created_at) VALUES (?, ?, ?, ?, ?)')
-    .bind(job.id, user.id, name, text, now).run();
-  return [200, { comment: { id: made.meta.last_row_id, name, text, at: new Date(now).toISOString() }, name }];
+  // A reply sits under the top-level comment it answers, one level deep, and remembers whose words it answers.
+  let parentId = null, replyUser = null;
+  if (body.replyTo !== undefined && body.replyTo !== null) {
+    const p = Number.isInteger(Number(body.replyTo))
+      ? await env.DB.prepare("SELECT id, parent_id, user_id FROM comments WHERE id = ? AND bid_id = ? AND status = 'shown'").bind(Number(body.replyTo), job.id).first()
+      : null;
+    if (!p) return [404, { message: 'That comment is not there any more.' }];
+    parentId = p.parent_id || p.id;
+    replyUser = p.user_id;
+  }
+  const made = await env.DB.prepare('INSERT INTO comments (bid_id, user_id, name, text, created_at, parent_id, reply_user_id) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .bind(job.id, user.id, name, text, now, parentId, replyUser).run();
+  // Whoever was answered is told, if they asked for alerts. Sent by the timer, once.
+  if (replyUser && replyUser !== user.id) {
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO notices (user_id, kind, ref, subject, short, body, created_at)
+       SELECT u.id, 'reply', ?2, ?3, ?4, ?5, ?6 FROM users u
+       WHERE u.id = ?1 AND (u.alerts = 1 OR EXISTS (SELECT 1 FROM push_subs ps WHERE ps.user_id = u.id))`,
+    ).bind(replyUser, String(made.meta.last_row_id), `${name} replied to you`, text.slice(0, 120), [
+      `${name} replied to your comment on TorchHive:`, '', text, '',
+      `See it and answer: ${siteUrl}/#board`, '',
+      'You are getting this because you turned on alerts in your TorchHive account.',
+      `To stop them: ${apiUrl}/stop?u={stop}`,
+    ].join('\n'), now).run();
+  }
+  return [200, { comment: { id: made.meta.last_row_id, name, text, at: new Date(now).toISOString(), parent: parentId }, name }];
 }
 
 // Anyone signed in can report a comment. One report each; enough of them hide it

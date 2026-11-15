@@ -34,7 +34,7 @@ import {
   storeAdminKey, adminKeyIsSet, adminKeyMatches,
 } from './store.js';
 import {
-  signInOn, emailLinksOn, sessionUser, namedUser, isAdminEmail, authGoogle, postMe, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, reportComment, recentComments, removeComment, restoreComment, blockCommenter,
+  signInOn, emailLinksOn, sessionUser, namedUser, isAdminEmail, getActivity, postSeen, deleteAccount, authGoogle, postMe, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, reportComment, recentComments, removeComment, restoreComment, blockCommenter,
 } from './social.js';
 import { record, report, tidy } from './stats.js';
 import ADMIN_HTML from './admin.html';
@@ -883,7 +883,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
 
 // ---- entry ------------------------------------------------------------------------
 
-const PUBLIC = new Set(['/board', '/live', '/chat', '/check', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/auth/google', '/me', '/push/sub', '/push/unsub', '/push/next', '/votes', '/comments', '/comments/report', '/a']);
+const PUBLIC = new Set(['/board', '/live', '/chat', '/check', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/auth/google', '/me', '/me/activity', '/me/seen', '/me/delete', '/push/sub', '/push/unsub', '/push/next', '/votes', '/comments', '/comments/report', '/a']);
 // Signing in, votes and comments: [method, path] to handler. Each answers [status, body].
 const SOCIAL = {
   'POST /auth/start': (request, env, s, now) => authStart(request, env, s, now),
@@ -892,6 +892,9 @@ const SOCIAL = {
   'POST /auth/google': (request, env, s, now) => authGoogle(request, env, now),
   'GET /me': (request, env, s, now) => getMe(request, env, now),
   'POST /me': (request, env, s, now) => postMe(request, env, now),
+  'GET /me/activity': (request, env, s, now) => getActivity(request, env, now),
+  'POST /me/seen': (request, env, s, now) => postSeen(request, env, now),
+  'POST /me/delete': (request, env, s, now) => deleteAccount(request, env, now),
   'POST /push/sub': async (request, env, s, now) => {
     const user = await sessionUser(request, env, now);
     return user ? pushSubscribe(env, user, await request.json().catch(() => null), now) : [401, { message: 'Sign in first.' }];
@@ -907,7 +910,7 @@ const SOCIAL = {
   },
   'GET /comments': (request, env) => getComments(env, new URL(request.url)),
   'POST /comments/report': (request, env, s, now) => reportComment(request, env, now),
-  'POST /comments': (request, env, s, now) => (s.open ? postComment(request, env, now) : [403, { message: 'Bidding is not open yet.' }]),
+  'POST /comments': (request, env, s, now) => (s.open ? postComment(request, env, now, s.siteUrl, s.apiUrl) : [403, { message: 'Bidding is not open yet.' }]),
 };
 
 export default {
