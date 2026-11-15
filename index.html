@@ -21,7 +21,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/assets/favicon.png" type="image/png" sizes="64x64">
 <link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
-<link rel="preload" as="image" href="/assets/idea-sunrise.webp">
+<link rel="preload" as="image" href="/assets/challenges/potato-palace.webp">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -179,9 +179,9 @@ p{margin:0}
 .idea-scene__images img{position:absolute;width:100%;height:100%;object-fit:cover;object-position:56% 48%;opacity:0;transform:scale(1.06);
   transition:opacity .9s ease,object-position 1.4s ease}
 .idea-scene__images img.is-active{opacity:1}
-/* Each idea gets its own slow move across the picture, so even the same photo reads as a new shot. */
+/* A small drift adds movement while preserving the subject of each matched scene. */
 .idea-scene__images img.is-moving{animation:ideaDrift 8s ease-out forwards}
-@keyframes ideaDrift{from{transform:scale(1.16) translate(var(--dx,0),var(--dy,0))}to{transform:scale(1.04) translate(0,0)}}
+@keyframes ideaDrift{from{transform:scale(1.06) translate(var(--dx,0),var(--dy,0))}to{transform:scale(1.04) translate(0,0)}}
 .idea-progress{position:absolute;left:0;bottom:0;height:3px;width:0;background:var(--accent);z-index:1}
 .idea-progress.is-running{animation:ideaProgress 7s linear forwards}
 @keyframes ideaProgress{from{width:0}to{width:100%}}
@@ -189,8 +189,13 @@ p{margin:0}
 .idea-strip{display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none;padding:3px 2px}
 .idea-strip::-webkit-scrollbar{display:none}
 .idea-thumb{flex:0 0 auto;width:48px;height:36px;border:1px solid var(--line-2);border-radius:7px;padding:0;cursor:pointer;background-color:var(--card);
-  background-size:330%;background-repeat:no-repeat;opacity:.5;scroll-snap-align:center;transition:opacity .2s,border-color .2s,transform .2s}
+  background-size:cover;background-repeat:no-repeat;position:relative;opacity:.5;scroll-snap-align:center;transition:opacity .2s,border-color .2s,transform .2s}
 .idea-thumb:hover{opacity:1}
+.idea-thumb__number{position:absolute;right:2px;bottom:2px;min-width:16px;padding:0 3px;border-radius:3px;background:rgba(12,13,16,.86);color:var(--text);font:700 11px/1.5 var(--body);font-variant-numeric:tabular-nums}
+.idea-browse{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px;margin-top:12px;color:var(--muted);font-size:.72rem}
+.idea-browse select{width:100%;min-width:0;min-height:40px;padding:9px 30px 9px 11px;border:1px solid var(--line-2);border-radius:8px;background:var(--field);color:var(--text);font:500 .78rem var(--body);color-scheme:dark}
+@media(max-width:560px){.idea-browse{grid-template-columns:1fr;gap:5px}.idea-browse select{min-height:44px;font-size:16px}}
+
 .idea-thumb[aria-current="true"]{opacity:1;border:2px solid var(--accent);transform:translateY(-2px)}
 .idea-thumb:focus-visible{outline:2px solid var(--accent-hi);outline-offset:2px;opacity:1}
 .idea-nav{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;border:1px solid #ffffff40;background:rgba(12,13,16,.6);
@@ -218,7 +223,7 @@ p{margin:0}
 .idea-tag{display:inline-flex;align-items:center;gap:8px;border:1px solid #ffffff40;background:rgba(12,13,16,.55);
   backdrop-filter:blur(8px);padding:6px 10px;border-radius:5px;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--text)}
 .idea-tag::before{content:"";height:5px;width:5px;background:var(--accent);border-radius:50%}
-.idea-scene__counter{font-size:.67rem;letter-spacing:.08em;color:var(--text);text-shadow:0 1px 8px #000}
+.idea-scene__counter{flex-shrink:0;white-space:nowrap;font-size:.67rem;letter-spacing:.08em;color:var(--text);text-shadow:0 1px 8px #000}
 .idea-scene__caption{position:absolute;inset:auto 24px 24px}
 .idea-scene__caption p{font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-hi);margin-bottom:9px}
 .idea-scene__caption h2{font-size:clamp(1.6rem,2.7vw,2.15rem);font-weight:800;line-height:1.07;letter-spacing:-.04em;max-width:16ch;text-wrap:balance;text-shadow:0 2px 20px #0008}
@@ -635,14 +640,12 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <div id="panelFun" role="tabpanel" aria-labelledby="tabFun">
           <div class="idea-scene">
             <div class="idea-scene__images" aria-hidden="true">
-              <img class="is-active" id="scene-sunrise" src="/assets/idea-sunrise.webp" width="1672" height="941" alt="" fetchpriority="high">
-              <img id="scene-workshop" src="/assets/idea-workshop.webp" width="1672" height="941" alt="" decoding="async">
-              <img id="scene-cleanup" src="/assets/idea-cleanup.webp" width="1672" height="941" alt="" decoding="async">
+              <img class="is-active" id="scene-potato-palace" src="/assets/challenges/potato-palace.webp" width="1672" height="941" alt="" fetchpriority="high">
             </div>
-            <div class="idea-scene__top"><span class="idea-tag" id="ideaCategory">Take the long way</span><span class="idea-scene__counter num" id="ideaCount">01 / 18</span></div>
+            <div class="idea-scene__top"><span class="idea-tag" id="ideaCategory">Potato royalty</span><span class="idea-scene__counter num" id="ideaCount">01 / 100</span></div>
             <div class="idea-scene__caption">
-              <p>Make me work for it</p>
-              <h2 id="ideaTitle">Walk five miles for one doughnut.</h2>
+              <p>Make tomorrow worth watching</p>
+              <h2 id="ideaTitle">Build a throne for a potato.</h2>
               <a href="#bid" id="ideaUse">Use this idea <span aria-hidden="true">↗</span></a>
             </div>
             <button class="idea-nav idea-nav--prev" id="scenePrev" type="button" aria-label="Previous idea"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg></button>
@@ -656,7 +659,8 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
             <button class="idea-control" id="ideaShuffle" type="button" aria-label="Show another challenge idea"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h2c4 0 6 10 10 10h2M14 12l3 3-3 3M3 15h2c1 0 2-1 3-2M12 7c1-1 2-2 3-2h2M14 2l3 3-3 3"/></svg>Shuffle</button>
             <button class="idea-control idea-control--pause" id="ideaPause" type="button" aria-label="Pause changing ideas" title="Pause changing ideas"><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M5 4h3v12H5zM12 4h3v12h-3z"/></svg></button>
           </div>
-          <p class="idea-note">Pick a challenge. Add a twist. Make tomorrow worth watching.</p>
+          <label class="idea-browse" id="ideaBrowse" hidden><span id="ideaJumpLabel">Browse all 100 ideas</span><select id="ideaJump" aria-label="Choose a challenge idea"></select></label>
+          <p class="idea-note">100 ideas. Funny ones first. Pictures illustrate suggestions, not completed jobs.</p>
           </div>
           <div id="panelWork" role="tabpanel" aria-labelledby="tabWork" hidden>
             <div class="work">
@@ -1028,6 +1032,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   <a class="btn btn--primary btn--sm" href="#bid">Place a bid</a>
 </div>
 
+<script src="/assets/challenge-ideas.js"></script>
 <script>
 (function(){
   /* ---------- settings ----------------------------------------
@@ -1178,161 +1183,129 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   });
 
   /* ---------- changing challenge inspiration ----------
-     These are suggestions, never real bids. Rotation never edits a typed job.
-     Each shuffled deck runs without repeats; a new visit avoids the last idea. */
-  var ideas = [
-    {scene:'sunrise', title:'Walk five miles for one doughnut.', task:'Walk a five-mile round trip to buy one doughnut. Film the journey and the verdict on whether it was worth it.'},
-    {scene:'sunrise', title:'Let a coin choose my next turn.', task:'Take a 45-minute walk on public pedestrian routes, flipping a coin at each safe junction to choose left or right. Then find your way back.'},
-    {scene:'sunrise', title:'Carry a watermelon. Two miles.', task:'Carry one watermelon on a two-mile walk without a bag or wheels. Bring it home and cut it open at the finish.'},
-    {scene:'sunrise', title:'Draw a dinosaur with my walk.', task:'Plan and walk a route of up to three miles on public paths so the GPS trace looks like a dinosaur. Reveal the finished shape after the walk.'},
-    {scene:'sunrise', title:'Earn my coffee with 10,000 steps.', task:'Complete 10,000 walking steps before your first coffee, then show the step count and the coffee you earned.'},
-    {scene:'sunrise', title:'Find A to Z without using a sign.', task:'Spend up to 90 minutes on a public walking route photographing natural shapes that look like letters A through Z. No printed letters or signs; reveal your alphabet at the end.'},
-    {scene:'workshop', title:'Overengineer ringing a bell.', task:'Spend up to 90 minutes building a tabletop chain-reaction machine from household objects that ends by ringing a desk bell. Show the failed attempts and a complete run.'},
-    {scene:'workshop', title:'Make spaghetti hold 100 coins.', task:'Build a tabletop bridge from dry spaghetti and glue, then gradually load it with 100 coins. Film the build and find out how many it holds before it breaks.'},
-    {scene:'workshop', title:'Turn the garage into mini golf.', task:'Build a homemade miniature-golf hole across your garage with at least three obstacles. Film attempts until you make a hole in one or 60 minutes of trying are up.'},
-    {scene:'workshop', title:'Build a card tower taller than me.', task:'Try to build a playing-card tower taller than you in 90 minutes. No tape, glue or supports. Show the tallest attempt, even if it collapses.'},
-    {scene:'workshop', title:'Sort 500 coins with chopsticks.', task:'Sort 500 mixed coins into denominations using only chopsticks to move them. Film the timer and the final piles.'},
-    {scene:'workshop', title:'Make a gas station feast.', task:'Buy up to $20 of food at a gas station and turn it into a three-course dinner at home. Show the receipt, cook the meal and give an unscripted taste test.'},
-    {scene:'workshop', title:'Turn a cardboard box into an arcade.', task:'Spend two hours turning a cardboard box into a working tabletop arcade game with a score system. Build it from household materials, then play a round on camera.'},
-    {scene:'cleanup', title:'Clean a patio with a toothbrush.', task:'Spend up to 45 minutes cleaning a two-foot-by-two-foot square of your own patio using a toothbrush and water. Film the timer, the effort and the before-and-after reveal.'},
-    {scene:'cleanup', title:'Pick up 100 pieces. Beat the clock.', task:'Pick up 100 pieces of ordinary litter in a public park using gloves and a grabber. Time the cleanup and show the five most surprising finds at the end.'},
-    {scene:'cleanup', title:'Rake leaves with a dinner fork.', task:'Spend 30 minutes clearing fallen leaves from a six-foot-by-six-foot patch of your own yard using only a dinner fork. Show how much ground you actually cleared.'},
-    {scene:'cleanup', title:'Make a cleanup gadget from junk.', task:'Spend one hour making a hand-operated litter grabber from scrap materials, then test whether it can pick up 20 clean empty cans without dropping them.'},
-    {scene:'cleanup', title:'Rescue the ugliest $10 thrift find.', task:'Find an item for $10 or less at a thrift store, spend up to two hours repairing or improving it at home, and reveal the before and after. Film the project, not store staff or customers.'}
-  ];
-  /* short names for the suggestion buttons under the job box, in the same order as the ideas */
-  var chipNames = ['The five-mile doughnut', 'Coin-flip walk', 'Watermelon carry', 'GPS dinosaur', '10,000 steps first', 'A to Z photo hunt',
-    'Overengineer a bell', 'Spaghetti bridge', 'Garage mini golf', 'Card tower', 'Chopstick coin sort', 'Gas station feast', 'Cardboard arcade',
-    'Toothbrush vs. patio', '100-piece cleanup', 'Fork vs. leaves', 'Junk grabber', '$10 thrift rescue'];
-  /* The ideas are put in one fixed order, with the three kinds of scene taking
-     turns, so stepping 1, 2, 3 changes the picture every time and the numbers
-     always mean the same idea. */
-  (function(){
-    var piles = {}, order = [], scenes = [], more = true;
-    ideas.forEach(function(idea, i){ if(!piles[idea.scene]){ piles[idea.scene] = []; scenes.push(idea.scene); } piles[idea.scene].push(i); });
-    while(more){
-      more = false;
-      scenes.forEach(function(scene){ if(piles[scene].length){ order.push(piles[scene].shift()); more = true; } });
-    }
-    var sortedIdeas = order.map(function(i){ return ideas[i]; }), sortedNames = order.map(function(i){ return chipNames[i]; });
-    ideas.length = 0; chipNames.length = 0;
-    sortedIdeas.forEach(function(x){ ideas.push(x); }); sortedNames.forEach(function(x){ chipNames.push(x); });
-  })();
-  (function(){
-    /* three different suggestions each visit, one from each kind of scene when there are enough */
-    var chips = document.querySelectorAll('#bid .chips[aria-label="Ideas"] .chipbtn');
-    if(chipNames.length !== ideas.length || !chips.length) return;
-    var byScene = {}, picks = [];
-    ideas.forEach(function(idea, i){ (byScene[idea.scene] = byScene[idea.scene] || []).push(i); });
-    var scenes = Object.keys(byScene).sort(function(){ return Math.random() - .5; });
-    scenes.forEach(function(scene){ var pile = byScene[scene]; picks.push(pile.splice(Math.floor(Math.random() * pile.length), 1)[0]); });
-    var rest = [].concat.apply([], scenes.map(function(scene){ return byScene[scene]; })).sort(function(){ return Math.random() - .5; });
-    while(picks.length < chips.length && rest.length) picks.push(rest.shift());
-    Array.prototype.forEach.call(chips, function(chip, n){
-      if(picks[n] === undefined) return;
-      chip.textContent = chipNames[picks[n]];
-      chip.setAttribute('data-idea', ideas[picks[n]].task);
-    });
-  })();
-  var sceneNames = {sunrise:'Take the long way', workshop:'Make it ridiculous', cleanup:'Chores with a catch'};
-  var inspiration = $('inspiration'), category = 'all', deck = [], ideaIndex = -1;
+     Curated suggestions, never real bids. Every fresh visit opens with an
+     entertaining starter; typed jobs are never changed by automatic rotation. */
+  var ideaLibrary = window.TORCHHIVE_CHALLENGES || {
+    scenes: {'potato-palace': {label:'Potato royalty', src:'/assets/challenges/potato-palace.webp', thumb:'/assets/challenges/potato-palace-thumb.webp', focus:'66% 48%'}},
+    ideas: [{id:'potato-palace-1', scene:'potato-palace', title:'Build a throne for a potato.', chip:'Build a throne for a potato', task:'Spend up to 60 minutes building an absurdly grand miniature throne for one potato from cardboard and craft scraps. Show the build and give the potato its royal reveal.'}],
+    starterCount: 1
+  };
+  var ideas = ideaLibrary.ideas, sceneData = ideaLibrary.scenes, sceneNames = {}, sceneImages = {};
+  var starterCount = Math.min(ideaLibrary.starterCount, ideas.length);
+  var inspiration = $('inspiration'), deck = [], ideaIndex = -1;
   var ideaTimer = null, ideaPaused = reduce, ideaHovered = false, ideaVisible = true, workOpen = false;
-  /* each visit opens on the idea after the one last seen */
-  try { ideaIndex = Number(localStorage.getItem('dgfIdeaLast') || -1); } catch(e) {}
-  if(!(ideaIndex >= -1 && ideaIndex < ideas.length)) ideaIndex = -1;
+  var lastStarter = -1;
+  try { lastStarter = Number(localStorage.getItem('thIdeaStarterV1') || -1); } catch(e) {}
+  if(!Number.isInteger(lastStarter) || lastStarter < -1 || lastStarter >= starterCount) lastStarter = -1;
+  var firstIdea = (lastStarter + 1) % starterCount;
+  var imageBox = document.querySelector('.idea-scene__images');
+  Object.keys(sceneData).forEach(function(key){
+    var meta = sceneData[key], img = $('scene-' + key);
+    sceneNames[key] = meta.label;
+    if(!img){
+      img = document.createElement('img'); img.id = 'scene-' + key;
+      img.width = 1672; img.height = 941; img.alt = ''; img.decoding = 'async';
+      imageBox.appendChild(img);
+    }
+    img.style.objectPosition = meta.focus;
+    sceneImages[key] = img;
+  });
+  function loadIdeaScene(key){
+    var img = sceneImages[key];
+    if(img && !img.getAttribute('src')) img.src = sceneData[key].src;
+    return img;
+  }
   function mix(list){
     for(var i = list.length - 1; i > 0; i--){
       var j = Math.floor(Math.random() * (i + 1)), temp = list[i]; list[i] = list[j]; list[j] = temp;
     }
     return list;
   }
-  /* A shuffled deck, dealt so the picture changes with every idea: the three
-     kinds of scene take turns for as long as each has ideas left. */
+  /* Deal a whole shuffled deck without repeats, alternating scenes. */
   function shuffleDeck(){
-    var all = ideas.map(function(_, i){ return i; }).filter(function(i){ return category === 'all' || ideas[i].scene === category; });
-    if(category !== 'all'){ deck = mix(all); }
-    else {
-      var piles = mix(Object.keys(sceneNames)).map(function(scene){ return mix(all.filter(function(i){ return ideas[i].scene === scene; })); });
-      deck = [];
-      while(piles.some(function(p){ return p.length; })){
-        piles.forEach(function(p){ if(p.length) deck.push(p.shift()); });
-      }
+    var piles = mix(Object.keys(sceneData)).map(function(scene){
+      return mix(ideas.map(function(_, i){ return i; }).filter(function(i){ return i !== ideaIndex && ideas[i].scene === scene; }));
+    });
+    deck = [];
+    while(piles.some(function(p){ return p.length; })){
+      piles.forEach(function(p){ if(p.length) deck.push(p.shift()); });
     }
-    if(deck.length > 1 && (deck[0] === ideaIndex || (ideaIndex >= 0 && ideas[ideaIndex] && ideas[deck[0]].scene === ideas[ideaIndex].scene))){
+    if(deck.length > 1 && ideaIndex >= 0 && ideas[deck[0]].scene === ideas[ideaIndex].scene){
       var swap = 1;
-      while(swap < deck.length - 1 && ideas[deck[swap]].scene === ideas[deck[0]].scene) swap++;
+      while(swap < deck.length - 1 && ideas[deck[swap]].scene === ideas[ideaIndex].scene) swap++;
       var first = deck[0]; deck[0] = deck[swap]; deck[swap] = first;
     }
   }
-  /* where each idea's shot starts from: a different crop and drift every time */
-  var SHOTS = [['50% 40%', '-2%', '1.5%'], ['62% 55%', '2%', '-1%'], ['40% 50%', '1.5%', '2%'], ['56% 34%', '-1.5%', '-2%'], ['48% 62%', '2%', '1%'], ['66% 44%', '-2%', '-1%']];
-  var shot = 0;
+  /* The three form suggestions also come from the entertaining opening set. */
+  (function(){
+    var chips = document.querySelectorAll('#bid .chips[aria-label="Ideas"] .chipbtn');
+    var picks = mix(ideas.slice(0, starterCount));
+    Array.prototype.forEach.call(chips, function(chip, n){
+      var idea = picks[n % picks.length];
+      chip.textContent = idea.chip;
+      chip.setAttribute('data-idea', idea.task);
+    });
+  })();
   function runProgress(on){
-    var bar = $('ideaProgress');
-    bar.classList.remove('is-running');
+    var bar = $('ideaProgress'); bar.classList.remove('is-running');
     if(on){ void bar.offsetWidth; bar.classList.add('is-running'); }
   }
   function scheduleIdea(){
     clearTimeout(ideaTimer);
     var focused = inspiration.contains(document.activeElement) || $('bid').contains(document.activeElement);
     if(!ideaPaused && !ideaHovered && !focused && ideaVisible && !workOpen && !document.hidden){
-      ideaTimer = setTimeout(function(){ nextIdea(false); }, 7000);
-      runProgress(true);
-    } else {
-      runProgress(false);
-    }
+      ideaTimer = setTimeout(function(){ nextIdea(false); }, 7000); runProgress(true);
+    } else { runProgress(false); }
   }
-  /* Every idea has its own thumbnail: a different part of its scene's photo. */
-  var FOCALS = ['10% 20%', '90% 24%', '50% 52%', '16% 84%', '86% 80%', '50% 10%', '50% 92%'];
-  var seenInScene = {}, trail = [];
+  var jump = $('ideaJump'); jump.textContent = '';
+  $('ideaJumpLabel').textContent = 'Browse all ' + ideas.length + ' ideas';
   var thumbs = ideas.map(function(idea, i){
-    var b = document.createElement('button'), n = seenInScene[idea.scene] = (seenInScene[idea.scene] || 0) + 1;
+    var b = document.createElement('button'), number = document.createElement('span');
     b.type = 'button'; b.className = 'idea-thumb';
-    b.style.backgroundImage = 'url(/assets/idea-' + idea.scene + '.webp)';
-    b.style.backgroundPosition = FOCALS[(n - 1) % FOCALS.length];
+    b.style.backgroundImage = 'url(' + sceneData[idea.scene].thumb + ')';
+    b.style.backgroundPosition = sceneData[idea.scene].focus;
     b.title = idea.title;
     b.setAttribute('aria-label', 'Idea ' + (i + 1) + ': ' + idea.title);
+    number.className = 'idea-thumb__number'; number.textContent = i + 1; number.setAttribute('aria-hidden', 'true'); b.appendChild(number);
     b.addEventListener('click', function(){ showIdea(i, true); tap('Picked an idea picture'); });
     $('ideaStrip').appendChild(b);
+    var option = document.createElement('option'); option.value = String(i); option.textContent = String(i + 1).padStart(2, '0') + ' · ' + idea.title; jump.appendChild(option);
     return b;
   });
-  /* Puts one idea on show. `back` is true when stepping backwards, so it is not added to the trail again. */
-  function showIdea(index, announce, back){
+  function showIdea(index, announce){
+    if(!Number.isInteger(index) || index < 0 || index >= ideas.length) return;
     ideaIndex = index;
-    deck = deck.filter(function(i){ return i !== index; });   /* it will not come round again straight away */
-    if(!back && trail[trail.length - 1] !== index) trail.push(index);
-    if(trail.length > 40) trail.shift();
-    var idea = ideas[ideaIndex];
+    deck = deck.filter(function(i){ return i !== index; });
+    var idea = ideas[index], image = loadIdeaScene(idea.scene);
     $('ideaTitle').textContent = idea.title;
     $('ideaCategory').textContent = sceneNames[idea.scene];
-    $('ideaCount').textContent = String(index + 1).padStart(2, '0') + ' / ' + String(ideas.length).padStart(2, '0');
-    var move = SHOTS[index % SHOTS.length];
-    Object.keys(sceneNames).forEach(function(scene){
-      var img = $('scene-' + scene), on = scene === idea.scene;
+    $('ideaCount').textContent = String(index + 1).padStart(2, '0') + ' / ' + ideas.length;
+    Object.keys(sceneImages).forEach(function(key){
+      var img = sceneImages[key], on = key === idea.scene;
       img.classList.toggle('is-active', on);
-      if(!on) return;
-      img.style.objectPosition = move[0];
-      img.style.setProperty('--dx', move[1]); img.style.setProperty('--dy', move[2]);
-      img.classList.remove('is-moving'); void img.offsetWidth; img.classList.add('is-moving');   /* start the move again */
+      img.classList.remove('is-moving');
     });
-    thumbs.forEach(function(t, i){ t.setAttribute('aria-current', String(i === index)); });
-    var strip = $('ideaStrip'), t = thumbs[index];
-    strip.scrollTo({left: t.offsetLeft - strip.offsetLeft - strip.clientWidth / 2 + t.offsetWidth / 2, behavior: reduce ? 'auto' : 'smooth'});
+    if(image){
+      image.style.setProperty('--dx', index % 2 ? '1%' : '-1%'); image.style.setProperty('--dy', '0');
+      if(!reduce){ void image.offsetWidth; image.classList.add('is-moving'); }
+    }
+    thumbs.forEach(function(t, i){ t.setAttribute('aria-current', String(i === index)); t.tabIndex = i === index ? 0 : -1; });
+    var strip = $('ideaStrip'), thumb = thumbs[index];
+    strip.scrollTo({left: thumb.offsetLeft - strip.offsetLeft - strip.clientWidth / 2 + thumb.offsetWidth / 2, behavior: reduce ? 'auto' : 'smooth'});
+    jump.value = String(index);
     if(!$('task').value.trim() && !raising) $('task').placeholder = idea.task;
-    if(announce) $('ideaAnnouncement').textContent = 'Idea: ' + idea.title;
-    try { localStorage.setItem('dgfIdeaLast', String(ideaIndex)); } catch(e) {}
+    if(announce) $('ideaAnnouncement').textContent = 'Idea ' + (index + 1) + ' of ' + ideas.length + ': ' + idea.title;
+    /* Only the selected scene and its next neighbor load at full size. */
+    loadIdeaScene(ideas[(index + 1) % ideas.length].scene);
     scheduleIdea();
   }
-  /* Next and previous go in order: 1, 2, 3 and round again. Shuffle is the only thing that jumps. */
-  function nextIdea(announce){
-    showIdea((ideaIndex + 1 + ideas.length) % ideas.length, announce);
-  }
-  function prevIdea(){
-    showIdea((ideaIndex - 1 + ideas.length) % ideas.length, true);
-  }
+  function nextIdea(announce){ showIdea((ideaIndex + 1 + ideas.length) % ideas.length, announce); }
+  function prevIdea(){ showIdea((ideaIndex - 1 + ideas.length) % ideas.length, true); }
   function randomIdea(){
-    var pick = ideaIndex;
-    while(ideas.length > 1 && pick === ideaIndex) pick = Math.floor(Math.random() * ideas.length);
+    if(ideas.length < 2) return;
+    if(!deck.length) shuffleDeck();
+    var pick = deck.shift();
+    if(pick === ideaIndex && deck.length){ deck.push(pick); pick = deck.shift(); }
     showIdea(pick, true);
   }
   function paintPause(){
@@ -1342,11 +1315,11 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       ? '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="m6 4 10 6-10 6Z"/></svg>'
       : '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M5 4h3v12H5zM12 4h3v12h-3z"/></svg>';
   }
-  $('ideaControls').hidden = false;
+  $('ideaControls').hidden = false; $('ideaBrowse').hidden = false;
+  jump.addEventListener('change', function(){ showIdea(Number(this.value), true); tap('Browsed challenge ideas'); });
   $('ideaShuffle').addEventListener('click', function(){ randomIdea(); tap('Shuffled ideas'); });
   [$('ideaNext'), $('sceneNext')].forEach(function(b){ b.addEventListener('click', function(){ nextIdea(true); tap('Next idea'); }); });
   [$('ideaPrev'), $('scenePrev')].forEach(function(b){ b.addEventListener('click', function(){ prevIdea(); tap('Previous idea'); }); });
-  /* swipe the picture on a phone; left and right arrow keys anywhere in the box */
   (function(){
     var scene = document.querySelector('.idea-scene'), startX = null;
     scene.addEventListener('touchstart', function(e){ startX = e.touches[0].clientX; }, {passive: true});
@@ -1356,20 +1329,12 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       if(dx > 40) prevIdea(); else if(dx < -40) nextIdea(true);
     }, {passive: true});
     $('panelFun').addEventListener('keydown', function(e){
+      if(e.target.tagName === 'SELECT') return;
       if(e.key === 'ArrowRight'){ e.preventDefault(); nextIdea(true); }
       else if(e.key === 'ArrowLeft'){ e.preventDefault(); prevIdea(); }
     });
   })();
   $('ideaPause').addEventListener('click', function(){ ideaPaused = !ideaPaused; paintPause(); scheduleIdea(); });
-  Array.prototype.forEach.call(document.querySelectorAll('[data-category]'), function(button){
-    button.addEventListener('click', function(){
-      category = button.getAttribute('data-category'); deck = [];
-      Array.prototype.forEach.call(document.querySelectorAll('[data-category]'), function(b){
-        b.setAttribute('aria-pressed', String(b === button));
-      });
-      nextIdea(true);
-    });
-  });
   $('ideaUse').addEventListener('click', function(){
     tap('Used an idea');
     if(raising) stopRaise();
@@ -1386,12 +1351,12 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   });
   document.addEventListener('visibilitychange', scheduleIdea);
   if('IntersectionObserver' in window){
-    var ideaObserver = new IntersectionObserver(function(entries){
-      ideaVisible = entries[0].isIntersecting; scheduleIdea();
-    }, {threshold:.2});
+    var ideaObserver = new IntersectionObserver(function(entries){ ideaVisible = entries[0].isIntersecting; scheduleIdea(); }, {threshold:.2});
     ideaObserver.observe(inspiration);
   }
-  paintPause(); nextIdea(false);
+  paintPause(); showIdea(firstIdea, false);
+  try { localStorage.setItem('thIdeaStarterV1', String(firstIdea)); } catch(e) {}
+
 
   /* ---------- Entertaining and Practical ----------
      Practical lists what I am good at. Each one can be bid on two ways: an hour

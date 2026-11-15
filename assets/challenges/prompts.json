@@ -1,0 +1,128 @@
+{
+  "tool": "Built-in image_gen.imagegen",
+  "mode": "generate",
+  "transparent_background": false,
+  "description": "20 original AI-generated illustrative challenge scenes; no reference images. Converted to WebP preserving composition; thumbnails resized without cropping.",
+  "assets": [
+    {
+      "slug": "potato-palace",
+      "prompt": "Use case: ads-marketing. Create one photorealistic editorial illustration for a TorchHive challenge card, wide landscape 16:9 composition. Funny, inviting and believable, premium documentary photography rather than a cartoon. Warm golden amber practical light, charcoal shadows and subdued background, crisp recognizable props. Main subject near the center-right with a little environmental context; lower quarter less busy for a caption overlay. No text, letters, logos, brands, watermark, UI or border. No recognizable people or faces; only anonymous adult hands if useful. A single ordinary unpeeled potato sits majestically on a hilariously elaborate miniature throne built from plain cardboard, gold-colored craft paper and popsicle sticks on a home workshop table. Tiny cardboard stairs and miniature curtains make it look like a royal palace for a potato. Charming absurdity, hand-built craftsmanship.",
+      "image": "assets/challenges/potato-palace.webp",
+      "thumbnail": "assets/challenges/potato-palace-thumb.webp"
+    },
+    {
+      "slug": "tiny-feast",
+      "prompt": "Use case: ads-marketing. Create one photorealistic editorial illustration for a TorchHive challenge card, wide landscape 16:9 composition. Funny, inviting and believable, premium documentary photography rather than a cartoon. Warm golden amber practical light, charcoal shadows and subdued background, crisp recognizable props. Main subject near the center-right with a little environmental context; lower quarter less busy for a caption overlay. No text, letters, logos, brands, watermark, UI or border. No recognizable people or faces; only anonymous adult hands if useful. An absurdly elaborate miniature three-course meal: an immaculate tiny sandwich, tiny salad and tiny dessert each balanced on ordinary tablespoons next to a normal-size dinner plate and a fork for scale. A pair of adult hands carefully plates one tiny garnish with tweezers. Home kitchen, comedic fine-dining seriousness.",
+      "image": "assets/challenges/tiny-feast.webp",
+      "thumbnail": "assets/challenges/tiny-feast-thumb.webp"
+    },
+    {
+      "slug": "sock-hoops",
+      "prompt": "Use case: ads-marketing. Create one photorealistic editorial illustration for a TorchHive challenge card, wide landscape 16:9 composition. Funny, inviting and believable, premium documentary photography rather than a cartoon. Warm golden amber practical light, charcoal shadows and subdued background, crisp recognizable props. Main subject near the center-right with a little environmental context; lower quarter less busy for a caption overlay. No text, letters, logos, brands, watermark, UI or border. No recognizable people or faces; only anonymous adult hands if useful. A home laundry-room basketball challenge: rolled-up colorful socks frozen in midair on their way toward an ordinary laundry basket placed like a miniature hoop. Several soft sock balls on the floor, a modest chair at the throwing line. No people visible. Playful, harmless indoor sports atmosphere.",
+      "image": "assets/challenges/sock-hoops.webp",
+      "thumbnail": "assets/challenges/sock-hoops-thumb.webp"
+    },
+    {
+      "slug": "pasta-engineering",
+      "prompt": "Use case: ads-marketing. Create one photorealistic editorial illustration for a TorchHive challenge card, wide landscape 16:9 composition. Funny, inviting and believable, premium documentary photography rather than a cartoon. Warm golden amber practical light, charcoal shadows and subdued background, crisp recognizable props. Main subject near the center-right with a little environmental context; lower quarter less busy for a caption overlay. No text, letters, logos, brands, watermark, UI or border. No recognizable people or faces; only anonymous adult hands if useful. A delicate handmade tabletop bridge built entirely from dry spaghetti with tiny glue joints, stretched between two sturdy supports. A small paper cup of ordinary coins rests in the middle and several coins lie on the workbench. Dramatic close-up emphasizing the fragile spaghetti holding surprising weight. No labels.",
+      "image": "assets/challenges/pasta-engineering.webp",
+      "thumbnail": "assets/challenges/pasta-engineering-thumb.webp"
+    },
+    {
+      "slug": "chain-reaction",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. An absurdly overengineered tabletop Rube Goldberg contraption of wooden dominoes, cardboard ramps, a marble, a toy wheel and a spoon lever, all leading to one tiny brass service bell. Show the marble approaching the final lever, workshop background, clever handmade details, no dangerous components.",
+      "image": "assets/challenges/chain-reaction.webp",
+      "thumbnail": "assets/challenges/chain-reaction-thumb.webp"
+    },
+    {
+      "slug": "breakfast-lab",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. A flat pancake in a frying pan with a hilarious lopsided friendly face formed from darker pancake batter, next to a few plain pancakes, a waffle and a squeeze bottle of batter on a home kitchen counter. Only a spatula held by an adult hand enters the frame. Gentle breakfast experiment humor, edible normal food.",
+      "image": "assets/challenges/breakfast-lab.webp",
+      "thumbnail": "assets/challenges/breakfast-lab-thumb.webp"
+    },
+    {
+      "slug": "chopstick-sort",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. Close-up of adult hands using wooden chopsticks to move one ordinary coin, with many coins, colorful buttons and dry beans in partly organized groups across a tabletop. Empty small sorting bowls nearby. The absurdly painstaking precision challenge is instantly clear. No printed markings readable.",
+      "image": "assets/challenges/chopstick-sort.webp",
+      "thumbnail": "assets/challenges/chopstick-sort-thumb.webp"
+    },
+    {
+      "slug": "cardboard-arcade",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. A working homemade tabletop arcade built from one plain delivery cardboard box: small ramps, circular target openings, a marble chute and cardboard lever, with a few colorful ping-pong balls. Endearing ambitious DIY craftsmanship, cardboard texture and tape visible, no scores or lettering, no powered mechanism.",
+      "image": "assets/challenges/cardboard-arcade.webp",
+      "thumbnail": "assets/challenges/cardboard-arcade-thumb.webp"
+    },
+    {
+      "slug": "paper-flight",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. An enormous folded plain paper airplane nearly as wide as a home worktable, with three normal-size folded planes, a paper helicopter and a simple circular paper target visible nearby. A tidy clear workshop corridor behind it suggests a gentle flight test. The comically oversized plane is the hero, no readable paper markings.",
+      "image": "assets/challenges/paper-flight.webp",
+      "thumbnail": "assets/challenges/paper-flight-thumb.webp"
+    },
+    {
+      "slug": "garage-golf",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. Low-angle view along a homemade miniature-golf lane in a tidy garage. Cardboard ramps and tunnels, a tiny hand-made cardboard windmill, a plain cup as the hole, a golf ball and a putter resting nearby. An absurdly elaborate course made from household materials. No people, no branding, no numbers.",
+      "image": "assets/challenges/garage-golf.webp",
+      "thumbnail": "assets/challenges/garage-golf-thumb.webp"
+    },
+    {
+      "slug": "pantry-restaurant",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. A fancy restaurant-style dinner plate made from humble pantry ingredients: crackers, beans, sliced bread and simple vegetables arranged with amusing fine-dining precision. Plain unbranded pantry tins and grocery bag nearby on a home kitchen counter, adult hands making a final garnish, no faces. The contrast between humble groceries and dramatic plating is funny.",
+      "image": "assets/challenges/pantry-restaurant.webp",
+      "thumbnail": "assets/challenges/pantry-restaurant-thumb.webp"
+    },
+    {
+      "slug": "balloon-engineering",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. A funny little hand-built race car made from corrugated cardboard, wooden skewers, straws and four bottle-cap wheels, powered by a large inflated amber-orange balloon. It sits at the start of a clear tabletop test lane, with a second simple balloon-powered craft nearby. Handmade, recognizable, no labels.",
+      "image": "assets/challenges/balloon-engineering.webp",
+      "thumbnail": "assets/challenges/balloon-engineering-thumb.webp"
+    },
+    {
+      "slug": "card-tower",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. A surprisingly tall, precarious house of ordinary playing cards on a home table, with loose cards and one collapsed small section beside it. Adult hands enter carefully from the side to place the final card. Dramatic shallow depth of field emphasizes the delicate balancing act. Ordinary card suits and rank markings may be visible but no captions or branding.",
+      "image": "assets/challenges/card-tower.webp",
+      "thumbnail": "assets/challenges/card-tower-thumb.webp"
+    },
+    {
+      "slug": "speed-clean",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. An adult hand holding a tiny toothbrush scrubs one neat clean patch into a grimy outdoor patio tile. Nearby sit a normal-size cleaning brush, a dinner fork beside a few dry leaves, and a small bucket of water. Close low angle emphasizes the comically undersized tool and satisfying clean-versus-dirty line. No harsh chemical bottles.",
+      "image": "assets/challenges/speed-clean.webp",
+      "thumbnail": "assets/challenges/speed-clean-thumb.webp"
+    },
+    {
+      "slug": "thrift-rescue",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. A scratched inexpensive wooden box on a home workbench, half restored with a rich warm finish while the other half remains dull and scuffed. Adult hands work with a small sanding block and brush, with a plain tin and unused picture frame nearby. A satisfying thrift rescue transformation, no electric repairs, no text.",
+      "image": "assets/challenges/thrift-rescue.webp",
+      "thumbnail": "assets/challenges/thrift-rescue-thumb.webp"
+    },
+    {
+      "slug": "outdoor-quest",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. An anonymous adult in a plain dark shirt and jeans seen from behind on a quiet gentle woodland walking trail, casually carrying one large watermelon in both arms. Only the back and side of the body are visible, no face. A wonderfully absurd ordinary walk in warm morning light, safe flat path, no identifiable signs or houses.",
+      "image": "assets/challenges/outdoor-quest.webp",
+      "thumbnail": "assets/challenges/outdoor-quest-thumb.webp"
+    },
+    {
+      "slug": "photo-tricks",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. Behind-the-scenes forced-perspective setup: a small toy dinosaur positioned near a phone camera on a tabletop tripod so the toy appears enormous against tiny paper buildings and an ordinary mug. A small desk lamp creates dramatic cinematic shadows. Show the real small-scale setup clearly, no people, no screen text.",
+      "image": "assets/challenges/photo-tricks.webp",
+      "thumbnail": "assets/challenges/photo-tricks-thumb.webp"
+    },
+    {
+      "slug": "stop-motion",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. A tiny home filmmaking setup: a compact camera on a small tripod aimed at an arrangement of an empty mug, a paper boat and pencils on a tabletop. One adult hand adjusts a paper prop between stop-motion frames. A small desk lamp makes the simple objects look cinematic and dramatic. No visible interface or text on the camera.",
+      "image": "assets/challenges/stop-motion.webp",
+      "thumbnail": "assets/challenges/stop-motion-thumb.webp"
+    },
+    {
+      "slug": "everyday-invention",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. An absurdly complicated hand-cranked snack dispenser built from cardboard, craft sticks, string, a small wooden pulley and chutes, ending in a single plain wrapped snack on a small tray. A pair of adult hands gently turns the crank. Funny overengineering of a very simple task, grounded home workshop detail.",
+      "image": "assets/challenges/everyday-invention.webp",
+      "thumbnail": "assets/challenges/everyday-invention-thumb.webp"
+    },
+    {
+      "slug": "paper-city",
+      "prompt": "Use case: ads-marketing. One photorealistic editorial illustration for a TorchHive challenge card, landscape 16:9. Funny, believable, premium documentary photography. Warm amber practical light, charcoal shadows, subdued background, clear recognizable props. Main subject near center-right, lower quarter comparatively calm for a caption. No text, readable numbers, logos, brands, watermark, interface or border. No recognizable face; anonymous adult hands only if needed. A delightful miniature city made from folded recycled paper and cardboard on a tabletop, with towers, a bridge and tiny origami details. A small ordinary desk fan at the right points toward the city as if testing it; a few paper roofs begin to flutter. Gentle harmless chaos, paper construction clearly visible, no people, no writing on the paper.",
+      "image": "assets/challenges/paper-city.webp",
+      "thumbnail": "assets/challenges/paper-city-thumb.webp"
+    }
+  ]
+}

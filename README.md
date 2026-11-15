@@ -89,17 +89,26 @@ the repo root rather than opening `index.html` off the filesystem.
 
 ## Editing
 
-The hero shows 18 curated challenge ideas with three locally hosted illustrative images.
-Ideas rotate every nine seconds, run through a shuffled deck, and avoid starting a new
-visit with the last displayed idea (when browser storage is available). Visitors can
-shuffle, pause, or filter by outdoor challenges, creative challenges, or chores with a
-catch. Each idea has a concrete constraint and something to reveal on camera. Rotation pauses
-while the hero is hovered, its controls or the bid form have focus, the hero is offscreen,
-or the tab is hidden. Reduced-motion users start with automatic rotation paused.
-"Use this idea" fills the task field but never sends a bid; automatic changes only
-update an empty field's placeholder. Edit the `ideas` array in `index.html` to change
-the suggestions. The three `assets/idea-*.webp` files are illustrative scenes, not
-footage of completed jobs.
+The Entertaining panel contains **100 curated challenge ideas and 20 locally hosted
+illustrations**, defined in `assets/challenge-ideas.js`. Each scene has five related
+tasks; the library interleaves scenes so adjacent cards change the picture. The first
+20 ideas are funny or entertaining starters. New visits cycle through these starters
+when browser storage is available. Edit the groups in that file to change the ideas.
+
+Cards rotate every seven seconds. Visitors can step forward/backward, shuffle without
+repeating a card within the deck, pause, use numbered thumbnails, or jump directly with
+"Browse all 100 ideas". Rotation pauses on hover, while the hero controls or bid form
+have focus, when offscreen, on the Practical tab, and when the browser tab is hidden.
+Reduced-motion users start paused. "Use this idea" fills the task field without sending
+a bid; rotation only updates an empty field's placeholder. Ideas still go through the
+normal job screening, pricing, and bidding process.
+
+`assets/challenges/` holds 20 full-size WebP scenes and lightweight thumbnails. Only the
+selected full-size scene, the next scene, and the default opening poster are requested
+initially; other full-size images load as needed. The pictures illustrate suggestions, not completed jobs or the
+owner. Generation prompts and provenance are in `assets/challenges/prompts.json` and
+`CREDITS.md`. Run `node scripts/check-challenge-library.mjs` to check the library and
+its asset references after editing.
 
 Design tokens (every color in the site) live in the `:root` block at the top of the
 `<style>` tag. The sponsor spots are the two `.spot` blocks in `#sponsors`; the first is
