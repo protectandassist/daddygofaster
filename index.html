@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TorchHive — Bid on what I do tomorrow</title>
-<meta name="description" content="Each day the highest bid sets a job for me to do the next day, on camera. Bidding is free, bids start at one cent, and only the winner pays.">
+<meta name="description" content="Each day the highest bid sets a job for me to do the next day, on camera. Bidding is free, bids start at 50 cents, and only the winner pays.">
 <link rel="canonical" href="https://torchhive.com/">
 <meta name="theme-color" content="#0C0D10">
 <script>document.documentElement.className="js"</script>
@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://torchhive.com/">
 <meta property="og:title" content="Bid on what I do tomorrow">
-<meta property="og:description" content="The highest bid sets a job for me to do tomorrow, on camera. Bids start at one cent and only the winner pays.">
+<meta property="og:description" content="The highest bid sets a job for me to do tomorrow, on camera. Bids start at 50 cents and only the winner pays.">
 <meta property="og:image" content="https://torchhive.com/assets/og-bid.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://torchhive.com/assets/og-bid.jpg">
@@ -467,6 +467,23 @@ main,.foot{position:relative;z-index:1}
   padding:14px 20px 14px 14px;border-radius:16px;background:#1c1508;border:1px solid var(--accent);box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 40px rgba(239,149,2,.25);
   opacity:0;transition:transform .45s cubic-bezier(.2,1.3,.4,1),opacity .3s}
 .hype.is-on{transform:translate(-50%,0);opacity:1}
+/* yours: taking the lead is the big moment, losing it is a nudge to take it back */
+.hype--mine{background:#0c2016;border-color:#3dd68c;box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 60px rgba(61,214,140,.45);padding:18px 24px 18px 16px;animation:mineglow 1.2s ease-in-out 3}
+.hype--mine b{color:#7ff0b5;font-size:.8rem}
+.hype--mine span{font-size:1.2rem}
+.hype--out{background:#22100f;border-color:var(--bad);box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 40px rgba(242,109,114,.3)}
+.hype--out b{color:#ff9aa0}
+@keyframes mineglow{50%{box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 110px rgba(61,214,140,.8)}}
+.burst{position:fixed;left:50%;bottom:110px;width:0;height:0;z-index:69;pointer-events:none}
+.burst i{position:absolute;left:-6px;top:-6px;width:12px;height:12px;border-radius:50%;background:var(--accent);animation:burst 1.3s cubic-bezier(.12,.7,.25,1) forwards}
+.burst i:nth-child(3n){background:#fff3c4;width:8px;height:8px}
+.burst i:nth-child(3n+1){background:#3dd68c}
+.burst i:nth-child(4n){border-radius:2px}
+@keyframes burst{to{transform:translate(var(--x),var(--y)) rotate(540deg) scale(.25);opacity:0}}
+.mine__row.is-leading{box-shadow:0 0 26px rgba(61,214,140,.16)}
+.chipbtn--go{background:var(--accent);border-color:var(--accent);color:#1b0a02!important;font-weight:700;font-size:.8rem;padding-left:14px;padding-right:14px}
+.chipbtn--go:hover{background:var(--accent-hi)}
+@media(prefers-reduced-motion:reduce){.hype--mine{animation:none}.burst{display:none}}
 .hype img{height:44px;width:auto;flex:0 0 auto;animation:flicker 1.1s ease-in-out infinite}
 @keyframes flicker{0%,100%{transform:scale(1) rotate(-2deg)}50%{transform:scale(1.1) rotate(2deg)}}
 .hype b{display:block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-hi)}
@@ -680,7 +697,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         </div>
         <ul class="ticks">
           <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Free to bid</li>
-          <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Bids start at 1&cent;</li>
+          <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Bids start at 50&cent;</li>
           <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Only the winner pays</li>
         </ul>
         <div class="hero__links">
@@ -721,7 +738,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <div class="row2">
             <div class="field">
               <label for="amount" id="amountLabel">Your bid</label>
-              <div class="money"><span aria-hidden="true">$</span><input class="num" id="amount" name="amount" type="text" inputmode="decimal" required autocomplete="off" placeholder="0.01"></div>
+              <div class="money"><span aria-hidden="true">$</span><input class="num" id="amount" name="amount" type="text" inputmode="decimal" required autocomplete="off" placeholder="0.50"></div>
             </div>
             <div class="field" id="maxField">
               <label for="max">Auto-bid up to (optional)</label>
@@ -731,7 +748,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <div class="chips chips--flush" id="leadWrap" hidden>
             <button class="chipbtn chipbtn--lead num" type="button" id="leadChip"></button>
           </div>
-          <p class="readout" id="readout" aria-live="polite">Even a 1¢ winning bid includes up to one hour.</p>
+          <p class="readout" id="readout" aria-live="polite">Even a 50¢ winning bid includes up to one hour.</p>
           <div class="bid__more" id="more" hidden>
             <div class="row2">
               <div class="field">
@@ -774,7 +791,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <span class="step__n" aria-hidden="true">01 / THE IDEA</span>
           <svg class="step__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11v9H4V4h9M9 15l1-5 9-9 4 4-9 9-5 1ZM17 3l4 4"/></svg>
           <h3>Place a bid</h3>
-          <p>Say what you want me to do and what you will pay for it. Bids start at one cent. Your job is checked against the rules before you can place the bid. If your idea costs money to do, such as fares, tickets or supplies, that cost is added on top of your bid, taxes and fees included, and you are shown the amount before you place the bid.</p>
+          <p>Say what you want me to do and what you will pay for it. Bids start at 50 cents. Your job is checked against the rules before you can place the bid. If your idea costs money to do, such as fares, tickets or supplies, that cost is added on top of your bid, taxes and fees included, and you are shown the amount before you place the bid.</p>
         </li>
         <li class="card step">
           <span class="step__n" aria-hidden="true">02 / THE BID</span>
@@ -866,7 +883,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         <p class="lead">The first hour is included with any winning bid. Each full $200 in your bid adds one hour to the limit. I set the actual time spent within that limit, and confirm longer jobs before approval.</p>
       </div>
       <ul class="tiles rise">
-        <li class="card tile"><b class="num">1¢–$199.99</b><span>Up to 1 hour</span></li>
+        <li class="card tile"><b class="num">50¢–$199.99</b><span>Up to 1 hour</span></li>
         <li class="card tile"><b class="num">$200–$399.99</b><span>Up to 2 hours</span></li>
         <li class="card tile"><b class="num">$400–$599.99</b><span>Up to 3 hours</span></li>
         <li class="card tile"><b class="num">$600–$799.99</b><span>Up to 4 hours</span></li>
@@ -919,10 +936,10 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         <div class="card rulebox rulebox--wide">
           <h3>Payment and fairness</h3>
           <ul class="list list--dot list--2">
-            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Bids start at 1&cent;. Only the winner pays: the winner's card is charged when bidding closes.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Bids start at 50&cent;. Only the winner pays: the winner's card is charged when bidding closes.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A bid needs a card. Your bid, or your maximum if you set one, is held on the card and not charged. If you do not win, the hold is released when bidding closes. On a debit card it can take a few days to show again.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Any winning bid includes up to one hour. Bids below $200 stop at one hour. $200–$399.99 allows up to two hours, $400–$599.99 up to three, and so on. I set the actual time within the cap; costs are extra.</span></li>
-            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A winning bid under 50&cent; is free, because cards cannot charge less.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>The lowest bid is 50&cent;, the least a card can be charged, so every winner pays something.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>One win per person per week, and up to five jobs a day each.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A new high bid in the last five minutes extends bidding by five minutes. While the bids keep climbing, bidding stays open.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>You choose whether your job is secret or open. A secret job stays hidden until the video. An open job is shown on the board, and anyone can add $2 or more to it. The job's total is what competes, so a crowd can outbid one big bidder. Everyone who adds money is charged only if that job wins.</span></li>
@@ -1002,7 +1019,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     <div class="wrap">
       <p class="eyebrow">Your call</p>
       <h2>What should I do <em>tomorrow?</em></h2>
-      <p>The highest bid decides. Bids start at one cent.</p>
+      <p>The highest bid decides. Bids start at 50 cents.</p>
       <div class="close__go">
         <a class="btn btn--primary" href="#bid">Place a bid</a>
         <a class="btn btn--ghost" href="https://www.youtube.com/@Torchhive" target="_blank" rel="noopener">Watch on YouTube</a>
@@ -1028,7 +1045,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
 </footer>
 
 <div class="dock" id="dock">
-  <div class="dock__text"><span id="dockK">Bids start at</span><b class="num" id="dockV">1&cent;</b></div>
+  <div class="dock__text"><span id="dockK">Bids start at</span><b class="num" id="dockV">50&cent;</b></div>
   <a class="btn btn--primary btn--sm" href="#bid">Place a bid</a>
 </div>
 
@@ -1153,10 +1170,10 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       if(add < minPledge) return setReadout('', 'The least you can add is ' + money(minPledge) + '.');
       return setReadout(money(add), ' goes behind this job. It is only charged if the job wins.');
     }
-    if(raw === '') return setReadout('', 'Even a 1¢ winning bid includes up to one hour.');
+    if(raw === '') return setReadout('', 'Even a 50¢ winning bid includes up to one hour.');
     var c = toCents(raw);
     if(c === null) return setReadout('', 'Enter dollars and cents, like 12.50.');
-    if(c < 1) return setReadout('', 'The lowest bid is $0.01.');
+    if(c < 50) return setReadout('', 'The lowest bid is $0.50.');
     var rest = ' allows ' + covers(c) + '. I set the actual time spent.';
     if(open && highCents && c <= highCents) rest += ' The high bid is ' + money(highCents) + '.';
     else if(open && c > highCents) rest += ' That would take the lead.';
@@ -1547,7 +1564,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     }
     $('boardTable').hidden = bids.length === 0;
     $('boardEmpty').hidden = bids.length > 0;
-    if(open && bids.length === 0) $('boardEmptyText').textContent = 'One cent would win right now.';
+    if(open && bids.length === 0) $('boardEmptyText').textContent = 'Fifty cents would win right now.';
     if(note){
       $('boardNote').textContent = note;
       $('boardNote').className = 'board__note' + (demo ? ' board__note--demo' : '');
@@ -1589,7 +1606,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     if(open && bids.length) $('leadChip').textContent = 'Take the lead: ' + money(highCents + 1);
     $('boardCta').textContent = open && bids.length ? 'Beat the high bid' : 'Place a bid';
     $('dockK').textContent = bids.length ? 'High bid' : 'Bids start at';
-    $('dockV').textContent = bids.length ? money(highCents) : '1¢';
+    $('dockV').textContent = bids.length ? money(highCents) : '50¢';
     refresh();
   }
 
@@ -1664,6 +1681,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
        of leader: a new leader first, then a new bid, a raise, money added, the clock. */
     var bidNews = news.filter(function(n){ return n.kind === 'new' || n.kind === 'up'; })[0];
     var clock = news.filter(function(n){ return n.kind === 'clock'; })[0];
+    if(Date.now() < hypeMineUntil) return;   /* your own news is on screen: it comes first */
     if(lead) announce('New leader', lead.text);
     else if(bidNews) announce(bidNews.kind === 'new' ? 'New bid' : (/^Someone put /.test(bidNews.text) ? 'Money added' : 'Bid raised'), bidNews.text);
     else if(clock) announce('Clock extended', clock.text);
@@ -1777,11 +1795,68 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     } catch (e) {}
   }
 
-  function announce(title, text){
+  function announce(title, text, kind){
     $('hypeTitle').textContent = title; $('hypeText').textContent = text;
+    $('hype').className = 'hype' + (kind ? ' hype--' + kind : '');
+    void $('hype').offsetWidth;
     $('hype').classList.add('is-on');
     clearTimeout(hypeTimer);
-    hypeTimer = setTimeout(function(){ $('hype').classList.remove('is-on'); }, 4500);
+    hypeTimer = setTimeout(function(){ $('hype').classList.remove('is-on'); }, kind === 'mine' ? 6500 : 4500);
+    hypeMineUntil = kind ? Date.now() + 3500 : 0;
+  }
+  /* ---------- your own moment ----------
+     Taking the lead is the payoff: the fire goes up tall, sparks fly, a rising
+     chime plays, the phone buzzes, and the banner turns green. Nothing here is
+     shown unless it is true: it fires only when your bid really is on top. */
+  var hypeMineUntil = 0;
+  function winChime(){
+    if(!soundOn || !audio || audio.state !== 'running') return;
+    try {
+      [523.25, 659.25, 783.99, 1046.5].forEach(function(hz, i){
+        var o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + i * .095;
+        o.type = 'triangle'; o.frequency.value = hz;
+        g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.16, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + (i === 3 ? .7 : .22));
+        o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + .75);
+      });
+    } catch (e) {}
+  }
+  function sparkBurst(){
+    if(reduce) return;
+    var box = document.createElement('div');
+    box.className = 'burst'; box.setAttribute('aria-hidden', 'true');
+    for(var i = 0; i < 26; i++){
+      var s = document.createElement('i'), angle = Math.PI * (1.08 + Math.random() * .84), far = 120 + Math.random() * 240;   /* up and out */
+      s.style.setProperty('--x', Math.round(Math.cos(angle) * far) + 'px');
+      s.style.setProperty('--y', Math.round(Math.sin(angle) * far) + 'px');
+      s.style.animationDelay = Math.round(Math.random() * 120) + 'ms';
+      box.appendChild(s);
+    }
+    document.body.appendChild(box);
+    setTimeout(function(){ if(box.parentNode) box.parentNode.removeChild(box); }, 1700);
+  }
+  function celebrate(cents){
+    igniteFire(true);
+    fireUntil = performance.now() + 5200;   /* longer than anyone else's bid gets */
+    fireSound(true); winChime(); sparkBurst();
+    try { if(navigator.vibrate) navigator.vibrate([30, 50, 30, 50, 110]); } catch (e) {}
+    announce('You are in the lead', 'Your ' + money(cents) + ' is the bid to beat. Hold it until the clock runs out.', 'mine');
+    tap('Took the lead');
+  }
+  function nudgeOutbid(highCents){
+    announce('You have been outbid', 'The high bid is now ' + money(highCents) + '. Take it back with one tap.', 'out');
+    try { if(navigator.vibrate) navigator.vibrate(60); } catch (e) {}
+  }
+  /* one more than the high bid, in a step that matches the money on the table */
+  function takeBackCents(highCents){
+    return highCents + (highCents < 2000 ? 100 : highCents < 10000 ? 500 : 1000);
+  }
+  /* The whole raise in one tap: no form, no card box. The card already on the bid holds the difference. */
+  function quickRaise(entry, standing, cents){
+    tap('Take the lead');
+    startRaise(entry, standing);
+    amount.value = (cents / 100).toFixed(2);
+    refresh();
+    if(form.requestSubmit) form.requestSubmit(); else btn.click();
   }
   function countUp(el, from, to){
     if(reduce){ el.textContent = money(to); return; }
@@ -1837,19 +1912,24 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         pick = rows.filter(function(b){ return b.open; })[Math.floor(Math.random() * 2)];
         pick.amountCents += 200 + Math.floor(Math.random() * 9) * 100; pick.backers += 1; pick.placedAt = new Date().toISOString();
       } else if(kind === 2){                          /* a raise that takes the lead */
-        pick = rows.filter(function(b){ return b.amountCents < top; })[0] || rows[0];
+        pick = rows.filter(function(b){ return b.amountCents < top && !b.mine; })[0] || rows.filter(function(b){ return !b.mine; })[0];
         pick.amountCents = top + 100 + Math.floor(Math.random() * 6) * 100; pick.placedAt = new Date().toISOString();
       } else {                                        /* a small raise further down */
-        pick = rows[rows.length - 1];
+        pick = rows.filter(function(b){ return !b.mine; }).pop();
         pick.amountCents += 150; pick.placedAt = new Date().toISOString();
       }
-      paint(demoData);
+      paint(demoData); demoMine();
     }, 6000);
   } else if(CONFIG.api){
     load();
-    (function watch(){
-      setTimeout(function(){ if(!document.hidden) load(); watch(); }, open ? 10000 : 30000);
-    })();
+    /* every 10 seconds while a round is open, every 30 while it is not. Decided on each
+       tick, so the first refresh after the page loads is not left waiting on the slow one. */
+    var ticks = 0;
+    setInterval(function(){
+      ticks++;
+      if(document.hidden || (!open && ticks % 3)) return;
+      load();
+    }, 10000);
     document.addEventListener('visibilitychange', function(){ if(!document.hidden && open) load(); });
   }
 
@@ -1910,6 +1990,13 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         (b.maxCents ? 'Auto-bid up to ' + money(b.maxCents) + '. ' : '') +
         (b.approvedMinutes ? 'Agreed time: ' + duration(b.approvedMinutes) + '. ' : '') + (b.costCents ? 'Costs on top of your bid: ' + money(b.costCents) + (b.costItems ? ' (' + b.costItems.map(function(c){ return c.item + ' ' + money(c.cents); }).join(', ') + ')' : '') + ', taxes and fees included' + (b.costOnCard ? ', charged to your card with your bid if you win. ' : ', paid before the job if you win. ') : '') + (tasks[b.token] || '');
       text.appendChild(head); text.appendChild(sub); row.appendChild(text);
+      if(b.open && b.standing === 'outbid'){
+        var take = takeBackCents(b.highCents), go = document.createElement('button');
+        go.type = 'button'; go.className = 'chipbtn chipbtn--go'; go.textContent = 'Take the lead · ' + money(take);
+        go.setAttribute('aria-label', 'Raise my bid to ' + money(take) + ' to take the lead');
+        go.addEventListener('click', function(){ quickRaise({token: b.token, task: tasks[b.token] || ''}, b, take); });
+        row.appendChild(go);
+      }
       if(b.open){
         var up = document.createElement('button');
         up.type = 'button'; up.className = 'chipbtn'; up.textContent = 'Raise';
@@ -1921,12 +2008,19 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     bids.forEach(function(b){
       var was = lastStanding[b.token];
       if(was && was !== b.standing){
-        if(b.standing === 'outbid') notify('You have been outbid', 'The high bid is now ' + money(b.highCents) + '. Open TorchHive to raise yours.');
+        if(b.standing === 'leading'){
+          if(b.kind === 'pledge'){ igniteFire(true); fireSound(true); announce('Your job took the lead', 'The job you backed is on top at ' + money(b.totalCents) + '.', 'mine'); }
+          else celebrate(b.amountCents);
+        }
+        else if(b.standing === 'outbid' && was === 'leading'){
+          nudgeOutbid(b.highCents);
+          notify('You have been outbid', 'The high bid is now ' + money(b.highCents) + '. Open TorchHive to raise yours.');
+        }
         else if(b.standing === 'won') notify('You won', 'Your bid of ' + money(b.kind === 'pledge' ? b.totalCents : b.amountCents) + ' won the round.');
       }
       lastStanding[b.token] = b.standing;
     });
-    if(shown.some(function(b){ return b.open; }) && canNotify() && Notification.permission === 'default'){
+    if(!demo && shown.some(function(b){ return b.open; }) && canNotify() && Notification.permission === 'default'){
       var ask = document.createElement('div'), words = document.createElement('span'), yes = document.createElement('button');
       ask.className = 'mine__ask';
       words.textContent = 'Get a notification on this device if you are outbid.';
@@ -1944,9 +2038,19 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     keep(saved().filter(function(b){ return live[b.token]; }));
   }
 
+  /* the preview's own "your bids": the one pretend bid, standing where it really stands in the pretend round */
+  function demoMine(){
+    var rows = (demoData && demoData.bids) || [], own = rows.filter(function(b){ return b.mine; })[0];
+    if(!own){ $('mine').hidden = true; return; }
+    var top = Math.max.apply(null, rows.map(function(b){ return b.amountCents; }));
+    var first = rows.slice().sort(function(a, b){ return b.amountCents - a.amountCents; })[0];
+    try { remember('demo-mine', $('task').value.trim() || 'Your preview bid'); } catch (e) {}
+    paintMine([{token: 'demo-mine', open: true, standing: first === own ? 'leading' : 'outbid', amountCents: own.amountCents, highCents: top, shared: false}]);
+  }
   function loadMine(){
     var list = saved();
-    if(demo || !CONFIG.api || !list.length){ $('mine').hidden = true; return; }
+    if(demo){ demoMine(); return; }
+    if(!CONFIG.api || !list.length){ $('mine').hidden = true; return; }
     fetch(CONFIG.api + '/mine', {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
@@ -2456,7 +2560,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     var maxRaw = $('max').value.trim(), maxCents = maxRaw === '' ? null : toCents(maxRaw);
     if(!raising && task.length < 10){ $('task').focus(); return say('Describe the job in a few more words.'); }
     if(backing && (cents === null || cents < minPledge)){ amount.focus(); return say('The least you can add is ' + money(minPledge) + '.'); }
-    if(cents === null || cents < 1){ amount.focus(); return say('Enter a bid of at least $0.01.'); }
+    if(cents === null || cents < 50){ amount.focus(); return say('Enter a bid of at least $0.50.'); }
     if(maxRaw !== '' && (maxCents === null || maxCents < cents)){ $('max').focus(); return say('Your maximum has to be at least your bid.'); }
     if(!raising && backing && $('more').hidden){     /* adding money to a job already on the board: nothing to check */
       $('more').hidden = false;
@@ -2499,7 +2603,15 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $('email').focus(); return say('Check the email address.'); }
     }
 
-    if(demo) return say('This is a preview, so nothing was sent. When bidding is open, your answer appears here.', true);
+    if(demo){   /* a pretend bid in the pretend round: nothing is sent or charged, but everything on the page reacts */
+      var rows = demoData.bids, own = rows.filter(function(b){ return b.mine; })[0];
+      var others = Math.max.apply(null, rows.filter(function(b){ return !b.mine; }).map(function(b){ return b.amountCents; }));
+      if(raising && own){ if(cents <= own.amountCents) return say('Enter more than your bid of ' + money(own.amountCents) + '.'); own.amountCents = cents; own.placedAt = new Date().toISOString(); }
+      else if(own) return say('This preview holds one bid of yours. Raise that one.');
+      else rows.push({name: name, amountCents: cents, placedAt: new Date().toISOString(), open: false, mine: true});
+      return answer({ok: true, d: {verdict: 'qualified', token: 'demo-mine', amountCents: cents, leading: cents > others,
+        message: 'Preview only: nothing was sent or charged. ' + (cents > others ? 'You are in the lead.' : 'The high bid is ' + money(others) + '.')}}, task);
+    }
 
     var body = raising
       ? {token: raising.token, amountCents: cents, maxCents: maxCents}
@@ -2569,6 +2681,11 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     say(d.message || (res.ok ? 'Your bid is in.' : 'That did not go through. Please try again.'), landed);
     if(d.token) remember(d.token, task);
     /* the job stays in the box, so raising it is one number and one click */
+    if(landed && d.token && d.verdict === 'qualified'){
+      var onTop = Boolean(d.leading);
+      if(onTop && lastStanding[d.token] !== 'leading') celebrate(d.amountCents || 0);
+      lastStanding[d.token] = onTop ? 'leading' : 'outbid';
+    }
     if(landed){
       if(!raising){ track('placed'); keepProfile($('who').value.trim(), $('email').value.trim()); }
       amount.value = ''; $('max').value = ''; hideCard(); refresh();
