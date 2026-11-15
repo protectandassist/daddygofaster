@@ -18,6 +18,7 @@
 <meta name="twitter:image" content="https://torchhive.com/assets/og-bid.jpg">
 
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/assets/favicon.png" type="image/png" sizes="64x64">
 <link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="preload" as="image" href="/assets/idea-sunrise.webp">
@@ -399,6 +400,19 @@ p{margin:0}
 .acct__form input:focus{outline:none;border-color:var(--accent)}
 .acct__msg{flex:1 0 100%;color:var(--text)}
 .acct__msg:empty{display:none}
+.acct__panel{flex:1 0 100%;display:grid;gap:12px;padding-top:10px;margin-top:2px;border-top:1px solid var(--line)}
+.acct__panel h3{font:600 .95rem/1.3 var(--body);color:var(--text);margin:0}
+.acct__row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.acct__row label{flex:0 0 auto;color:var(--text)}
+.acct__row input[type=text]{flex:1 1 180px;min-width:0;background:var(--field);border:1px solid var(--line-2);border-radius:8px;color:var(--text);font:400 .9rem var(--body);padding:8px 11px}
+.acct__row input[type=text]:focus{outline:none;border-color:var(--accent)}
+.acct__row span{flex:1 1 220px}
+.acct__panel .check{color:var(--text);margin:0}
+.gbtn{min-height:44px;display:flex;align-items:center}
+.gbtn:empty{display:none}
+.acct__form .gbtn{flex:1 0 100%}
+.join__or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.85rem;margin:12px 0}
+.join__or::before,.join__or::after{content:"";flex:1;border-top:1px solid var(--line)}
 /* The poster's choice: keep the job secret, or open it so anyone can add money. */
 .vis{border:0;padding:0;margin:0;display:grid;gap:8px}
 .vis legend{padding:0;margin-bottom:7px;font-size:.9rem;font-weight:600}
@@ -776,12 +790,28 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       <div class="card board rise">
         <div class="acct" id="acct" hidden>
           <span id="acctText">Sign in to vote and comment.</span>
+          <button class="chipbtn" type="button" id="acctOpen" aria-expanded="false" aria-controls="acctPanel" hidden>My account</button>
           <button class="chipbtn" type="button" id="acctBtn">Sign in</button>
           <form class="acct__form" id="acctForm" hidden novalidate>
+            <div class="gbtn" id="gBtnAcct"></div>
             <input type="email" id="acctEmail" placeholder="you@example.com" autocomplete="email" aria-label="Your email, for a sign-in link">
-            <button class="chipbtn" type="submit">Email me a link</button>
+            <button class="chipbtn" type="submit" id="acctSend">Email me a link</button>
           </form>
           <span class="acct__msg" id="acctMsg" role="status"></span>
+          <div class="acct__panel" id="acctPanel" hidden>
+            <h3 id="panelHead">Your account</h3>
+            <form class="acct__row" id="nameForm" novalidate>
+              <label for="nameInput">Username</label>
+              <input type="text" id="nameInput" maxlength="24" autocomplete="nickname" placeholder="Pick a username">
+              <button class="chipbtn" type="submit">Save</button>
+            </form>
+            <label class="check"><input type="checkbox" id="alertEmail">Email me alerts: when bidding opens, if I am outbid, when my round is about to close, and the result</label>
+            <div class="acct__row" id="pushRow" hidden>
+              <span id="pushText">Get the same alerts on this device, even when TorchHive is closed.</span>
+              <button class="chipbtn" type="button" id="pushBtn">Turn on notifications</button>
+            </div>
+            <span class="acct__msg" id="panelMsg" role="status"></span>
+          </div>
         </div>
         <div class="feed" id="feed" hidden>
           <span class="feed__live">Live</span>
@@ -891,14 +921,19 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         <div>
           <p class="eyebrow">Free. No password.</p>
           <h2>Create your own TorchHive account</h2>
-          <p>Vote on open jobs, comment on the ones you put money behind, and stay signed in on any device. Enter your email and we send you a link. Opening it creates your account.</p>
+          <p>Pick your own username, vote on open jobs, comment on the ones you put money behind, and get alerts by email or on your phone. Sign in with Google, or enter your email and we send you a link. Either one creates your account.</p>
         </div>
         <div>
+          <div id="joinWays">
+          <div class="gbtn" id="gBtnJoin"></div>
+          <p class="join__or" id="joinOr" hidden>or</p>
           <form class="join__form" id="joinForm" novalidate>
             <label class="visually-hidden" for="joinEmail">Your email</label>
             <input type="email" id="joinEmail" placeholder="you@example.com" autocomplete="email">
             <button class="btn btn--primary btn--block" type="submit">Create my account</button>
           </form>
+          </div>
+          <a class="btn btn--primary btn--block" id="joinManage" href="#acct" hidden>Open my account</a>
           <p class="join__msg" id="joinMsg" role="status"></p>
         </div>
       </div>
@@ -983,6 +1018,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   var alerts = false, roundDay = null, raising = null, baseTitle = document.title;
   var cardKey = null, stripe = null, cardEl = null, stripeLoading = false;
   var session = null, me = null, signInOn = false, lastBoard = null, openThread = null, drafts = {};
+  var emailLinks = false, googleId = null, pushKey = null, pushOn = false, panelOpen = false;
   try { session = localStorage.getItem('dgfSession') || null; } catch (e) {}
   var pooling = false, minPledge = 200, backing = null;   /* backing: the open job this visitor is adding money to */
 
@@ -1508,6 +1544,9 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
 
     lastBoard = data;
     signInOn = Boolean(data.signIn);
+    emailLinks = data.emailLinks === undefined ? signInOn : Boolean(data.emailLinks);
+    googleId = data.google || null;
+    pushKey = data.pushKey || null;
     paintAcct();
     var body = $('boardBody');
     var typing = body.contains(document.activeElement) && /^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName);
@@ -1553,6 +1592,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       : closed
         ? 'Bidding is closed for today. The next round opens this evening.'
         : 'Bidding is not open yet. This opens an email asking to be told when it is.';
+    paintTellMe();
 
     $('leadWrap').hidden = !(open && bids.length);
     if(open && bids.length) $('leadChip').textContent = 'Take the lead: ' + money(highCents + 1);
@@ -1735,8 +1775,8 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   function canNotify(){ return 'Notification' in window; }
   function notify(title, text){
     try {
-      if(!canNotify() || Notification.permission !== 'granted' || !document.hidden) return;
-      var n = new Notification(title, {body: text, icon: '/assets/apple-touch-icon.png', tag: 'torchhive-bid'});
+      if(!canNotify() || Notification.permission !== 'granted' || !document.hidden || pushOn) return;   /* with device notifications on, the service sends it */
+      var n = new Notification(title, {body: text, icon: '/assets/apple-touch-icon.png', tag: 'torchhive'});
       n.onclick = function(){ window.focus(); n.close(); };
     } catch (e) {}
   }
@@ -1977,6 +2017,8 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       var on = body.on !== false;
       if(row) row.votes = Math.max(0, (row.votes || 0) + (on ? 1 : -1));
       out.d = {job: job, voted: on, votes: row ? row.votes : 0};
+    } else if(path === '/me'){
+      out.d = {name: body.name === undefined ? me.name : String(body.name).trim(), emailAlerts: body.emailAlerts === undefined ? Boolean(me.emailAlerts) : body.emailAlerts};
     } else if(path === '/auth/start'){
       out.d = {message: 'This is a preview, so no email was sent. On the real page a sign-in link arrives in a minute.'};
     }
@@ -1996,16 +2038,201 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   }
   function paintAcct(){
     $('acct').hidden = !signInOn;
-    $('acctText').textContent = me ? 'Signed in as ' + me.email + '.' : 'Sign in to vote and comment.';
+    $('acctText').textContent = me ? 'Signed in as ' + (me.name || me.email) + '.' : 'Sign in to vote, comment and get alerts.';
     $('acctBtn').textContent = me ? 'Sign out' : 'Sign in';
+    $('acctOpen').hidden = !me;
     if(me) $('acctForm').hidden = true;
+    $('acctEmail').hidden = $('acctSend').hidden = !emailLinks;
+    /* someone signed in without a username is asked for one straight away */
+    if(me && !me.name && !me.asked){ me.asked = true; panelOpen = true; }
+    if(!me) panelOpen = false;
+    $('acctPanel').hidden = !panelOpen;
+    $('acctOpen').setAttribute('aria-expanded', panelOpen ? 'true' : 'false');
+    if(me){
+      $('panelHead').textContent = me.name ? 'Your account' : 'Pick your username';
+      if(document.activeElement !== $('nameInput')) $('nameInput').value = me.name || '';
+      $('alertEmail').checked = Boolean(me.emailAlerts);
+      if(me.name && !$('who').value) $('who').value = me.name;   /* one less thing to type on the bid form */
+    }
+    paintPush();
+    paintGoogle();
     /* the "Create your own TorchHive account" section, and the links to it */
     $('join').hidden = !signInOn;
     $('navJoin').hidden = $('navJoinMobile').hidden = !signInOn || Boolean(me);
-    $('joinForm').hidden = Boolean(me);
-    if(me) $('joinMsg').textContent = 'You are signed in as ' + me.email + '.';
+    $('joinWays').hidden = Boolean(me);
+    $('joinForm').hidden = !emailLinks;
+    $('joinOr').hidden = !(emailLinks && googleId);
+    $('joinManage').hidden = !me;
+    if(me) $('joinMsg').textContent = 'You are signed in as ' + (me.name || me.email) + '.';
     else if($('joinMsg').getAttribute('data-kind') !== 'sent') $('joinMsg').textContent = '';
+    paintTellMe();
   }
+  function openPanel(text){
+    panelOpen = true; paintAcct();
+    $('panelMsg').textContent = text || '';
+    $('acct').scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'center'});
+    if(!me.name) $('nameInput').focus({preventScroll: true});
+  }
+  $('acctOpen').addEventListener('click', function(){ panelOpen = !panelOpen; $('panelMsg').textContent = ''; paintAcct(); if(panelOpen) tap('Opened account'); });
+  $('joinManage').addEventListener('click', function(e){ e.preventDefault(); if(me) openPanel(); });
+
+  /* ---- username and email alerts ---- */
+  $('nameForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var name = $('nameInput').value.replace(/\s+/g, ' ').trim();
+    if(name.length < 2){ $('panelMsg').textContent = 'Use a username of 2 to 24 letters or numbers.'; return; }
+    var first = !me.name;
+    /* a first username comes with email alerts on, unless the box was unticked */
+    call('POST', '/me', first ? {name: name, emailAlerts: $('alertEmail').checked} : {name: name}).then(function(res){
+      if(res.status === 401){ me = null; keepSession(null); paintAcct(); return askSignIn('Sign in again.'); }
+      if(!res.ok){ $('panelMsg').textContent = res.d.message || 'That did not go through. Try again.'; return; }
+      me.name = res.d.name; me.emailAlerts = res.d.emailAlerts;
+      if(first) tap('Picked a username');
+      $('nameInput').blur();
+      paintAcct();
+      $('panelMsg').textContent = 'Saved. You are ' + me.name + '.' + (me.emailAlerts ? ' Alerts will come to ' + me.email + '.' : '');
+      if(lastBoard) paint(lastBoard);
+    }).catch(function(){ $('panelMsg').textContent = 'That did not go through. Check your connection and try again.'; });
+  });
+  $('alertEmail').addEventListener('change', function(){
+    if(!me) return;
+    var on = this.checked;
+    if(!me.name){ me.emailAlerts = on; return; }   /* sent with the username */
+    call('POST', '/me', {emailAlerts: on}).then(function(res){
+      if(!res.ok){ $('alertEmail').checked = !on; $('panelMsg').textContent = res.d.message || 'That did not go through. Try again.'; return; }
+      me.emailAlerts = res.d.emailAlerts;
+      tap(on ? 'Email alerts on' : 'Email alerts off');
+      $('panelMsg').textContent = on ? 'Alerts will come to ' + me.email + '.' : 'Alert emails are off.';
+      paintTellMe();
+    }).catch(function(){ $('alertEmail').checked = !on; });
+  });
+
+  /* ---- before bidding opens: "tell me when it does" ---- */
+  function paintTellMe(){
+    var btn = $('notifyBtn');
+    if(btn.hidden || !signInOn) return;
+    var told = me && (me.emailAlerts || pushOn);
+    btn.textContent = told ? 'You will be told when bidding opens' : 'Tell me when bidding opens';
+    $('bidFine').textContent = told
+      ? 'Bidding is not open yet. We will ' + (me.emailAlerts ? 'email ' + me.email : 'notify this device') + ' the moment it is.'
+      : 'Bidding is not open yet. Create a free account and turn on alerts to be told the moment it is.';
+  }
+
+  /* ---- notifications on this device, even with the site closed ----
+     The browser's push service wakes a small worker (sw.js), which asks the bid
+     service what to show. Asked for only when the button is pressed. */
+  function pushCapable(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+  function pushBytes(key){
+    var pad = key.replace(/-/g, '+').replace(/_/g, '/'), raw = atob(pad + '==='.slice((pad.length + 3) % 4)), out = new Uint8Array(raw.length);
+    for(var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+  function paintPush(){
+    var row = $('pushRow');
+    if(!me || !pushKey || demo){ row.hidden = true; return; }
+    row.hidden = false;
+    if(!pushCapable()){
+      $('pushBtn').hidden = true;
+      $('pushText').textContent = /iPhone|iPad|iPod/.test(navigator.userAgent)
+        ? 'For alerts on this iPhone: tap Share, then Add to Home Screen, and open TorchHive from there. Then come back to this box.'
+        : 'This browser cannot show notifications when the site is closed. Email alerts still reach you.';
+      return;
+    }
+    $('pushBtn').hidden = false;
+    if(Notification.permission === 'denied'){
+      $('pushBtn').hidden = true;
+      $('pushText').textContent = 'Notifications are blocked for this site in your browser settings. Allow them there, then reload.';
+      return;
+    }
+    $('pushText').textContent = pushOn ? 'Notifications are on for this device.' : 'Get the same alerts on this device, even when TorchHive is closed.';
+    $('pushBtn').textContent = pushOn ? 'Turn off' : 'Turn on notifications';
+  }
+  function swReady(){
+    return navigator.serviceWorker.register('/sw.js?api=' + encodeURIComponent(CONFIG.api)).then(function(){ return navigator.serviceWorker.ready; });
+  }
+  function pushOff(){
+    if(!pushCapable()) return Promise.resolve();
+    return navigator.serviceWorker.getRegistration().then(function(reg){
+      return reg ? reg.pushManager.getSubscription() : null;
+    }).then(function(sub){
+      pushOn = false;
+      if(!sub) return;
+      call('POST', '/push/unsub', {endpoint: sub.endpoint}).catch(function(){});
+      return sub.unsubscribe();
+    }).catch(function(){ pushOn = false; });
+  }
+  $('pushBtn').addEventListener('click', function(){
+    var note = $('panelMsg');
+    if(pushOn){ pushOff().then(function(){ note.textContent = 'Notifications are off for this device.'; tap('Device alerts off'); paintAcct(); }); return; }
+    note.textContent = 'Turning on…';
+    Notification.requestPermission().then(function(answer){
+      if(answer !== 'granted') throw new Error('blocked');
+      return swReady();
+    }).then(function(reg){
+      return reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: pushBytes(pushKey)});
+    }).then(function(sub){
+      return call('POST', '/push/sub', {endpoint: sub.endpoint});
+    }).then(function(res){
+      if(!res.ok) throw new Error(res.d.message || 'refused');
+      pushOn = true; tap('Notifications turned on');
+      note.textContent = 'Notifications are on for this device.';
+      paintAcct();
+    }).catch(function(err){
+      note.textContent = err && err.message === 'blocked' ? 'Notifications were not allowed, so nothing was turned on.' : 'Notifications could not be turned on in this browser. Email alerts still reach you.';
+      paintPush();
+    });
+  });
+  /* is this device already signed up? */
+  function checkPush(){
+    if(!pushCapable() || demo) return;
+    navigator.serviceWorker.getRegistration().then(function(reg){
+      return reg ? reg.pushManager.getSubscription() : null;
+    }).then(function(sub){
+      pushOn = Boolean(sub) && Notification.permission === 'granted';
+      /* signed in on a device that already has it on: make sure it is tied to this account */
+      if(pushOn && me) call('POST', '/push/sub', {endpoint: sub.endpoint}).catch(function(){});
+      paintPush(); paintTellMe();
+    }).catch(function(){});
+  }
+
+  /* ---- sign in with Google ----
+     Google's own button. It hands this page a signed note saying who the person
+     is; the bid service checks Google's signature on it. No password comes here. */
+  var googleState = 0;   /* 0 not loaded, 1 loading, 2 ready */
+  function paintGoogle(){
+    if(!googleId || me || demo) return;
+    if(googleState === 2) return drawGoogle();
+    if(googleState === 1) return;
+    googleState = 1;
+    var sc = document.createElement('script');
+    sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
+    sc.onload = function(){
+      try {
+        window.google.accounts.id.initialize({client_id: googleId, callback: onGoogle, auto_select: false, cancel_on_tap_outside: true});
+        googleState = 2; drawGoogle();
+      } catch (e) { googleState = 0; }
+    };
+    sc.onerror = function(){ googleState = 0; };
+    document.head.appendChild(sc);
+  }
+  function drawGoogle(){
+    ['gBtnAcct', 'gBtnJoin'].forEach(function(id){
+      var el = $(id);
+      if(el.firstChild) return;
+      try { window.google.accounts.id.renderButton(el, {theme: 'filled_black', size: 'large', shape: 'pill', text: 'continue_with', logo_alignment: 'left'}); } catch (e) {}
+    });
+  }
+  function onGoogle(answer){
+    var note = $('join').getBoundingClientRect().top < window.innerHeight && $('join').getBoundingClientRect().bottom > 0 ? $('joinMsg') : $('acctMsg');
+    note.textContent = 'Signing you in…';
+    call('POST', '/auth/google', {credential: answer && answer.credential}).then(function(res){
+      if(!res.ok){ note.textContent = res.d.message || 'Google sign-in did not work. Try again.'; return; }
+      keepSession(res.d.session); track('signup');
+      note.textContent = '';
+      loadMe(true);
+    }).catch(function(){ note.textContent = 'That did not go through. Check your connection and try again.'; });
+  }
+
   function sendLink(email, note, form){
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ note.textContent = 'Check the email address.'; return; }
     note.textContent = 'Sending…';
@@ -2020,16 +2247,20 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     e.preventDefault();
     sendLink($('joinEmail').value.trim(), $('joinMsg'), $('joinForm'));
   });
-  function loadMe(){
+  function loadMe(fresh){
     if(demo){ paintAcct(); return; }   /* the preview has its own pretend visitor */
     if(!session){ me = null; paintAcct(); return; }
     call('GET', '/me').then(function(res){
       if(res.ok){
-        me = {email: res.d.email, name: res.d.name, votes: res.d.votes || [], canComment: res.d.canComment || []};
+        me = {email: res.d.email, name: res.d.name, emailAlerts: Boolean(res.d.emailAlerts), votes: res.d.votes || [], canComment: res.d.canComment || []};
         if(!$('email').value) $('email').value = me.email;   /* one less thing to type on the bid form */
+        /* a brand-new account starts with the alerts box ticked; it is only saved with the username */
+        if(!me.name) me.emailAlerts = true;
       }
       else if(res.status === 401){ me = null; keepSession(null); }
       paintAcct();
+      checkPush();
+      if(me && fresh) openPanel(me.name ? 'You are signed in.' : 'You are signed in. Pick the username people will see.');
       if(lastBoard) paint(lastBoard);
     }).catch(function(){});
   }
@@ -2042,7 +2273,8 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   $('acctBtn').addEventListener('click', function(){
     $('acctMsg').textContent = '';
     if(!me){ $('acctForm').hidden = !$('acctForm').hidden; if(!$('acctForm').hidden) $('acctEmail').focus(); return; }
-    call('POST', '/auth/end').catch(function(){}).then(function(){
+    /* signing out also stops this device's notifications: they belong to the account */
+    pushOff().then(function(){ return call('POST', '/auth/end'); }).catch(function(){}).then(function(){
       me = null; keepSession(null); paintAcct();
       if(lastBoard) paint(lastBoard);
     });
@@ -2057,9 +2289,9 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     if(!m){ loadMe(); return; }
     try { history.replaceState(null, '', location.pathname + location.search + '#board'); } catch (e) {}
     call('POST', '/auth/finish', {code: m[1]}).then(function(res){
-      if(res.ok){ keepSession(res.d.session); $('acctMsg').textContent = 'You are signed in.'; }
+      if(res.ok){ keepSession(res.d.session); }
       else { signInOn = true; paintAcct(); $('acctMsg').textContent = res.d.message || 'That sign-in link did not work. Ask for a new one.'; }
-      loadMe();
+      loadMe(res.ok);
     }).catch(function(){ loadMe(); });
   })();
 
@@ -2117,8 +2349,8 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       var nameBox = null;
       if(!me.name){
         nameBox = document.createElement('input');
-        nameBox.type = 'text'; nameBox.maxLength = 24; nameBox.placeholder = 'Name to show beside your comment';
-        nameBox.setAttribute('aria-label', 'Name to show beside your comment');
+        nameBox.type = 'text'; nameBox.maxLength = 24; nameBox.placeholder = 'Pick a username to show beside your comment';
+        nameBox.setAttribute('aria-label', 'Pick a username to show beside your comment');
         form.appendChild(nameBox);
       }
       words.maxLength = 280; words.placeholder = 'Add a comment'; words.setAttribute('aria-label', 'Your comment');
@@ -2336,7 +2568,14 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   }
 
   /* ---------- before bidding opens: the button writes the email for them ---------- */
-  $('notifyBtn').addEventListener('click', function(){
+  $('notifyBtn').addEventListener('click', function(e){
+    if(signInOn){   /* an account's alerts do this properly: no email to write */
+      e.preventDefault();
+      tap('Tell me when bidding opens');
+      if(me) openPanel(me.emailAlerts || pushOn ? 'You are set. We will tell you the moment bidding opens.' : 'Tick "Email me alerts" to be told when bidding opens.');
+      else $('join').scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'center'});
+      return;
+    }
     var task = $('task').value.trim(), cents = toCents(amount.value.trim());
     var lines = ['Please tell me when bidding opens.'];
     if(task) lines.push('', 'My idea: ' + task);

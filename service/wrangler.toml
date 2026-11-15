@@ -32,6 +32,13 @@ SCREEN_MODEL = "claude-opus-5-5"
 SITE_URL = "https://torchhive.com"
 # Who outbid emails come from. The domain has to be verified with the email provider (Resend).
 MAIL_FROM = "TorchHive <alerts@mail.torchhive.com>"
+# This service's own address, for the "stop these emails" link in alert emails.
+API_URL = "https://dgf-bids.trevor-c2b.workers.dev"
+# Sign in with Google: the site's public client id from Google Cloud. Empty means the Google button is not shown.
+GOOGLE_CLIENT_ID = ""
+# Notifications on people's devices: the public half of the push key pair. The private half is the
+# Worker secret VAPID_PRIVATE. With either missing, the site does not offer device notifications.
+VAPID_PUBLIC = "BAl938Ccvgkf7_A-SvOAfEsatBB3cPem-tFJydyQNO-LjS4GRyjCYYAq197ZiJDWM4-tt1PrEvG7MWrTeRbbwb0"
 
 # Card holds (Stripe) are on when both of these are set as Worker secrets:
 #   STRIPE_SECRET_KEY        holds, charges and releases

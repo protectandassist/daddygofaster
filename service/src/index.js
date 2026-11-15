@@ -28,12 +28,13 @@ import {
 } from './holds.js';
 import { screenBid } from './screen.js';
 import { shouldEmail, outbidEmail, sendEmail } from './mail.js';
+import { pushKey, pushSubscribe, pushUnsubscribe, pushNext, outbidNotices, roundNotices, sendNotices, stopAlerts } from './alerts.js';
 import {
   sha256, randomHex, sameText, getSetting, setSetting, deleteSetting, seal, providerKey,
   storeAdminKey, adminKeyIsSet, adminKeyMatches,
 } from './store.js';
 import {
-  signInOn, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, reportComment, recentComments, removeComment, restoreComment, blockCommenter,
+  signInOn, emailLinksOn, sessionUser, authGoogle, postMe, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, reportComment, recentComments, removeComment, restoreComment, blockCommenter,
 } from './social.js';
 import { record, report, tidy } from './stats.js';
 import ADMIN_HTML from './admin.html';
@@ -70,6 +71,7 @@ function settings(env) {
     model: env.SCREEN_MODEL || 'claude-opus-5-5',
     siteUrl: (env.SITE_URL || 'https://torchhive.com').replace(/\/+$/, ''),
     mailFrom: env.MAIL_FROM || '',
+    apiUrl: (env.API_URL || 'https://dgf-bids.trevor-c2b.workers.dev').replace(/\/+$/, ''),
   };
 }
 
@@ -163,8 +165,14 @@ async function settleStandings(request, env, s, ctx, a, before, now) {
   }
 
   // Whoever was leading and is not any more gets told, if they asked to be.
-  if (before && standing.leaderId !== before.id && shouldEmail(before, now)) {
-    const work = emailOutbid(request, env, s, before, standing, now);
+  if (before && standing.leaderId !== before.id) {
+    const work = (async () => {
+      // People with an account are told through their account's alerts (email and devices),
+      // backers of the job included. Anyone else who ticked the box gets the plain outbid email.
+      const covered = await outbidNotices(env, s, before, standing.highCents, now);
+      if (!covered && shouldEmail(before, now)) await emailOutbid(request, env, s, before, standing, now);
+      await sendNotices(env, s, now, 8);
+    })().catch((error) => console.error('[ALERTS] outbid', String(error)));
     if (ctx) ctx.waitUntil(work); else await work;
   }
   return standing;
@@ -213,9 +221,15 @@ function bidReply(row, verdict, message, standing) {
 
 // ---- public: the board ------------------------------------------------------------
 
+// How people can sign in, for the page: at all, by emailed link, and with Google (its
+// public client id). And the public key a device needs to ask for notifications.
+async function signInWays(env, s) {
+  return { signIn: await signInOn(env, s), emailLinks: await emailLinksOn(env, s), google: env.GOOGLE_CLIENT_ID || null, pushKey: pushKey(env) };
+}
+
 async function getBoard(env, s, now) {
   // Before bidding opens there is no board, but people can already make an account.
-  if (!s.open) return { status: 'soon', bids: [], alerts: false, signIn: await signInOn(env, s) };
+  if (!s.open) return { status: 'soon', bids: [], alerts: false, ...(await signInWays(env, s)) };
   const a = await currentAuction(env, s, now);
   const { results } = await env.DB.prepare(
     `SELECT name, amount_cents, created_at, shared, pid, task, backers,
@@ -231,7 +245,7 @@ async function getBoard(env, s, now) {
     cardKey: cardKeys(env)?.publishable ?? null, // set when a bid needs a card; the page shows the card box
     pooling: Boolean(cardKeys(env)), // can people add money to an open job? It needs card holds.
     minPledgeCents: LIMITS.minPledgeCents,
-    signIn: await signInOn(env, s), // can people sign in? It needs the email key.
+    ...(await signInWays(env, s)),
     // A secret job gives name, amount and time only: the job itself never leaves the database
     // here. An open job, which its poster chose to show, also gives the job, a public
     // handle to add money to, and how many people have. Never an email or a maximum.
@@ -613,10 +627,15 @@ async function postMine(request, env) {
   return [200, { bids: out }];
 }
 
-async function stopEmails(env, token) {
-  const ok = typeof token === 'string' && /^[0-9a-f]{32}$/.test(token);
-  if (ok) await env.DB.prepare('UPDATE bids SET notify = 0 WHERE token = ?').bind(token).run();
-  const line = ok ? 'You will not get any more emails about this bid.' : 'That link is not valid.';
+async function stopEmails(env, token, account) {
+  let line;
+  if (account !== null) {
+    line = (await stopAlerts(env, account)) ? 'Alert emails are off for your account. You can turn them back on from your account on TorchHive.' : 'That link is not valid.';
+  } else {
+    const ok = typeof token === 'string' && /^[0-9a-f]{32}$/.test(token);
+    if (ok) await env.DB.prepare('UPDATE bids SET notify = 0 WHERE token = ?').bind(token).run();
+    line = ok ? 'You will not get any more emails about this bid.' : 'That link is not valid.';
+  }
   return new Response(
     `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>TorchHive</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#0C0D10;color:#F5F5F6;font:18px/1.5 system-ui,sans-serif;text-align:center;padding:24px"><p>${line}</p>`,
     { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } },
@@ -792,13 +811,21 @@ async function adminRoute(request, env, s, ctx, path, now) {
 
 // ---- entry ------------------------------------------------------------------------
 
-const PUBLIC = new Set(['/board', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/me', '/votes', '/comments', '/comments/report', '/a']);
+const PUBLIC = new Set(['/board', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/auth/google', '/me', '/push/sub', '/push/unsub', '/push/next', '/votes', '/comments', '/comments/report', '/a']);
 // Signing in, votes and comments: [method, path] to handler. Each answers [status, body].
 const SOCIAL = {
   'POST /auth/start': (request, env, s, now) => authStart(request, env, s, now),
   'POST /auth/finish': (request, env, s, now) => authFinish(request, env, now),
   'POST /auth/end': (request, env, s, now) => authEnd(request, env, now),
+  'POST /auth/google': (request, env, s, now) => authGoogle(request, env, now),
   'GET /me': (request, env, s, now) => getMe(request, env, now),
+  'POST /me': (request, env, s, now) => postMe(request, env, now),
+  'POST /push/sub': async (request, env, s, now) => {
+    const user = await sessionUser(request, env, now);
+    return user ? pushSubscribe(env, user, await request.json().catch(() => null), now) : [401, { message: 'Sign in first.' }];
+  },
+  'POST /push/unsub': async (request, env) => pushUnsubscribe(env, await request.json().catch(() => null)),
+  'POST /push/next': async (request, env) => pushNext(env, await request.json().catch(() => null)),
   'POST /votes': (request, env, s, now) => (s.open ? postVote(request, env, now) : [403, { message: 'Bidding is not open yet.' }]),
   'GET /comments': (request, env) => getComments(env, new URL(request.url)),
   'POST /comments/report': (request, env, s, now) => reportComment(request, env, now),
@@ -853,7 +880,7 @@ export default {
         }
         return json({ message: 'Method not allowed.' }, 405, cors);
       }
-      if (path === '/stop' && request.method === 'GET') return stopEmails(env, url.searchParams.get('t'));
+      if (path === '/stop' && request.method === 'GET') return stopEmails(env, url.searchParams.get('t'), url.searchParams.get('u'));
       if ((path === '/admin' || path === '/reports') && request.method === 'GET') {
         return new Response(path === '/reports' ? REPORTS_HTML : ADMIN_HTML, {
           headers: {
@@ -879,11 +906,14 @@ export default {
   // winner's card and release every other hold. One round's money per run.
   async scheduled(event, env, ctx) {
     const now = Date.now();
+    const s = settings(env);
     try {
       await settleDue(env, now);
       const key = cardKeys(env)?.secret ?? null;
       for (const day of await unsettledDays(env, now)) await settleMoney(env, key, day, now, chooseWinner);
       if (key) await sweepStale(env, key, now);
+      await roundNotices(env, s, now, key);
+      await sendNotices(env, s, now);
       if (new Date(now).getUTCMinutes() === 7) await tidy(env, now); // hourly: old addresses cleared, old rows dropped
     } catch (error) {
       console.error('[BIDS] timer', error && error.stack ? error.stack : String(error));
