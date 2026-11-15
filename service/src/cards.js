@@ -6,6 +6,9 @@
 //   STRIPE_SECRET_KEY        used here, never sent to a browser
 //   STRIPE_PUBLISHABLE_KEY   handed to the site's page so it can show the card box
 
+// Added after the company name on the bidder's card statement, so the charge is recognised.
+export const STATEMENT_TAG = 'TORCHHIVE';
+
 export const CARD_TROUBLE = 'The card could not be checked just now. Nothing was held. Try again in a minute.';
 export const CARD_DECLINED = 'That card was not approved. Nothing was held. Try a different card.';
 
@@ -68,6 +71,7 @@ export async function createHold(env, key, { customerId, email, cardId, cents, d
     setup_future_usage: 'off_session', // so a raise can hold more on the same card
     description: `TorchHive bid for ${day}`,
     receipt_email: email,
+    statement_descriptor_suffix: STATEMENT_TAG, // so the card statement says TorchHive beside the company name
     'metadata[bid_id]': String(bidId),
     'metadata[day]': day,
   });
@@ -102,6 +106,7 @@ export async function chargeSaved(env, key, { customerId, cardId, email, cents, 
     off_session: 'true',
     description: `TorchHive winning bid for ${day}`,
     receipt_email: email,
+    statement_descriptor_suffix: STATEMENT_TAG, // so the card statement says TorchHive beside the company name
     'metadata[bid_id]': String(bidId),
     'metadata[day]': day,
   }, idempotencyKey || `dgf-win-${customerId}-${cents}`);
