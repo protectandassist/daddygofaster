@@ -80,7 +80,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <h2>All bids in this auction</h2>
       <p class="muted" id="noBids">No bids yet.</p>
       <table id="bidsTable" hidden>
-        <thead><tr><th>#</th><th>Name</th><th>Status</th><th id="cardHead">Card</th><th>Time allowance</th><th>Time / costs</th><th>Note</th><th class="num">Bid</th></tr></thead>
+        <thead><tr><th>#</th><th>Name</th><th>Status</th><th id="cardHead">Card</th><th>Time allowance</th><th>Time / costs</th><th>Note</th><th class="num">Bid</th><th></th></tr></thead>
         <tbody id="bids"></tbody>
       </table>
     </section>
@@ -104,6 +104,12 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
         <p class="small" id="liveMsg" role="status" style="flex:1 0 100%" hidden></p>
       </div>
       <div id="chatList"></div>
+    </section>
+
+    <section class="card" id="checksCard">
+      <h2>Jobs people checked</h2>
+      <p class="muted small">Every job someone typed and pressed Continue on, newest first: the bid they had in mind, what they were told, any costs, and whether they went on to bid. Kept for 30 days. No name or email is attached to a check.</p>
+      <div id="checksList"></div>
     </section>
 
     <section class="card" id="creatorsCard">
@@ -232,9 +238,35 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       tr.appendChild(el('td', 'small', estimate(b)));
       tr.appendChild(el('td', 'muted small', b.note || ''));
       tr.appendChild(el('td', 'num', money(b.amountCents)));
+      var off = el('td');
+      if(d.auction && d.auction.status === 'open' && (b.status === 'held' || b.status === 'qualified' || b.status === 'card')){
+        var rm = el('button', 'bad', 'Remove');
+        rm.title = 'Takes this bid off the board and releases its card hold';
+        rm.addEventListener('click', function(){
+          if(rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = 'Sure? Remove'; setTimeout(function(){ rm.dataset.sure = ''; rm.textContent = 'Remove'; }, 4000); return; }
+          rm.disabled = true; act('/admin/api/bids/' + b.id + '/remove');
+        });
+        off.appendChild(rm);
+      }
+      tr.appendChild(off);
       body.appendChild(tr);
     });
 
+    var cl = $('checksList'); cl.textContent = '';
+    if(!(d.checks || []).length) cl.appendChild(el('p', 'muted small', 'Nobody has checked a job yet.'));
+    (d.checks || []).forEach(function(c){
+      var box = el('div', 'held-item');
+      var top = el('div', 'row');
+      top.appendChild(el('b', null, money(c.amountCents || 0)));
+      if(c.costCents) top.appendChild(el('span', null, '+ ' + money(c.costCents) + ' costs'));
+      top.appendChild(el('span', 'tag ' + (c.verdict === 'refused' ? 'refused' : c.verdict === 'ok' ? 'qualified' : 'held'), c.verdict === 'ok' ? 'allowed' : c.verdict === 'refused' ? 'not allowed' : c.verdict === 'short' ? 'bid too low' : 'needs you'));
+      top.appendChild(el('span', 'tag ' + (c.bid ? 'qualified' : 'held'), c.bid ? 'went on to bid' : 'did not bid'));
+      top.appendChild(el('span', 'muted small', new Date(c.at).toLocaleString([], {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'})));
+      box.appendChild(top);
+      box.appendChild(el('div', null, c.task));
+      if(c.told) box.appendChild(el('div', 'muted small', 'Told: ' + c.told));
+      cl.appendChild(box);
+    });
     var live = d.live || {on: false};
     $('liveNote').textContent = live.on
       ? 'You are live on the site now. The stream and the chat are showing. End it here when the stream is over.'

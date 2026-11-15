@@ -312,6 +312,16 @@ p{margin:0}
 .row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
 @media(max-width:480px){.row2{grid-template-columns:minmax(0,1fr)}}
 .msg{padding:13px 15px;border-radius:10px;font-size:.95rem;background:rgba(242,109,114,.1);border:1px solid rgba(242,109,114,.4)}
+.costbox{margin:14px 0 4px;padding:14px 15px;border-radius:10px;border:1px solid var(--gold);background:rgba(255,200,87,.07)}
+.costbox--no{border-color:rgba(242,109,114,.5);background:rgba(242,109,114,.08)}
+.costbox__head{font-weight:700;font-size:.98rem;margin:0 0 8px}
+.costbox__rows{margin:0;display:grid;gap:5px;font-size:.92rem}
+.costbox__rows div{display:flex;justify-content:space-between;gap:14px}
+.costbox__rows dt{color:var(--muted)}
+.costbox__rows dd{margin:0;font-variant-numeric:tabular-nums;white-space:nowrap}
+.costbox__rows .costbox__total{margin-top:5px;padding-top:8px;border-top:1px solid var(--line-2);font-weight:700;font-size:1rem}
+.costbox__rows .costbox__total dt{color:var(--text)}
+.costbox__fine{margin:9px 0 10px;font-size:.8rem;color:var(--muted)}
 .msg--ok{background:rgba(61,214,140,.1);border-color:rgba(61,214,140,.4)}
 .fine{font-size:.72rem;color:var(--faint);text-align:center;line-height:1.65}
 @media(max-width:480px){.bid__heading{padding:22px 20px 18px}.bid__stats{margin:0 20px}.bid__body{padding:22px 20px}
@@ -857,6 +867,12 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
             <button class="chipbtn chipbtn--lead num" type="button" id="leadChip"></button>
           </div>
           <p class="readout" id="readout" aria-live="polite">A winning bid at the 50¢ reserve still includes up to one hour.</p>
+          <div class="costbox" id="costBox" hidden aria-live="polite">
+            <p class="costbox__head" id="costHead"></p>
+            <dl class="costbox__rows" id="costRows"></dl>
+            <p class="costbox__fine" id="costFine"></p>
+            <button class="chipbtn" type="button" id="costOther">Pick something else</button>
+          </div>
           <div class="bid__more" id="more" hidden>
             <div class="row2">
               <div class="field">
@@ -2977,6 +2993,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     tap('Chip in');
     if(raising || backing) stopRaise();
     backing = job;
+    lastCheck = null; $('costBox').hidden = true;
     $('task').value = job.task;
     $('task').readOnly = true;
     document.querySelector('#bid .chips[aria-label="Ideas"]').hidden = true;
@@ -2997,6 +3014,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   /* ---------- raising one of them ---------- */
   function startRaise(entry, standing){
     raising = entry;
+    lastCheck = null; $('costBox').hidden = true;
     $('task').value = entry.task;
     $('task').readOnly = true;
     document.querySelector('#bid .chips[aria-label="Ideas"]').hidden = true;
@@ -3013,6 +3031,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   }
   function stopRaise(){
     raising = null; backing = null;
+    lastCheck = null; $('costBox').hidden = true;
     $('raiseText').textContent = 'You are raising your bid on this job.';
     $('raiseCancel').textContent = 'Place a different bid';
     $('amountLabel').textContent = 'Your bid';
@@ -3036,7 +3055,71 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     msg.textContent = text;
     msg.className = 'msg' + (ok ? ' msg--ok' : '');
   }
-  function buttonLabel(){ return raising ? 'Raise bid' : ($('more').hidden ? 'Continue' : (backing ? 'Add money' : 'Place bid')); }
+  /* What the job check said, shown right under the bid: the job's costs and the most they can be charged,
+     before the bid is placed. Nobody has to scroll to find it, and there is one tap to pick another job. */
+  var lastCheck = null;
+  function paintCost(){
+    var box = $('costBox');
+    if(!lastCheck || raising || backing){ box.hidden = true; return; }
+    var d = lastCheck, rows = $('costRows'), go = d.verdict === 'ok' || d.verdict === 'review';
+    rows.textContent = '';
+    box.className = 'costbox' + (go ? '' : ' costbox--no');
+    function row(label, value, total){
+      var w = document.createElement('div'), dt = document.createElement('dt'), dd = document.createElement('dd');
+      if(total) w.className = 'costbox__total';
+      dt.textContent = label; dd.textContent = value; w.appendChild(dt); w.appendChild(dd); rows.appendChild(w);
+    }
+    if(!go){
+      $('costHead').textContent = d.message || 'This job cannot go on the board.';
+      $('costFine').textContent = 'Nothing was held or charged. Change the job, or pick another one.';
+      box.hidden = false; return;
+    }
+    var cents = toCents(amount.value.trim()) || 0, cost = d.costCents || 0;
+    var maxRaw = $('max').value.trim(), maxCents = maxRaw === '' ? null : toCents(maxRaw);
+    $('costHead').textContent = d.verdict === 'review'
+      ? 'A person has to approve this job before it goes on the board.'
+      : (cost ? 'This job is allowed. It has costs on top of your bid.' : 'This job is allowed. Nothing extra to pay for.');
+    row('Your bid', money(cents));
+    if(cost){
+      if(d.costItems && d.costItems.length) d.costItems.forEach(function(c){ row(c.item, money(c.cents)); });
+      else row('Job costs', money(cost));
+    }
+    row('Charged if you win', money(cents + cost), true);
+    if(maxCents && maxCents > cents) row('If your auto-bid goes to its maximum', money(maxCents + cost));
+    $('costFine').textContent = (cost ? 'The costs are what I have to buy to do it, with taxes and fees included. ' : '') +
+      'Held on your card now, charged only if you win, and released if you do not.' +
+      (d.verdict === 'review' ? ' If I find the job has costs when I approve it, they show on your bid before the round closes.' : '');
+    box.hidden = false;
+    if(!btn.disabled) btn.textContent = buttonLabel();
+  }
+  amount.addEventListener('input', paintCost);
+  $('max').addEventListener('input', paintCost);
+  $('task').addEventListener('input', function(){   /* the job changed: what was shown no longer applies */
+    if(lastCheck && checkedJob !== $('task').value.trim().toLowerCase()){ lastCheck = null; paintCost(); }
+  });
+  $('costOther').addEventListener('click', function(){
+    lastCheck = null; checkedJob = null; paintCost();
+    $('task').value = '';
+    $('more').hidden = true; hideCard();
+    msg.hidden = true;
+    btn.disabled = false; btn.textContent = buttonLabel();
+    tap('Picked something else');
+    $('task').focus({preventScroll: true});
+    var ideas = document.querySelector('.chips[aria-label="Ideas"]');
+    (ideas || $('task')).scrollIntoView({behavior: 'instant', block: 'center'});
+  });
+  /* Brought into view now, and once more after the card box and keyboard have settled. */
+  function showCost(){
+    var go = function(){ if(!$('costBox').hidden) $('costBox').scrollIntoView({block: 'center', behavior: 'instant'}); };
+    go(); setTimeout(go, 450);
+  }
+  /* The button that places the bid says the full charge, costs included: the last thing read before pressing. */
+  function placeLabel(){
+    var cents = toCents(amount.value.trim());
+    if(!lastCheck || !lastCheck.costCents || cents === null) return 'Place bid';
+    return 'Place bid · ' + money(cents + lastCheck.costCents) + ' if you win';
+  }
+  function buttonLabel(){ return raising ? 'Raise bid' : ($('more').hidden ? 'Continue' : (backing ? 'Add money' : placeLabel())); }
 
   form.addEventListener('submit', function(e){
     e.preventDefault();
@@ -3071,15 +3154,22 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         var d = res.d || {};
         if(d.verdict === 'ok' || d.verdict === 'review'){
           checkedJob = task.toLowerCase();
+          lastCheck = d; paintCost();
           if($('more').hidden){ $('more').hidden = false; track('start'); }
           showCard();
-          say(d.message, true);
+          say(d.costCents ? 'Check the costs above, then add your details to place the bid.' : 'Add your details to place the bid.', true);
           stop();
           $('who').focus({preventScroll: true});
+          showCost();
           return;
         }
         checkedJob = null;
         if(d.verdict === 'refused') tap('Job not allowed');
+        if(d.verdict === 'refused' || d.verdict === 'short'){   /* said right at the bid, with a way to pick another job */
+          lastCheck = d; paintCost(); msg.hidden = true; stop();
+          showCost();
+          return;
+        }
         stop(d.message || 'That could not be checked just now. Try again in a moment.');
       }).catch(function(){ checkedJob = null; stop('That could not be checked. Check your connection and try again.'); });
       return;
@@ -3183,6 +3273,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   /* after a bid lands, the form is already set up to raise that same bid */
   function startRaiseQuietly(token, task){
     raising = {token: token, task: task};
+    lastCheck = null; $('costBox').hidden = true;
     $('task').readOnly = true;
     document.querySelector('#bid .chips[aria-label="Ideas"]').hidden = true;
     $('raiseBar').hidden = false;

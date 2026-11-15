@@ -511,6 +511,16 @@ async function recentCheck(env, task, now) {
   try { return JSON.parse(row.answer); } catch { return null; }
 }
 
+// Owner: the jobs people checked lately, newest first, and whether a bid followed.
+async function recentChecks(env) {
+  const { results } = await env.DB.prepare(
+    'SELECT c.id, c.task, c.amount_cents, c.verdict, c.cost_cents, c.told, c.created_at, ' +
+    'EXISTS (SELECT 1 FROM bids b WHERE lower(b.task) = lower(c.task) AND b.created_at >= c.created_at - 1000) AS bid ' +
+    'FROM checks c WHERE c.task IS NOT NULL ORDER BY c.id DESC LIMIT 60',
+  ).all();
+  return results.map((c) => ({ id: c.id, task: c.task, amountCents: c.amount_cents, verdict: c.verdict, costCents: c.cost_cents, told: c.told, at: new Date(c.created_at).toISOString(), bid: Boolean(c.bid) }));
+}
+
 // POST /check { task, amountCents, maxCents }: is this job allowed, and what would
 // it cost on top of the bid? Asked before a bid can be submitted. Nothing is placed
 // or held here, and no name, email or card is involved.
@@ -525,16 +535,21 @@ async function postCheck(request, env, s, now) {
   const maxCents = Number.isInteger(body.maxCents) && body.maxCents >= amountCents ? body.maxCents : null;
 
   let answer = await recentCheck(env, task, now); // the same job asked again costs nothing
+  let fresh = false;
+  const ipHash = await sha256((request.headers.get('CF-Connecting-IP') || 'unknown') + '|check');
   if (!answer) {
-    const ipHash = await sha256((request.headers.get('CF-Connecting-IP') || 'unknown') + '|check');
     const seen = await env.DB.prepare('SELECT COUNT(*) AS n FROM checks WHERE ip_hash = ? AND created_at > ?').bind(ipHash, now - 3_600_000).first();
     if (seen.n >= IP_CHECKS_PER_HOUR) return [429, { verdict: 'limit', message: 'That is a lot of jobs checked from here. Try again in an hour.' }];
     // No name yet: the board name is checked when the bid itself comes in.
     answer = await screenBid(env, { name: 'Bidder', task, model: s.model, apiKey: await aiKey(env), openaiKey: await openaiKey(env), openaiModel: s.openaiModel });
-    await env.DB.prepare('INSERT INTO checks (task_hash, ip_hash, answer, created_at) VALUES (?, ?, ?, ?)')
-      .bind(await sha256(taskKey(task)), ipHash, answer ? JSON.stringify(answer) : null, now).run();
+    fresh = true;
   }
-  return [200, checkReply(answer ? applyScreen({ ...answer, name_ok: true }, { amountCents, maxCents }) : null)];
+  const reply = checkReply(answer ? applyScreen({ ...answer, name_ok: true }, { amountCents, maxCents }) : null);
+  // Kept for the owner to see: the job, the bid they had in mind and what they were told. A repeat
+  // of the same job is kept too, without its answer, so it is not counted as a fresh check.
+  await env.DB.prepare('INSERT INTO checks (task_hash, ip_hash, answer, created_at, task, amount_cents, verdict, cost_cents, told) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(await sha256(taskKey(task)), fresh ? ipHash : null, fresh && answer ? JSON.stringify(answer) : null, now, task, amountCents, reply.verdict, reply.costCents, reply.message).run();
+  return [200, reply];
 }
 
 // ---- public: adding money to an open job ------------------------------------------
@@ -760,9 +775,28 @@ async function adminState(env, s, now, showJobs) {
     live: await liveState(env),
     chat: await recentChat(env),
     members: await listMembers(env),
+    checks: await recentChecks(env),
     creators: await adminCreators(env),
     previous,
   };
+}
+
+// Owner: take a bid off the round that is open, whatever its state. Its hold, and the
+// holds of anyone who added money to it, go back to the cards at once.
+async function adminRemove(request, env, s, ctx, id, now) {
+  const bid = await env.DB.prepare('SELECT * FROM bids WHERE id = ?').bind(id).first();
+  if (!bid) return [404, { message: 'No such bid.' }];
+  const a = await env.DB.prepare('SELECT * FROM auctions WHERE day = ?').bind(bid.day).first();
+  if (!a || a.status !== 'open') return [409, { message: 'That round has closed. Use Pass on the winner instead.' }];
+  if (!['held', 'qualified', 'card'].includes(bid.status)) return [409, { message: 'That bid is already off the board.' }];
+  const before = await topBid(env, a.day);
+  await env.DB.prepare("UPDATE bids SET status = 'refused', next_status = NULL, screened_by = 'owner', decided_at = ? WHERE id = ?").bind(now, id).run();
+  const keys = cardKeys(env);
+  if (keys) await releaseBidHolds(env, keys.secret, id, now);
+  const left = await env.DB.prepare("SELECT COUNT(*) AS n FROM holds WHERE bid_id = ? AND state IN ('held', 'action')").bind(id).first();
+  await env.DB.prepare("UPDATE pledges SET status = 'released' WHERE bid_id = ? AND status IN ('active', 'card')").bind(id).run();
+  await settleStandings(request, env, s, ctx, a, before, now);
+  return [200, { status: 'removed', released: !left.n, ...(left.n ? { message: 'The bid is off the board, but the card company did not confirm the hold was released. It is tried again when the round closes.' } : {}) }];
 }
 
 async function adminDecide(request, env, s, ctx, id, now) {
@@ -859,6 +893,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
   if (request.method === 'GET' && path === '/admin/api/report') return [200, await report(env, s, now, url.searchParams)];
   if (request.method === 'GET' && path === '/admin/api/state') return [200, await adminState(env, s, now, url.searchParams.get('jobs') === '1')];
   if (request.method === 'POST' && (m = /^\/admin\/api\/bids\/(\d+)\/decide$/.exec(path))) return adminDecide(request, env, s, ctx, Number(m[1]), now);
+  if (request.method === 'POST' && (m = /^\/admin\/api\/bids\/(\d+)\/remove$/.exec(path))) return adminRemove(request, env, s, ctx, Number(m[1]), now);
   if (request.method === 'POST' && (m = /^\/admin\/api\/creators\/(\d+)\/(approve|pause)$/.exec(path))) return decideCreator(env, s, Number(m[1]), m[2], now);
   if (request.method === 'POST' && path === '/admin/api/live') {
     const body = await request.json().catch(() => null);
@@ -1076,7 +1111,7 @@ export default {
       await sendNotices(env, s, now);
       if (new Date(now).getUTCMinutes() === 7) {
         await tidy(env, now); // hourly: old addresses cleared, old rows dropped
-        await env.DB.prepare('DELETE FROM checks WHERE created_at < ?').bind(now - 86_400_000).run();
+        await env.DB.prepare('DELETE FROM checks WHERE created_at < ?').bind(now - 30 * 86_400_000).run(); // what people asked for, kept a month for the owner
       }
     } catch (error) {
       console.error('[BIDS] timer', error && error.stack ? error.stack : String(error));

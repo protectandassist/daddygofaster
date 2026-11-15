@@ -51,6 +51,7 @@ a:focus-visible{outline:2px solid #EF9502;outline-offset:3px}
   <ul>
     <li><strong>The name you put on the board and the amount</strong> are public.</li>
     <li><strong>The job you describe</strong> stays private until the video, unless you chose to make it an open job. Open jobs are public.</li>
+    <li><strong>A job you check before bidding</strong> (when you press Continue) is kept for 30 days with the bid you had in mind and what you were told, so we can see what people ask for. No name, email or card is attached to it.</li>
     <li><strong>Your email address</strong> is kept so we can reach you about your bid. It is never shown.</li>
     <li><strong>Your card</strong> goes straight from your browser to Stripe, the card processor. We never see or store the card number. We keep Stripe's reference for the hold or charge.</li>
   </ul>
@@ -74,6 +75,7 @@ a:focus-visible{outline:2px solid #EF9502;outline-offset:3px}
   <ul>
     <li>Cloudflare, which runs the site and stores its data</li>
     <li>Stripe, for card holds and payments</li>
+    <li>OpenAI, which checks each job against the rules and estimates what it would cost. It is sent the words of the job and nothing else</li>
     <li>Resend, which sends our emails</li>
     <li>Google, if you choose to sign in with Google</li>
     <li>YouTube, whose player shows the live stream when there is one</li>
