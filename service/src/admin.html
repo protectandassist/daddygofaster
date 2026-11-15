@@ -85,6 +85,17 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       </table>
     </section>
 
+    <section class="card" id="statsCard">
+      <h2>Visitors, last 14 days</h2>
+      <p class="muted small">Counted by this site itself. No cookies and no outside service. A visitor is one device on one day.</p>
+      <p class="muted" id="noStats">No visits counted yet.</p>
+      <table id="statsTable" hidden>
+        <thead><tr><th>Day</th><th class="num">Visitors</th><th class="num">Started a bid</th><th class="num">Bids placed</th><th class="num">Cards declined</th><th class="num">Money added</th><th class="num">Sign-in links</th></tr></thead>
+        <tbody id="statsRows"></tbody>
+      </table>
+      <div class="row small" style="margin-top:12px" id="statsExtra"></div>
+    </section>
+
     <section class="card" id="commentsCard" hidden>
       <h2>Comments in this auction</h2>
       <p class="muted small">Written by people who put money on an open job. Remove anything that should not be there.</p>
@@ -245,7 +256,23 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     }
   }
 
+  function loadStats(){
+    return api('/admin/api/stats?days=14').then(function(d){
+      var rows = $('statsRows'); rows.textContent = '';
+      $('noStats').hidden = d.byDay.length > 0; $('statsTable').hidden = d.byDay.length === 0;
+      d.byDay.forEach(function(r){
+        var tr = el('tr');
+        tr.appendChild(el('td', null, r.day));
+        ['visitors', 'starts', 'placed', 'declined', 'pledged', 'signups'].forEach(function(k){ tr.appendChild(el('td', 'num', String(r[k] || 0))); });
+        rows.appendChild(tr);
+      });
+      var extra = $('statsExtra'); extra.textContent = '';
+      if(d.referrers.length) extra.appendChild(el('span', 'muted', 'Came from: ' + d.referrers.map(function(r){ return r.ref + ' (' + r.visitors + ')'; }).join(', ')));
+      if(d.devices.length) extra.appendChild(el('span', 'muted', 'On: ' + d.devices.map(function(r){ return r.device + ' (' + r.visitors + ')'; }).join(', ')));
+    }).catch(function(){});
+  }
   function load(){
+    loadStats();
     return api('/admin/api/state?jobs=' + ($('showJobs').checked ? '1' : '0')).then(function(d){
       $('login').hidden = true; $('app').hidden = false; $('signout').hidden = false;
       $('updated').textContent = 'Updated ' + new Date().toLocaleTimeString();

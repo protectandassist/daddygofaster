@@ -93,6 +93,15 @@ Looking, bidding and adding money need no account. Voting and commenting do.
 
 Nobody's email is ever shown: a comment carries the chosen name, and a vote is a count.
 
+## Visitor counts
+
+The site counts its own visits (`src/stats.js`): no cookies and no outside service. The
+page reports that it was opened and a few steps in the bid form (started, placed, card
+declined, money added, sign-in link asked for) to `POST /a`. Each is stored with the day,
+phone or computer, the host the visitor came from, and a visitor mark that is a hash of
+the network address, the day and a secret, so it changes daily and cannot be turned back
+into an address. Crawlers are skipped. `/admin` shows the last 14 days.
+
 ## Auto-bid
 
 A bid can carry a hidden maximum. The bid then rises on its own, one cent over the next

@@ -10,6 +10,7 @@
 //          GET  /me              who is signed in, their votes, and where they can comment
 //          POST /votes           vote for an open job, or take the vote back (signed in)
 //          GET  /comments        comments on an open job;  POST /comments  add one (signed in, with money on it)
+//          POST /a               count a visit or a step in the bid form (see stats.js)
 //          GET  /stop            turn off outbid emails for one bid
 // Owner:   GET  /admin           the owner's page (asks for the admin key)
 //          *    /admin/api/...   needs "Authorization: Bearer <admin key>"
@@ -34,6 +35,7 @@ import {
 import {
   signInOn, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, recentComments, removeComment,
 } from './social.js';
+import { record, stats } from './stats.js';
 import ADMIN_HTML from './admin.html';
 
 const IP_BIDS_PER_HOUR = 30;
@@ -749,6 +751,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
   if (!(await adminKeyMatches(env, given))) return [401, { message: 'Wrong or missing admin key.' }];
   const url = new URL(request.url);
   let m;
+  if (request.method === 'GET' && path === '/admin/api/stats') return [200, await stats(env, s, now, url.searchParams.get('days'))];
   if (request.method === 'GET' && path === '/admin/api/state') return [200, await adminState(env, s, now, url.searchParams.get('jobs') === '1')];
   if (request.method === 'POST' && (m = /^\/admin\/api\/bids\/(\d+)\/decide$/.exec(path))) return adminDecide(request, env, s, ctx, Number(m[1]), now);
   if (request.method === 'POST' && (m = /^\/admin\/api\/comments\/(\d+)\/remove$/.exec(path))) return removeComment(env, Number(m[1]));
@@ -786,7 +789,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
 
 // ---- entry ------------------------------------------------------------------------
 
-const PUBLIC = new Set(['/board', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/me', '/votes', '/comments']);
+const PUBLIC = new Set(['/board', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/me', '/votes', '/comments', '/a']);
 // Signing in, votes and comments: [method, path] to handler. Each answers [status, body].
 const SOCIAL = {
   'POST /auth/start': (request, env, s, now) => authStart(request, env, s, now),
@@ -813,6 +816,10 @@ export default {
             status: 204,
             headers: { ...cors, 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type, authorization', 'access-control-max-age': '86400' },
           });
+        }
+        if (path === '/a' && request.method === 'POST') {
+          await record(request, env, s, now);
+          return new Response(null, { status: 204, headers: cors });
         }
         if (path === '/board' && request.method === 'GET') return json(await getBoard(env, s, now), 200, cors);
         const social = SOCIAL[request.method + ' ' + path];

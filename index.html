@@ -430,6 +430,23 @@ p{margin:0}
 .stat__v.is-bump{animation:statBump 1s ease-out}
 @keyframes statBump{0%{transform:scale(1)}30%{transform:scale(1.22);text-shadow:0 0 22px rgba(239,149,2,.9)}100%{transform:scale(1);text-shadow:none}}
 .stat__v.is-urgent{color:var(--bad);animation:livePulse 1s ease-in-out infinite}
+/* Fire comes up the screen when a bid lands. */
+.fire{position:fixed;inset:0;pointer-events:none;z-index:55;overflow:hidden}
+.fire i{position:absolute;bottom:-20vh;left:var(--l);width:var(--w);height:calc(var(--w) * 1.55);border-radius:50% 50% 46% 46% / 64% 64% 36% 36%;
+  background:radial-gradient(ellipse at 50% 78%,#fff3c4 0%,#ffcf57 20%,#ff9220 46%,rgba(255,74,12,.6) 66%,rgba(255,40,0,0) 78%);
+  mix-blend-mode:screen;filter:blur(3px);opacity:0;will-change:transform,opacity;animation:flameUp var(--t) cubic-bezier(.22,.61,.3,1) var(--d) forwards}
+@keyframes flameUp{0%{transform:translate3d(0,0,0) scale(.75);opacity:0}10%{opacity:.95}55%{opacity:.75}
+  100%{transform:translate3d(var(--x),-128vh,0) scale(.22) rotate(var(--r));opacity:0}}
+.fire::after{content:"";position:absolute;left:0;right:0;bottom:0;height:48vh;opacity:0;
+  background:linear-gradient(0deg,rgba(255,112,12,.6),rgba(255,166,28,.2) 45%,transparent)}
+.fire.is-lit::after{animation:fireGlow 2.6s ease-out}
+@keyframes fireGlow{0%{opacity:0}14%{opacity:1}100%{opacity:0}}
+.feed__sound{flex:0 0 auto;border:1px solid var(--line-2);border-radius:999px;background:transparent;color:var(--muted);font:600 .72rem var(--body);padding:4px 10px;cursor:pointer}
+.feed__sound:hover{color:var(--text);border-color:var(--accent)}
+.feed__sound[aria-pressed="true"]{color:var(--accent-hi);border-color:var(--accent)}
+.mine__ask{display:flex;align-items:center;gap:12px;padding:10px 13px;border-radius:10px;border:1px dashed var(--line-2);font-size:.86rem;color:var(--muted)}
+.mine__ask span{flex:1}
+.mine__ask .chipbtn{color:var(--text);flex:0 0 auto}
 /* The announcement when the lead changes hands. */
 .hype{position:fixed;left:50%;bottom:26px;z-index:60;transform:translate(-50%,140%);display:flex;align-items:center;gap:14px;max-width:min(92vw,520px);
   padding:14px 20px 14px 14px;border-radius:16px;background:#1c1508;border:1px solid var(--accent);box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 40px rgba(239,149,2,.25);
@@ -771,6 +788,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         <div class="feed" id="feed" hidden>
           <span class="feed__live">Live</span>
           <ul id="feedList" aria-live="polite" aria-label="What just happened"></ul>
+          <button class="feed__sound" id="soundBtn" type="button" aria-pressed="true">Sound on</button>
         </div>
         <table id="boardTable" hidden>
           <thead>
@@ -930,6 +948,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     </div>
   </section>
 </main>
+<div class="fire" id="fire" aria-hidden="true"></div>
 <div class="hype" id="hype" role="status" aria-live="polite"><img src="/assets/torchhive-mark.png" width="114" height="192" alt=""><div><b id="hypeTitle"></b><span id="hypeText"></span></div></div>
 
 <footer class="foot">
@@ -968,6 +987,34 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   var session = null, me = null, signInOn = false, lastBoard = null, openThread = null, drafts = {};
   try { session = localStorage.getItem('dgfSession') || null; } catch (e) {}
   var pooling = false, minPledge = 200, backing = null;   /* backing: the open job this visitor is adding money to */
+
+  /* ---------- counting visits ----------
+     Tells the site's own service that the page was opened, and when someone
+     starts or places a bid. No cookies and nothing sent anywhere else. The
+     owner sees daily totals on the owner's page. */
+  function track(kind){
+    if(demo || !CONFIG.api) return;
+    try {
+      var body = JSON.stringify({e: kind, r: kind === 'view' ? document.referrer : ''});
+      if(navigator.sendBeacon) navigator.sendBeacon(CONFIG.api + '/a', body);
+      else fetch(CONFIG.api + '/a', {method: 'POST', body: body, keepalive: true, mode: 'no-cors'});
+    } catch (e) {}
+  }
+  track('view');
+
+  /* ---------- remembering who you are ----------
+     The name and email typed into the bid form are kept in this browser only,
+     so the next bid does not ask again. */
+  function keepProfile(name, email){
+    try { if(name && email) localStorage.setItem('thProfile', JSON.stringify({name: name, email: email})); } catch (e) {}
+  }
+  (function(){
+    try {
+      var p = JSON.parse(localStorage.getItem('thProfile') || '{}');
+      if(p.name) $('who').value = p.name;
+      if(p.email) $('email').value = p.email;
+    } catch (e) {}
+  })();
 
   /* ---------- money and time ---------- */
   function toCents(str){
@@ -1539,9 +1586,84 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     var bump = $('statHigh');
     bump.classList.remove('is-bump'); void bump.offsetWidth; bump.classList.add('is-bump');
     var lead = news.filter(function(n){ return n.kind === 'lead'; })[0];
+    if(news.some(function(n){ return n.kind === 'new' || n.kind === 'up' || n.kind === 'lead'; })){ igniteFire(Boolean(lead)); fireSound(Boolean(lead)); }
     if(lead) announce('New leader', lead.text);
     else if(news.some(function(n){ return n.kind === 'clock'; })) announce('Clock extended', news.filter(function(n){ return n.kind === 'clock'; })[0].text);
   }
+  /* Flames rise from the bottom of the screen: more of them, and bigger, when the lead changes. */
+  function igniteFire(big){
+    if(reduce) return;
+    var box = $('fire'), n = big ? 54 : 30, wide = window.innerWidth;
+    for(var i = 0; i < n; i++){
+      var f = document.createElement('i'), w = (big ? 70 : 46) + Math.random() * (big ? 170 : 110);
+      if(wide < 700) w *= .62;
+      f.style.setProperty('--l', (Math.random() * 104 - 4) + '%');
+      f.style.setProperty('--w', w.toFixed(0) + 'px');
+      f.style.setProperty('--t', (1.5 + Math.random() * 1.5).toFixed(2) + 's');
+      f.style.setProperty('--d', (Math.random() * (big ? .9 : .5)).toFixed(2) + 's');
+      f.style.setProperty('--x', (Math.random() * 26 - 13).toFixed(1) + 'vw');
+      f.style.setProperty('--r', (Math.random() * 90 - 45).toFixed(0) + 'deg');
+      box.appendChild(f);
+    }
+    box.classList.remove('is-lit'); void box.offsetWidth; box.classList.add('is-lit');
+    setTimeout(function(){ for(var k = 0; k < n && box.firstChild; k++) box.removeChild(box.firstChild); }, 4200);
+  }
+  /* The fire sound is made in the browser: a rush of low noise with crackles.
+     Browsers only allow sound after the visitor has clicked or tapped once. */
+  var audio = null, soundOn = true;
+  try { soundOn = localStorage.getItem('thSound') !== 'off'; } catch (e) {}
+  function wakeSound(){
+    try {
+      if(!audio){ var Ctx = window.AudioContext || window.webkitAudioContext; if(Ctx) audio = new Ctx(); }
+      if(audio && audio.state === 'suspended') audio.resume();
+    } catch (e) {}
+  }
+  ['pointerdown', 'keydown', 'touchstart'].forEach(function(ev){ document.addEventListener(ev, wakeSound, {passive: true}); });
+  function fireSound(big){
+    if(!soundOn || !audio || audio.state !== 'running') return;
+    try {
+      var dur = big ? 2.4 : 1.6, rate = audio.sampleRate, buf = audio.createBuffer(1, Math.floor(rate * dur), rate), d = buf.getChannelData(0), last = 0;
+      for(var i = 0; i < d.length; i++){
+        var white = Math.random() * 2 - 1;
+        last = (last + .035 * white) / 1.035;                       /* a low roar */
+        d[i] = last * 3.4 + white * .05;
+        if(Math.random() < (big ? .0016 : .0011)) d[i] += (Math.random() * 2 - 1) * .85;   /* crackle */
+      }
+      var src = audio.createBufferSource(), low = audio.createBiquadFilter(), high = audio.createBiquadFilter(), gain = audio.createGain(), t = audio.currentTime;
+      src.buffer = buf;
+      low.type = 'lowpass'; low.frequency.setValueAtTime(500, t); low.frequency.linearRampToValueAtTime(big ? 3600 : 2600, t + .25); low.frequency.linearRampToValueAtTime(700, t + dur);
+      high.type = 'highpass'; high.frequency.value = 70;
+      gain.gain.setValueAtTime(.0001, t); gain.gain.exponentialRampToValueAtTime(big ? .55 : .38, t + .14); gain.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      src.connect(high); high.connect(low); low.connect(gain); gain.connect(audio.destination);
+      src.start(t); src.stop(t + dur);
+    } catch (e) {}
+  }
+  function paintSound(){
+    $('soundBtn').setAttribute('aria-pressed', String(soundOn));
+    $('soundBtn').textContent = soundOn ? 'Sound on' : 'Sound off';
+  }
+  $('soundBtn').addEventListener('click', function(){
+    soundOn = !soundOn;
+    try { localStorage.setItem('thSound', soundOn ? 'on' : 'off'); } catch (e) {}
+    paintSound(); wakeSound();
+    if(soundOn) setTimeout(function(){ fireSound(false); }, 60);   /* so they hear what they turned on */
+  });
+  paintSound();
+
+  /* ---------- notifications on this device ----------
+     Asked for only after someone has a bid in, and only when they press the
+     button. They fire while this page is open in a tab that is not in front;
+     the outbid email covers the rest. */
+  var lastStanding = {};
+  function canNotify(){ return 'Notification' in window; }
+  function notify(title, text){
+    try {
+      if(!canNotify() || Notification.permission !== 'granted' || !document.hidden) return;
+      var n = new Notification(title, {body: text, icon: '/assets/apple-touch-icon.png', tag: 'torchhive-bid'});
+      n.onclick = function(){ window.focus(); n.close(); };
+    } catch (e) {}
+  }
+
   function announce(title, text){
     $('hypeTitle').textContent = title; $('hypeText').textContent = text;
     $('hype').classList.add('is-on');
@@ -1683,6 +1805,24 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       }
       box.appendChild(row);
     });
+    bids.forEach(function(b){
+      var was = lastStanding[b.token];
+      if(was && was !== b.standing){
+        if(b.standing === 'outbid') notify('You have been outbid', 'The high bid is now ' + money(b.highCents) + '. Open TorchHive to raise yours.');
+        else if(b.standing === 'won') notify('You won', 'Your bid of ' + money(b.kind === 'pledge' ? b.totalCents : b.amountCents) + ' won the round.');
+      }
+      lastStanding[b.token] = b.standing;
+    });
+    if(shown.some(function(b){ return b.open; }) && canNotify() && Notification.permission === 'default'){
+      var ask = document.createElement('div'), words = document.createElement('span'), yes = document.createElement('button');
+      ask.className = 'mine__ask';
+      words.textContent = 'Get a notification on this device if you are outbid.';
+      yes.type = 'button'; yes.className = 'chipbtn'; yes.textContent = 'Turn on';
+      yes.addEventListener('click', function(){
+        try { Notification.requestPermission().then(function(){ loadMine(); }); } catch (e) { ask.hidden = true; }
+      });
+      ask.appendChild(words); ask.appendChild(yes); box.appendChild(ask);
+    }
     box.hidden = shown.length === 0;
     document.title = (shown.some(function(b){ return b.standing === 'outbid'; }) ? 'Outbid: ' : '') + baseTitle;
     /* forget bids from rounds that are over and not won */
@@ -1792,6 +1932,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     note.textContent = 'Sending…';
     call('POST', '/auth/start', {email: email}).then(function(res){
       note.setAttribute('data-kind', res.ok ? 'sent' : '');
+      if(res.ok) track('signup');
       note.textContent = res.d.message || (res.ok ? 'Check your email for a sign-in link.' : 'That did not go through. Try again.');
       if(res.ok && form === $('acctForm')) form.hidden = true;
     }).catch(function(){ note.textContent = 'That did not go through. Check your connection and try again.'; });
@@ -1804,7 +1945,10 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     if(demo){ paintAcct(); return; }   /* the preview has its own pretend visitor */
     if(!session){ me = null; paintAcct(); return; }
     call('GET', '/me').then(function(res){
-      if(res.ok) me = {email: res.d.email, name: res.d.name, votes: res.d.votes || [], canComment: res.d.canComment || []};
+      if(res.ok){
+        me = {email: res.d.email, name: res.d.name, votes: res.d.votes || [], canComment: res.d.canComment || []};
+        if(!$('email').value) $('email').value = me.email;   /* one less thing to type on the bid form */
+      }
       else if(res.status === 401){ me = null; keepSession(null); }
       paintAcct();
       if(lastBoard) paint(lastBoard);
@@ -1996,6 +2140,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     if(maxRaw !== '' && (maxCents === null || maxCents < cents)){ $('max').focus(); return say('Your maximum has to be at least your bid.'); }
     if(!raising && $('more').hidden){     /* step two: who is bidding */
       $('more').hidden = false;
+      track('start');
       showCard();
       msg.hidden = true;
       btn.textContent = backing ? 'Add money' : 'Place bid';
@@ -2060,10 +2205,13 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         .then(function(next){ return answer(next, task); });
     }
     if(d.verdict === 'card' || d.verdict === 'declined'){
+      if(d.verdict === 'declined') track('declined');
       showCard();
       return say(d.message || 'Add a card to place this bid.');
     }
     if(d.verdict === 'pledged'){
+      track('pledged');
+      keepProfile($('who').value.trim(), $('email').value.trim());
       if(d.token) remember(d.token, task);
       stopRaise();   /* back to a clean form; the message stays */
       say(d.message || 'Your money is in.', true);
@@ -2074,7 +2222,10 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     say(d.message || (res.ok ? 'Your bid is in.' : 'That did not go through. Please try again.'), landed);
     if(d.token) remember(d.token, task);
     /* the job stays in the box, so raising it is one number and one click */
-    if(landed){ amount.value = ''; $('max').value = ''; hideCard(); refresh(); }
+    if(landed){
+      if(!raising){ track('placed'); keepProfile($('who').value.trim(), $('email').value.trim()); }
+      amount.value = ''; $('max').value = ''; hideCard(); refresh();
+    }
     if(d.token && !raising && (landed || d.verdict === 'short')) startRaiseQuietly(d.token, task);
     load();
   }
