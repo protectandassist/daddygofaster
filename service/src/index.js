@@ -20,12 +20,11 @@
 // is also what charges the winner's card and releases every other hold.
 import {
   LIMITS, TIME_POLICY, money, describeMinutes, coveredMinutes, timeAllowance, approveDuration, validateBid, validateRaise, validatePledge, applyScreen, raiseVerdict,
-  resolveStandings, HELD_MESSAGE, nominalAuction, extendedClose, dayShift, pickWinner, holdTarget, extraHold,
+  resolveStandings, HELD_MESSAGE, nominalAuction, extendedClose, dayShift, pickWinner, holdTarget, extraHold, readCostItems,
 } from './rules.js';
 import { cardKeys, readIntent } from './cards.js';
 import {
-  MAX_CARD_FAILS, MAX_HOLDS, heldSummary, takeHold, releaseHold, releaseBidHolds, undoCharge, chargeWinner, chargeBackers, settleMoney, unsettledDays, sweepStale,
-} from './holds.js';
+  MAX_CARD_FAILS, MAX_HOLDS, heldSummary, takeHold, releaseHold, releaseBidHolds, undoCharge, chargeWinner, chargeBackers, settleMoney, unsettledDays, sweepStale, costCents } from './holds.js';
 import { screenBid } from './screen.js';
 import { shouldEmail, outbidEmail, sendEmail } from './mail.js';
 import { pushKey, pushSubscribe, pushUnsubscribe, pushNext, outbidNotices, roundNotices, sendNotices, stopAlerts } from './alerts.js';
@@ -454,14 +453,15 @@ async function postBid(request, env, s, ctx, now) {
   const placed = verdict.amountCents ?? bid.amountCents; // an auto-bid may have lifted it to cover the job
   const inserted = await env.DB.prepare(
     `INSERT INTO bids (day, name, email, task, amount_cents, max_cents, status, est_minutes, est_cost_cents, min_cents,
-                       screen_note, screened_by, ip_hash, created_at, token, notify, card_id, next_status, shared, pid, own_cents)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                       screen_note, screened_by, ip_hash, created_at, token, notify, card_id, next_status, shared, pid, own_cents, cost_items)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).bind(
     a.day, bid.name, bid.email, bid.task, placed, bid.maxCents, wantsHold ? 'card' : verdict.status,
     verdict.estMinutes ?? null, verdict.estCostCents ?? null, verdict.minCents ?? null,
     answer ? String(answer.reason || '').slice(0, 300) : null, answer ? 'ai' : 'none', ipHash, after, token, bid.notify ? 1 : 0,
     keys ? cardId : null, wantsHold ? verdict.status : null,
     shared ? 1 : 0, shared ? randomHex(6) : null, shared ? placed : null,
+    verdict.costItems && verdict.costItems.length ? JSON.stringify(verdict.costItems) : null,
   ).run();
   const row = { id: inserted.meta.last_row_id, amount_cents: placed, max_cents: bid.maxCents, min_cents: verdict.minCents ?? null, token };
 
@@ -620,7 +620,9 @@ async function postMine(request, env) {
       shared: Boolean(bid.shared), backers: bid.backers, ownCents: bid.own_cents ?? bid.amount_cents,
       amountCents: bid.amount_cents, maxCents: bid.max_cents ?? null, minCents: bid.min_cents ?? null,
       approvedMinutes: bid.screened_by === 'owner' ? bid.est_minutes : null,
-      costCents: bid.status === 'qualified' && bid.est_cost_cents > 0 ? bid.est_cost_cents : null, // what the job costs to do, on top of the bid
+      costCents: bid.status === 'qualified' ? costCents(bid) || null : null, // what the job costs to do, on top of the bid
+      costItems: bid.status === 'qualified' ? readCostItems(bid.cost_items) : null, // what that is made of
+      costOnCard: Boolean(bid.customer_id && bid.card_id), // charged with the bid, or collected by hand
       highCents: top ? top.amount_cents : 0,
       closesAt: new Date(a.closes_at).toISOString(),
     });
@@ -657,7 +659,7 @@ function adminBid(b, s, showJobs, cards = null) {
     task: showJobs ? b.task : null,
     // Whether a card is holding this bid. Never how much: that would give away the maximum.
     card: cards ? (cards.get(b.id) ? 'held' : 'none') : null,
-    payState: b.pay_state ?? null, paidCents: b.paid_cents ?? null,
+    payState: b.pay_state ?? null, paidCents: b.paid_cents ?? null, costCents: costCents(b),
     shared: Boolean(b.shared), backers: b.backers, ownCents: b.own_cents ?? b.amount_cents,
   };
 }
@@ -726,7 +728,7 @@ async function adminDecide(request, env, s, ctx, id, now) {
   const costCents = Number.isFinite(Number(body.costDollars)) ? Math.max(0, Math.round(Number(body.costDollars) * 100)) : null;
   const before = await topBid(env, a.day);
   await env.DB.prepare(
-    "UPDATE bids SET status = 'qualified', screened_by = 'owner', decided_at = ?, est_minutes = ?, est_cost_cents = ?, min_cents = ? WHERE id = ? AND status = 'held'",
+    "UPDATE bids SET status = 'qualified', screened_by = 'owner', decided_at = ?, est_minutes = ?, est_cost_cents = ?, min_cents = ?, cost_items = CASE WHEN ?3 IS est_cost_cents THEN cost_items ELSE NULL END WHERE id = ? AND status = 'held'",
   ).bind(now, approval.minutes, costCents, approval.minCents, id).run();
   await settleStandings(request, env, s, ctx, a, before, now);
   return [200, { status: 'qualified' }];

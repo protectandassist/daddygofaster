@@ -122,12 +122,33 @@ export function validateRaise(body) {
   return { ok: true, value: { amountCents, maxCents: max.value } };
 }
 
+// ---- what a job costs to do ---------------------------------------------------
+// The screen lists what the owner would have to buy. Its labels end up in front
+// of the bidder, so they are cut down to plain words here, and the total is the
+// sum of the list rather than a second number that could disagree with it.
+export function cleanCostItems(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const entry of list.slice(0, 8)) {
+    const cents = Math.round(Number(entry && entry.dollars) * 100);
+    const item = String((entry && entry.item) ?? '').replace(/[^\p{L}\p{N} ,&'-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
+    if (!item || !Number.isFinite(cents) || cents <= 0) continue;
+    out.push({ item, cents });
+  }
+  return out;
+}
+
+function costList(items) {
+  return items && items.length ? ' (' + items.map((c) => `${c.item} ${money(c.cents)}`).join(', ') + ')' : '';
+}
+
 // ---- time allowance and owner review ----------------------------------------
 // Estimates include travel. Only the owner can approve more than one hour.
-export function decide({ amountCents, estMinutes, estCostCents = 0 }) {
+export function decide({ amountCents, estMinutes, estCostCents = 0, costItems = null }) {
   const minCents = minCentsFor(estMinutes);
-  const costs = estCostCents > 0 ? money(estCostCents) : null;
-  const costNote = costs ? ` Costs of about ${costs} are extra and are paid before the job if you win.` : '';
+  const costNote = estCostCents > 0
+    ? ` This job has costs of ${money(estCostCents)}${costList(costItems)}, with taxes and fees included. They are added on top of your bid if you win.`
+    : '';
   if (estMinutes <= TIME_POLICY.includedMinutes) {
     return {
       status: 'qualified',
@@ -143,6 +164,12 @@ export function decide({ amountCents, estMinutes, estCostCents = 0 }) {
     status: 'short', minCents,
     message: `${timeAllowance(amountCents)} is the limit at this bid. This job looks longer. Limit the job to that time or bid at least ${money(minCents)} for me to review the longer duration.` + costNote,
   };
+}
+
+// The stored list, or null.
+export function readCostItems(text) {
+  if (!text) return null;
+  try { const list = JSON.parse(text); return Array.isArray(list) && list.length ? list : null; } catch { return null; }
 }
 
 // The same person sending the same job again is raising their bid, not placing a
@@ -173,7 +200,7 @@ export function raiseVerdict(existing, amountCents, maxCents = null) {
   if (!Number.isFinite(existing.est_minutes) || existing.est_minutes <= 0) {
     return { ...next, status: 'held', minCents: null, message: `${now}. The time needs owner review.` };
   }
-  const decision = decide({ amountCents: amount, estMinutes: existing.est_minutes, estCostCents: existing.est_cost_cents || 0 });
+  const decision = decide({ amountCents: amount, estMinutes: existing.est_minutes, estCostCents: existing.est_cost_cents || 0, costItems: readCostItems(existing.cost_items) });
   const verdict = liftForReview(decision, amount, ceiling);
   return { ...next, ...verdict, maxCents: ceiling > verdict.amountCents ? ceiling : null,
     message: verdict.status === 'qualified' ? `${now}. Any winning bid includes up to one hour.` : verdict.message };
@@ -249,12 +276,14 @@ export function applyScreen(out, { amountCents, maxCents = null }) {
     return { status: 'refused', category, message: REFUSALS[category] };
   }
   const minutes = Number(out.est_minutes);
-  const cost = Math.round(Number(out.est_cost_dollars) * 100);
+  const costItems = cleanCostItems(out.cost_items);
+  // The list is the cost. A bare total with no list (an older answer) still counts.
+  const cost = costItems.length ? costItems.reduce((n, c) => n + c.cents, 0) : Math.round(Number(out.est_cost_dollars) * 100);
   const sane = Number.isFinite(minutes) && minutes > 0 && minutes <= coveredMinutes(LIMITS.maxCents) && Number.isFinite(cost) && cost >= 0;
   if (out.decision !== 'allow' || out.needs_quote || !sane) return { status: 'held', message: HELD_MESSAGE };
 
   const estMinutes = minutes < 1 ? minutes : Math.ceil(minutes);
-  const verdict = { ...decide({ amountCents, estMinutes, estCostCents: cost }), estMinutes, estCostCents: cost };
+  const verdict = { ...decide({ amountCents, estMinutes, estCostCents: cost, costItems }), estMinutes, estCostCents: cost, costItems };
   return liftForReview(verdict, amountCents, maxCents);
 }
 

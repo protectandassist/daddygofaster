@@ -745,7 +745,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <div class="field" id="cardWrap" hidden>
             <span class="field__label" id="cardLabel">Card</span>
             <div class="cardbox" id="cardEl" role="group" aria-labelledby="cardLabel"></div>
-            <p class="field__hint">Your bid is held on this card, not charged. If you set a maximum, the hold is for your maximum. Only the winner is charged, and every other hold is released when bidding closes.</p>
+            <p class="field__hint">Your bid is held on this card, not charged. If you set a maximum, the hold is for your maximum. Only the winner is charged, and every other hold is released when bidding closes. If your job has costs, such as fares or tickets, the winner's card is charged those too. You are shown the amount, taxes and fees included, as soon as your bid is checked.</p>
           </div>
           <p class="msg" id="bidMsg" role="status" hidden></p>
           <button class="btn btn--primary btn--block" id="bidBtn" type="submit" hidden>Continue</button>
@@ -770,7 +770,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
           <span class="step__n" aria-hidden="true">01 / THE IDEA</span>
           <svg class="step__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11v9H4V4h9M9 15l1-5 9-9 4 4-9 9-5 1ZM17 3l4 4"/></svg>
           <h3>Place a bid</h3>
-          <p>Say what you want me to do and what you will pay for it. Bids start at one cent. If your idea costs money to do, such as fares, tickets or supplies, that cost is added on top of your bid, and you are shown the amount before bidding closes.</p>
+          <p>Say what you want me to do and what you will pay for it. Bids start at one cent. If your idea costs money to do, such as fares, tickets or supplies, that cost is added on top of your bid, taxes and fees included, and you are shown the amount as soon as your bid is checked.</p>
         </li>
         <li class="card step">
           <span class="step__n" aria-hidden="true">02 / THE BID</span>
@@ -871,7 +871,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       <div class="notes rise">
         <div class="card note">
           <h3>Costs are extra</h3>
-          <p>Fares, fuel, tickets, supplies and flights are added on top of your bid and paid before the job. You see the amount beside your bid once it is approved, before bidding closes. Anything with a flight or a hotel gets a real quote first.</p>
+          <p>Fares, fuel, tickets, supplies and flights are added on top of your bid, with their taxes and fees included. You are shown the amount and what it is made of as soon as your bid is checked, and it stays beside your bid. If you win, it is charged to the same card along with your bid. Anything with a flight or a hotel gets a real quote first.</p>
         </div>
         <div class="card note">
           <h3>Travel counts</h3>
@@ -1938,7 +1938,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       sub.textContent = (b.standing === 'outbid' || b.standing === 'short' ? 'Your bid: ' + money(b.amountCents) + '. ' : '') +
         (b.shared ? 'Open job' + (b.backers ? ', ' + plural(b.backers, 'backer') + ' added ' + money(b.amountCents - b.ownCents) : '') + '. ' : '') +
         (b.maxCents ? 'Auto-bid up to ' + money(b.maxCents) + '. ' : '') +
-        (b.approvedMinutes ? 'Agreed time: ' + duration(b.approvedMinutes) + '. ' : '') + (b.costCents ? 'Costs on top of your bid: about ' + money(b.costCents) + ', paid before the job if you win. ' : '') + (tasks[b.token] || '');
+        (b.approvedMinutes ? 'Agreed time: ' + duration(b.approvedMinutes) + '. ' : '') + (b.costCents ? 'Costs on top of your bid: ' + money(b.costCents) + (b.costItems ? ' (' + b.costItems.map(function(c){ return c.item + ' ' + money(c.cents); }).join(', ') + ')' : '') + ', taxes and fees included' + (b.costOnCard ? ', charged to your card with your bid if you win. ' : ', paid before the job if you win. ') : '') + (tasks[b.token] || '');
       text.appendChild(head); text.appendChild(sub); row.appendChild(text);
       if(b.open){
         var up = document.createElement('button');

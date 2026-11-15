@@ -56,12 +56,12 @@ test('one-hour jobs qualify at any bid; longer jobs require owner review and cos
   const ok = decide({ amountCents: 1, estMinutes: 50, estCostCents: 400 });
   assert.equal(ok.status, 'qualified');
   assert.equal(ok.minCents, 1);
-  assert.match(ok.message, /Costs of about \$4\.00 are extra/);
+  assert.match(ok.message, /costs of \$4\.00, with taxes and fees included\. They are added on top of your bid/);
   const review = decide({ amountCents: 21000, estMinutes: 120, estCostCents: 400 });
   assert.equal(review.status, 'held');
   assert.equal(review.minCents, 20000);
   assert.match(review.message, /actual time/);
-  assert.match(review.message, /Costs of about \$4\.00 are extra/);
+  assert.match(review.message, /costs of \$4\.00, with taxes and fees included\. They are added on top of your bid/);
   const short = decide({ amountCents: 39999, estMinutes: 121 });
   assert.equal(short.status, 'short');
   assert.equal(short.minCents, 40000);
@@ -139,6 +139,15 @@ test('the screen\'s answer becomes a verdict, and doubt goes to a person', () =>
   assert.equal(applyScreen(allow, ctx).status, 'qualified'); // any bid includes up to 60 minutes
   assert.equal(applyScreen({ ...allow, est_minutes: 50, est_cost_dollars: 4 }, ctx).status, 'qualified');
   assert.equal(applyScreen({ ...allow, est_minutes: 90 }, ctx).status, 'short');
+  // costs: the list is the total, labels are cut down to plain words, and the bidder is told
+  const priced = applyScreen({ ...allow, est_minutes: 50, est_cost_dollars: 99, cost_items: [
+    { item: 'Bus fare', dollars: 5 }, { item: 'Poster board <b>& markers</b>', dollars: 7.58 }, { item: '', dollars: 3 }, { item: 'Free thing', dollars: 0 },
+  ] }, ctx);
+  assert.equal(priced.estCostCents, 1258);
+  assert.deepEqual(priced.costItems, [{ item: 'Bus fare', cents: 500 }, { item: 'Poster board b & markers b', cents: 758 }]);
+  assert.match(priced.message, /costs of \$12\.58 \(Bus fare \$5\.00, Poster board b & markers b \$7\.58\), with taxes and fees included\. They are added on top of your bid if you win\./);
+  assert.equal(applyScreen({ ...allow, est_minutes: 50, est_cost_dollars: 4 }, ctx).estCostCents, 400); // a bare total still counts
+  assert.equal(applyScreen({ ...allow, est_minutes: 50, cost_items: [] }, ctx).message.includes('costs'), false);
   assert.equal(applyScreen({ ...allow, est_minutes: 5.2 }, ctx).estMinutes, 6); // rounded up, on the high side
   assert.deepEqual(applyScreen({ ...allow, decision: 'refuse', category: 'appearance' }, ctx),
     { status: 'refused', category: 'appearance', message: REFUSALS.appearance });

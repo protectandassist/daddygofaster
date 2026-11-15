@@ -107,18 +107,27 @@ export async function undoCharge(env, key, bid, now) {
   return { back, more: results.length > OPS_PER_RUN * 2 };
 }
 
+// What the job costs to do (fares, tickets, supplies, with their taxes and fees),
+// charged to the poster on top of the bid. It is the figure the bidder was shown:
+// the screen's list when their bid went in, or the owner's when he approved it.
+export function costCents(bid) {
+  return bid.est_cost_cents > 0 ? bid.est_cost_cents : 0;
+}
+
 // Collects the poster's own part of the winning job (all of it, unless others
-// added money: those are charged by chargeBackers). Charges the holds, releases
+// added money: those are charged by chargeBackers), plus the job's costs. The
+// hold only covers the bid, so the costs come from whatever the hold has left
+// over and then from the saved card. Charges the holds, releases
 // what is left over, and falls back to charging the saved card if the holds are
 // gone. Sets bids.pay_state and returns it:
-//   paid    charged in full (a last slice under 50 cents is let go)
-//   free    the winning bid is under 50 cents
+//   paid    charged in full, costs included (a last slice under 50 cents is let go)
+//   free    the winning bid and its costs together are under 50 cents
 //   manual  this bid never had a card, so the owner collects
 //   failed  the card did not go through; anything charged was given back
 export async function chargeWinner(env, key, bid, now) {
   const { results } = await env.DB.prepare("SELECT * FROM holds WHERE bid_id = ? AND pledge_id IS NULL AND state IN ('held', 'action', 'captured') ORDER BY cents DESC, id ASC")
     .bind(bid.id).all();
-  const own = bid.own_cents ?? bid.amount_cents;
+  const own = (bid.own_cents ?? bid.amount_cents) + costCents(bid);
   const done = async (state, paid) => {
     await env.DB.prepare('UPDATE bids SET pay_state = ?, paid_cents = ? WHERE id = ?').bind(state, paid, bid.id).run();
     return state;

@@ -14,6 +14,7 @@ const Screen = z.object({
   name_ok: z.boolean(),
   est_minutes: z.number(),
   est_cost_dollars: z.number(),
+  cost_items: z.array(z.object({ item: z.string(), dollars: z.number() })),
   needs_quote: z.boolean(),
   reason: z.string(),
 });
@@ -44,7 +45,8 @@ The display name is shown on a public board. Set name_ok to false if it is offen
 Estimates, for a job that is allowed:
 - Any winning bid includes up to one hour. Each full $200 in the bid adds one hour to the cap: below $200 is one hour, $200-$399.99 is two, $400-$599.99 is three. The owner chooses the actual time within that cap. Your estimate is planning information, never a promise. Do not refuse an otherwise allowed job just because it takes longer than an hour; return its estimate for the time rules to handle.
 - est_minutes: his total time door to door, including travel both ways and any waiting. Estimate on the high side. Use a fraction below 1 for something that takes seconds, such as a wave.
-- est_cost_dollars: what he would have to spend on fares, fuel, tickets, entry fees or things he must buy. Use 0 if there is nothing.
+- cost_items: everything he would have to spend money on to do the job, one entry each: fares, fuel, parking, tolls, tickets, entry fees, supplies or things he must buy. "item" is two to four plain words naming it, such as "Bus fare" or "Poster board and markers". "dollars" is the full price he would actually pay for that item, with sales tax and any booking or service fees already included. Estimate on the high side, at ordinary United States prices. Never include his time, which the bid pays for. Use an empty list if there is nothing to buy.
+- est_cost_dollars: the total of cost_items. Use 0 if there is nothing.
 - needs_quote: true if the cost depends on a real price you cannot know, such as a flight, a hotel or event tickets.
 
 decision:
