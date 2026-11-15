@@ -947,7 +947,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
 <footer class="foot">
   <div class="wrap foot__in">
     <span class="logo"><img class="logo__mark" src="/assets/torchhive-mark.png" width="114" height="192" alt="" loading="lazy">Torch<b>Hive</b></span>
-    <span class="foot__meta">&copy; 2026 TorchHive</span>
+    <span class="foot__meta">&copy; 2026 TorchHive. This site counts its own visits: no cookies and no ad trackers. Your network address is kept for 30 days to tell visits apart and to spot abuse.</span>
     <nav class="foot__links" aria-label="Footer">
       <a href="#rules">Rules</a>
       <a href="#sponsors">Sponsors</a>
@@ -985,15 +985,38 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
      Tells the site's own service that the page was opened, and when someone
      starts or places a bid. No cookies and nothing sent anywhere else. The
      owner sees daily totals on the owner's page. */
-  function track(kind){
-    if(demo || !CONFIG.api) return;
+  var ownDevice = false;
+  try {
+    /* torchhive.com/?owner=1 marks this browser as the owner's, so its visits are not counted; ?owner=0 undoes it */
+    var mark = /[?&]owner=([01])\b/.exec(location.search);
+    if(mark){ if(mark[1] === '1') localStorage.setItem('thOwner', '1'); else localStorage.removeItem('thOwner'); }
+    ownDevice = localStorage.getItem('thOwner') === '1';
+  } catch (e) {}
+  function track(kind, label, seconds){
+    if(demo || ownDevice || !CONFIG.api) return;
     try {
-      var body = JSON.stringify({e: kind, r: kind === 'view' ? document.referrer : ''});
+      var tag = /[?&]utm_source=([\w .-]{1,40})/.exec(location.search);
+      var body = JSON.stringify({e: kind, r: kind === 'view' ? document.referrer : '', l: label || undefined, s: seconds, u: kind === 'view' && tag ? tag[1] : undefined});
       if(navigator.sendBeacon) navigator.sendBeacon(CONFIG.api + '/a', body);
       else fetch(CONFIG.api + '/a', {method: 'POST', body: body, keepalive: true, mode: 'no-cors'});
     } catch (e) {}
   }
+  function tap(label){ track('tap', label); }
+  /* how long the page was looked at: reported each time it is hidden, because a phone rarely says goodbye */
+  var shownAt = document.hidden ? null : Date.now(), lookedMs = 0;
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden){
+      if(shownAt){ lookedMs += Date.now() - shownAt; shownAt = null; }
+      track('hide', null, Math.round(lookedMs / 1000));
+    } else { shownAt = Date.now(); }
+  });
+  window.addEventListener('pagehide', function(){
+    if(shownAt){ lookedMs += Date.now() - shownAt; shownAt = null; track('hide', null, Math.round(lookedMs / 1000)); }
+  });
   track('view');
+
+  track('view');
+  if(ownDevice && /[?&]owner=1\b/.test(location.search)) setTimeout(function(){ alert('This browser is now left out of the visitor counts.'); }, 300);
 
   /* ---------- remembering who you are ----------
      The name and email typed into the bid form are kept in this browser only,
@@ -1202,7 +1225,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     b.style.backgroundPosition = FOCALS[(n - 1) % FOCALS.length];
     b.title = idea.title;
     b.setAttribute('aria-label', 'Idea ' + (i + 1) + ': ' + idea.title);
-    b.addEventListener('click', function(){ showIdea(i, true); });
+    b.addEventListener('click', function(){ showIdea(i, true); tap('Picked an idea picture'); });
     $('ideaStrip').appendChild(b);
     return b;
   });
@@ -1253,9 +1276,9 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       : '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M5 4h3v12H5zM12 4h3v12h-3z"/></svg>';
   }
   $('ideaControls').hidden = false;
-  $('ideaShuffle').addEventListener('click', randomIdea);
-  [$('ideaNext'), $('sceneNext')].forEach(function(b){ b.addEventListener('click', function(){ nextIdea(true); }); });
-  [$('ideaPrev'), $('scenePrev')].forEach(function(b){ b.addEventListener('click', prevIdea); });
+  $('ideaShuffle').addEventListener('click', function(){ randomIdea(); tap('Shuffled ideas'); });
+  [$('ideaNext'), $('sceneNext')].forEach(function(b){ b.addEventListener('click', function(){ nextIdea(true); tap('Next idea'); }); });
+  [$('ideaPrev'), $('scenePrev')].forEach(function(b){ b.addEventListener('click', function(){ prevIdea(); tap('Previous idea'); }); });
   /* swipe the picture on a phone; left and right arrow keys anywhere in the box */
   (function(){
     var scene = document.querySelector('.idea-scene'), startX = null;
@@ -1281,6 +1304,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     });
   });
   $('ideaUse').addEventListener('click', function(){
+    tap('Used an idea');
     if(raising) stopRaise();
     $('task').value = ideas[ideaIndex].task;
     $('task').focus({preventScroll:true});
@@ -1327,6 +1351,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   var skill = skills[0];
   function projectFloor(hours){ return Math.max(0, Math.ceil(hours) - 1) * 20000; }   /* matches the service's time rule */
   function useJob(task, cents){
+    tap('Picked a practical job');
     if(raising) stopRaise();
     $('task').value = task;
     if(cents){ amount.value = (cents / 100).toFixed(2); refresh(); }
@@ -1373,8 +1398,8 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     try { sessionStorage.setItem('dgfTab', work ? 'work' : 'fun'); } catch(e) {}
     scheduleIdea();
   }
-  $('tabFun').addEventListener('click', function(){ showTab(false); });
-  $('tabWork').addEventListener('click', function(){ showTab(true); });
+  $('tabFun').addEventListener('click', function(){ showTab(false); tap('Entertaining tab'); });
+  $('tabWork').addEventListener('click', function(){ showTab(true); tap('Practical tab'); });
   [$('tabFun'), $('tabWork')].forEach(function(tab){
     tab.addEventListener('keydown', function(e){
       if(e.key === 'ArrowLeft' || e.key === 'ArrowRight'){ e.preventDefault(); showTab(tab === $('tabFun'), true); }
@@ -1431,7 +1456,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         talk.type = 'button'; talk.className = 'chipbtn chipbtn--quiet';
         talk.setAttribute('aria-expanded', String(openThread === bid.id));
         talk.textContent = 'Comments · ' + (bid.comments || 0);
-        talk.addEventListener('click', function(){ openThread = openThread === bid.id ? null : bid.id; if(lastBoard) paint(lastBoard); });
+        talk.addEventListener('click', function(){ openThread = openThread === bid.id ? null : bid.id; if(openThread) tap('Opened comments'); if(lastBoard) paint(lastBoard); });
         acts.appendChild(talk);
       }
       if(acts.childNodes.length) box.appendChild(acts);
@@ -1692,7 +1717,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   $('soundBtn').addEventListener('click', function(){
     soundOn = !soundOn;
     try { localStorage.setItem('thSound', soundOn ? 'on' : 'off'); } catch (e) {}
-    paintSound(); wakeSound();
+    paintSound(); wakeSound(); tap(soundOn ? 'Sound on' : 'Sound off');
     if(soundOn) setTimeout(function(){ fireSound(false); }, 60);   /* so they hear what they turned on */
   });
   paintSound();
@@ -1866,7 +1891,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       words.textContent = 'Get a notification on this device if you are outbid.';
       yes.type = 'button'; yes.className = 'chipbtn'; yes.textContent = 'Turn on';
       yes.addEventListener('click', function(){
-        try { Notification.requestPermission().then(function(){ loadMine(); }); } catch (e) { ask.hidden = true; }
+        try { Notification.requestPermission().then(function(answer){ if(answer === 'granted') tap('Notifications turned on'); loadMine(); }); } catch (e) { ask.hidden = true; }
       });
       ask.appendChild(words); ask.appendChild(yes); box.appendChild(ask);
     }
@@ -2032,6 +2057,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   })();
 
   function castVote(job, on){
+    tap('Voted');
     if(!me) return askSignIn('Sign in to vote. Votes show interest; money decides who wins.');
     call('POST', '/votes', {job: job, on: on}).then(function(res){
       if(res.status === 401){ me = null; keepSession(null); return askSignIn('Sign in again to vote.'); }
@@ -2088,7 +2114,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         call('POST', '/comments', {job: job, text: text, name: nameBox ? nameBox.value.trim() : undefined}).then(function(res){
           send.disabled = false;
           if(!res.ok){ said.textContent = res.d.message || 'That did not go through. Try again.'; return; }
-          drafts[job] = '';
+          drafts[job] = ''; tap('Posted a comment');
           me.name = res.d.name || me.name;
           document.activeElement && document.activeElement.blur();
           load();
@@ -2110,8 +2136,9 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     if($('maxField').hidden) $('max').value = '';
   }
   $('visSecret').addEventListener('change', function(){ paintChoice(); refresh(); });
-  $('visOpen').addEventListener('change', function(){ paintChoice(); refresh(); });
+  $('visOpen').addEventListener('change', function(){ paintChoice(); refresh(); tap('Open job chosen'); });
   function startBack(job){
+    tap('Chip in');
     if(raising || backing) stopRaise();
     backing = job;
     $('task').value = job.task;

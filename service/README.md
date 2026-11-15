@@ -93,14 +93,25 @@ Looking, bidding and adding money need no account. Voting and commenting do.
 
 Nobody's email is ever shown: a comment carries the chosen name, and a vote is a count.
 
-## Visitor counts
+## Visitor counts and Reports
 
-The site counts its own visits (`src/stats.js`): no cookies and no outside service. The
-page reports that it was opened and a few steps in the bid form (started, placed, card
-declined, money added, sign-in link asked for) to `POST /a`. Each is stored with the day,
-phone or computer, the host the visitor came from, and a visitor mark that is a hash of
-the network address, the day and a secret, so it changes daily and cannot be turned back
-into an address. Crawlers are skipped. `/admin` shows the last 14 days.
+The site counts its own visits (`src/stats.js`): no cookies, no outside service, no ad
+trackers. The page reports to `POST /a` that it was opened, how long it was looked at,
+which named buttons were pressed (a fixed list: nothing a visitor types is stored), and
+the steps of a bid (started, placed, card declined, money added, sign-in link asked for).
+
+Each moment is stored with the day, phone or computer, the host the visitor came from, a
+campaign tag if the link had one (`?utm_source=`), the nearest city from the network
+edge, and a visitor mark: a hash of the network address, the day and a secret, so one
+person is one visitor all day and the mark changes the next day. The network address is
+kept for 30 days, to tell visits apart and spot abuse, then cleared by the timer. Rows
+are deleted after 400 days. Crawlers are skipped. The site's footer says all this.
+
+`/reports` (same admin key as `/admin`; `torchhive.com/reports` leads there) shows a
+chosen period (today, yesterday, the last 7, 30 or 90 days, or picked dates): visitors and
+visits by day, the steps from visit to bid, where visitors came from and where they are,
+phone or computer, which buttons were pressed, and each visit with its trail and time.
+Opening `torchhive.com/?owner=1` once on a device leaves that browser out of the counts.
 
 ## Auto-bid
 

@@ -35,8 +35,9 @@ import {
 import {
   signInOn, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, recentComments, removeComment,
 } from './social.js';
-import { record, stats } from './stats.js';
+import { record, report, tidy } from './stats.js';
 import ADMIN_HTML from './admin.html';
+import REPORTS_HTML from './reports.html';
 
 const IP_BIDS_PER_HOUR = 30;
 const MAX_RAISES = 200; // per bid per round; far more than a person needs, enough to stop a script
@@ -751,7 +752,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
   if (!(await adminKeyMatches(env, given))) return [401, { message: 'Wrong or missing admin key.' }];
   const url = new URL(request.url);
   let m;
-  if (request.method === 'GET' && path === '/admin/api/stats') return [200, await stats(env, s, now, url.searchParams.get('days'))];
+  if (request.method === 'GET' && path === '/admin/api/report') return [200, await report(env, s, now, url.searchParams)];
   if (request.method === 'GET' && path === '/admin/api/state') return [200, await adminState(env, s, now, url.searchParams.get('jobs') === '1')];
   if (request.method === 'POST' && (m = /^\/admin\/api\/bids\/(\d+)\/decide$/.exec(path))) return adminDecide(request, env, s, ctx, Number(m[1]), now);
   if (request.method === 'POST' && (m = /^\/admin\/api\/comments\/(\d+)\/remove$/.exec(path))) return removeComment(env, Number(m[1]));
@@ -850,8 +851,8 @@ export default {
         return json({ message: 'Method not allowed.' }, 405, cors);
       }
       if (path === '/stop' && request.method === 'GET') return stopEmails(env, url.searchParams.get('t'));
-      if (path === '/admin' && request.method === 'GET') {
-        return new Response(ADMIN_HTML, {
+      if ((path === '/admin' || path === '/reports') && request.method === 'GET') {
+        return new Response(path === '/reports' ? REPORTS_HTML : ADMIN_HTML, {
           headers: {
             'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-frame-options': 'DENY',
             'referrer-policy': 'no-referrer', 'x-robots-tag': 'noindex',
@@ -880,6 +881,7 @@ export default {
       const key = cardKeys(env)?.secret ?? null;
       for (const day of await unsettledDays(env, now)) await settleMoney(env, key, day, now, chooseWinner);
       if (key) await sweepStale(env, key, now);
+      if (new Date(now).getUTCMinutes() === 7) await tidy(env, now); // hourly: old addresses cleared, old rows dropped
     } catch (error) {
       console.error('[BIDS] timer', error && error.stack ? error.stack : String(error));
     }
