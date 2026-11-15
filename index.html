@@ -1695,8 +1695,13 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     bump.classList.remove('is-bump'); void bump.offsetWidth; bump.classList.add('is-bump');
     var lead = news.filter(function(n){ return n.kind === 'lead'; })[0];
     if(news.some(function(n){ return n.kind === 'new' || n.kind === 'up' || n.kind === 'lead'; })){ igniteFire(Boolean(lead)); fireSound(Boolean(lead)); }
+    /* The banner comes up for everything that happens on the board, not only a change
+       of leader: a new leader first, then a new bid, a raise, money added, the clock. */
+    var bidNews = news.filter(function(n){ return n.kind === 'new' || n.kind === 'up'; })[0];
+    var clock = news.filter(function(n){ return n.kind === 'clock'; })[0];
     if(lead) announce('New leader', lead.text);
-    else if(news.some(function(n){ return n.kind === 'clock'; })) announce('Clock extended', news.filter(function(n){ return n.kind === 'clock'; })[0].text);
+    else if(bidNews) announce(bidNews.kind === 'new' ? 'New bid' : (/^Someone put /.test(bidNews.text) ? 'Money added' : 'Bid raised'), bidNews.text);
+    else if(clock) announce('Clock extended', clock.text);
   }
   /* Fire along the bottom of the window, drawn as hundreds of small soft sparks of
      light that rise, sway, cool from white-yellow through orange to red, and go
