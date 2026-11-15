@@ -10,7 +10,7 @@ export const LIMITS = {
   nameMax: 24,
   emailMax: 254,
   maxCents: 10_000_000, // $100,000
-  minBidCents: 50, // the lowest bid: the least a card can be charged, so every winner pays
+  minBidCents: 50, // the reserve: a bid has to meet it to count. It is the least a card can be charged, so every winner pays
   freeUnderCents: 50, // card minimum: a win below this is free
   minPledgeCents: 200, // least someone can add to an open job; below this the card fee eats it
 };
@@ -81,7 +81,7 @@ export function validateBid(body) {
   if (badLanguage(name)) return { ok: false, error: 'Pick a different name for the board.' };
   if (posesAsSite(name)) return { ok: false, error: 'That name is reserved. Pick a different name for the board.' };
   if (email.length > LIMITS.emailMax || !EMAIL_OK.test(email)) return { ok: false, error: 'Check the email address.' };
-  if (!Number.isInteger(amountCents) || amountCents < LIMITS.minBidCents) return { ok: false, error: `Enter a bid of at least ${money(LIMITS.minBidCents)}.` };
+  if (!Number.isInteger(amountCents) || amountCents < LIMITS.minBidCents) return { ok: false, error: `The reserve is ${money(LIMITS.minBidCents)}. Enter a bid of at least that.` };
   if (amountCents > LIMITS.maxCents) return { ok: false, error: `The most you can bid here is ${money(LIMITS.maxCents)}.` };
   const max = validateMax(body.maxCents, amountCents);
   if (!max.ok) return max;
@@ -117,7 +117,7 @@ export function validateMax(maxCents, amountCents) {
 // A raise sent with the bidder's private handle: only the money is checked.
 export function validateRaise(body) {
   const amountCents = body?.amountCents;
-  if (!Number.isInteger(amountCents) || amountCents < LIMITS.minBidCents) return { ok: false, error: `Enter a bid of at least ${money(LIMITS.minBidCents)}.` };
+  if (!Number.isInteger(amountCents) || amountCents < LIMITS.minBidCents) return { ok: false, error: `The reserve is ${money(LIMITS.minBidCents)}. Enter a bid of at least that.` };
   if (amountCents > LIMITS.maxCents) return { ok: false, error: `The most you can bid here is ${money(LIMITS.maxCents)}.` };
   const max = validateMax(body.maxCents, amountCents);
   if (!max.ok) return max;

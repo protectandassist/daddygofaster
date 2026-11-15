@@ -512,7 +512,7 @@ async function postCheck(request, env, s, now) {
   if (task.length < LIMITS.taskMin) return [400, { verdict: 'invalid', message: 'Describe the job in a few more words.' }];
   if (task.length > LIMITS.taskMax) return [400, { verdict: 'invalid', message: `Keep the job to ${LIMITS.taskMax} characters.` }];
   const amountCents = body.amountCents;
-  if (!Number.isInteger(amountCents) || amountCents < LIMITS.minBidCents || amountCents > LIMITS.maxCents) return [400, { verdict: 'invalid', message: `Enter a bid of at least ${money(LIMITS.minBidCents)}.` }];
+  if (!Number.isInteger(amountCents) || amountCents < LIMITS.minBidCents || amountCents > LIMITS.maxCents) return [400, { verdict: 'invalid', message: `The reserve is ${money(LIMITS.minBidCents)}. Enter a bid of at least that.` }];
   const maxCents = Number.isInteger(body.maxCents) && body.maxCents >= amountCents ? body.maxCents : null;
 
   let answer = await recentCheck(env, task, now); // the same job asked again costs nothing

@@ -367,9 +367,9 @@ test('nobody can take a name that passes them off as the site or its staff', () 
   assert.equal(validateBid({ task: 'Walk to the store and back', name: 'TorchHive Admin', email: 'a@example.com', amountCents: 500 }).ok, false);
 });
 
-test('the lowest bid is fifty cents, so every winner can be charged', () => {
+test('the reserve is fifty cents, so every winner can be charged', () => {
   const base = { task: 'Walk to work instead of driving.', name: 'mike_r', email: 'mike@example.com' };
-  assert.deepEqual(validateBid({ ...base, amountCents: 49 }), { ok: false, error: 'Enter a bid of at least $0.50.' });
+  assert.deepEqual(validateBid({ ...base, amountCents: 49 }), { ok: false, error: 'The reserve is $0.50. Enter a bid of at least that.' });
   assert.equal(validateBid({ ...base, amountCents: 1 }).ok, false);
   assert.equal(validateBid({ ...base, amountCents: 50 }).ok, true);
   assert.equal(validateRaise({ amountCents: 49 }).ok, false);
