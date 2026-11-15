@@ -14,7 +14,7 @@ crons = ["* * * * *"]
 
 [vars]
 # "true" opens bidding. Anything else and the site shows "Bidding opens soon".
-OPEN = "false"
+OPEN = "true"
 # Time policy lives in src/rules.js: any winning bid includes up to 60 minutes;
 # each full $200 adds another hour to the cap. The owner approves actual duration.
 # Bidding for a job day closes at CLOSE_HOUR (24-hour clock) in TIME_ZONE the evening before.
