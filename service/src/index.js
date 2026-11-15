@@ -166,7 +166,7 @@ async function settleStandings(request, env, s, ctx, a, before, now) {
   // while people keep outbidding each other, the round runs on.
   // While he is live with a fixed close, the time he announced stands: late bids add nothing.
   const live = await liveState(env);
-  const closesAt = live.on && live.fixedClose ? a.closes_at : extendedClose(a.closes_at, now, s.extend);
+  const closesAt = live.fixedClose ? a.closes_at : extendedClose(a.closes_at, now, s.extend);
   if (standing.highCents > (before ? before.amount_cents : 0) && closesAt !== a.closes_at) {
     await env.DB.prepare(
       "UPDATE auctions SET closes_at = ?, extensions = extensions + 1 WHERE day = ? AND status = 'open' AND closes_at = ?",
@@ -864,7 +864,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
     // Or "close bidding at 8:15": the owner page sends that moment as closeAt.
     const mins = Number(body?.closeInMinutes);
     const at = typeof body?.closeAt === 'string' ? Date.parse(body.closeAt) : NaN;
-    if (status === 200 && out.on && (Number.isFinite(at) || (Number.isFinite(mins) && mins > 0))) {
+    if (status === 200 && body?.on === true && (Number.isFinite(at) || (Number.isFinite(mins) && mins > 0))) {
       if (!s.open) return [200, { ...out, note: 'Bidding is not open, so there was no round to set a closing time on.' }];
       if (Number.isFinite(at) ? (at < now + 60_000 || at > now + 24 * 3_600_000) : (mins < 1 || mins > 720)) {
         return [400, { message: 'Pick a closing time between a minute from now and 24 hours from now.' }];

@@ -92,15 +92,16 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 
     <section class="card" id="liveCard">
       <h2>Going live</h2>
-      <p class="muted small" id="liveNote">When you are live, paste your stream links here. The site plays the YouTube or Twitch stream with a chat beside it, open to anyone with an account; with both, viewers pick which to watch. TikTok does not allow its live streams to be played on another site, so its link becomes a button. For your stream descriptions, send people to torchhive.com/live</p>
+      <p class="muted small" id="liveNote">The stream links are optional: you can set the closing time and the fixed close now and add a link later. When you are live, paste your stream links here. The site plays the YouTube or Twitch stream with a chat beside it, open to anyone with an account; with both, viewers pick which to watch. TikTok does not allow its live streams to be played on another site, so its link becomes a button. For your stream descriptions, send people to torchhive.com/live</p>
       <div class="row">
         <input id="liveYoutube" type="url" placeholder="YouTube link to the live video" style="flex:2 1 260px">
         <input id="liveTwitch" type="text" placeholder="Twitch channel or link (optional)" style="flex:1 1 200px">
         <input id="liveTiktok" type="url" placeholder="TikTok link (optional)" style="flex:1 1 200px">
         <label class="small" style="flex:1 0 100%"><input type="checkbox" id="liveFixed"> Fixed close: while I am live, late bids do not add time to the clock</label>
         <label class="small" style="flex:1 0 100%">Close bidding at <input id="liveAt" type="time" style="width:8.5em"> your time, or in <input id="liveClose" type="number" min="1" max="720" step="1" placeholder="--" style="width:5.5em"> minutes (leave both empty to keep the round's own closing time)</label>
-        <button id="liveOn">Show it on the site</button>
+        <button id="liveOn">Save</button>
         <button id="liveOff" class="bad" hidden>End live on the site</button>
+        <p class="small" id="liveMsg" role="status" style="flex:1 0 100%" hidden></p>
       </div>
       <div id="chatList"></div>
     </section>
@@ -237,7 +238,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     var live = d.live || {on: false};
     $('liveNote').textContent = live.on
       ? 'You are live on the site now. The stream and the chat are showing. End it here when the stream is over.'
-      : 'When you are live, paste your stream links here. The site plays the YouTube or Twitch stream with a chat beside it, open to anyone with an account; with both, viewers pick which to watch. TikTok does not allow its live streams to be played on another site, so its link becomes a button. For your stream descriptions, send people to torchhive.com/live';
+      : 'The stream links are optional: you can set the closing time and the fixed close now and add a link later. When you are live, paste your stream links here. The site plays the YouTube or Twitch stream with a chat beside it, open to anyone with an account; with both, viewers pick which to watch. TikTok does not allow its live streams to be played on another site, so its link becomes a button. For your stream descriptions, send people to torchhive.com/live';
     $('liveOff').hidden = !live.on;
     if(live.on){
       if(!$('liveYoutube').value && live.youtube) $('liveYoutube').value = 'https://youtu.be/' + live.youtube;
@@ -246,7 +247,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       $('liveFixed').checked = Boolean(live.fixedClose);
       $('liveNote').textContent += live.fixedClose ? ' The close is fixed: late bids add no time.' : ' Late bids still add time to the clock.';
     }
-    $('liveOn').textContent = live.on ? 'Change the links' : 'Show it on the site';
+    $('liveOn').textContent = live.on ? 'Change the links' : 'Save';
+    if(!live.on) $('liveFixed').checked = Boolean(live.fixedClose);
     $('chatList').textContent = '';
     (live.on ? d.chat || [] : []).forEach(function(c){
       var item = el('div', 'held-item'), top = el('div', 'row');
@@ -356,7 +358,19 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     }
   }
 
-  $('liveOn').addEventListener('click', function(){ act('/admin/api/live', {on: true, youtube: $('liveYoutube').value.trim(), twitch: $('liveTwitch').value.trim(), tiktok: $('liveTiktok').value.trim(), fixedClose: $('liveFixed').checked, closeAt: closeAtFromClock($('liveAt').value), closeInMinutes: $('liveAt').value || $('liveClose').value === '' ? undefined : Number($('liveClose').value)}).then(function(){ $('liveClose').value = ''; $('liveAt').value = ''; }); });
+  $('liveOn').addEventListener('click', function(){
+    $('actionErr').hidden = true; $('liveMsg').hidden = true;
+    api('/admin/api/live', {method: 'POST', body: JSON.stringify({on: true, youtube: $('liveYoutube').value.trim(), twitch: $('liveTwitch').value.trim(), tiktok: $('liveTiktok').value.trim(), fixedClose: $('liveFixed').checked, closeAt: closeAtFromClock($('liveAt').value), closeInMinutes: $('liveAt').value || $('liveClose').value === '' ? undefined : Number($('liveClose').value)})}).then(function(res){
+      res = res || {};
+      var said = [];
+      if(res.closesAt) said.push('Bidding now closes at ' + new Date(res.closesAt).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}) + '.');
+      if(res.note) said.push(res.note);
+      if(res.noStream) said.push('No stream link yet, so the site shows no player. Add a link here when you are live.');
+      else if(res.on) said.push('The stream is showing on the site.');
+      $('liveClose').value = ''; $('liveAt').value = '';
+      return Promise.resolve(load()).then(function(){ $('liveMsg').textContent = said.join(' '); $('liveMsg').hidden = !said.length; });
+    }).catch(function(e){ $('actionErr').textContent = e.message; $('actionErr').hidden = false; });
+  });
   $('liveOff').addEventListener('click', function(){ act('/admin/api/live', {on: false}); });
   /* "8:15 PM" on this device's clock: today if that is still ahead, otherwise tomorrow */
   function closeAtFromClock(value){

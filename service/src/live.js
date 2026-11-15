@@ -50,7 +50,7 @@ export function tiktokLink(link) {
 export async function liveState(env) {
   try {
     const live = JSON.parse((await getSetting(env, 'live')) || 'null');
-    return live && live.on ? { on: true, youtube: live.youtube || null, twitch: live.twitch || null, tiktok: live.tiktok || null, since: live.since || null, fixedClose: Boolean(live.fixedClose) } : { on: false };
+    return live && live.on ? { on: true, youtube: live.youtube || null, twitch: live.twitch || null, tiktok: live.tiktok || null, since: live.since || null, fixedClose: Boolean(live.fixedClose) } : { on: false, fixedClose: Boolean(live && live.fixedClose) };
   } catch { return { on: false }; }
 }
 
@@ -68,7 +68,12 @@ export async function setLive(env, body, now) {
   if (body.twitch && !twitch) return [400, { message: 'That does not look like a Twitch channel. Paste the channel link, or just its name.' }];
   if (body.youtube && !youtube) return [400, { message: 'That does not look like a YouTube link. Paste the link to the live video.' }];
   if (body.tiktok && !tiktok) return [400, { message: 'That does not look like a TikTok link.' }];
-  if (!youtube && !twitch && !tiktok) return [400, { message: 'Paste the link to at least one stream: YouTube, Twitch or TikTok.' }];
+  // No stream link yet: the closing time and the fixed close still apply. The site shows no player until a link is added.
+  if (!youtube && !twitch && !tiktok) {
+    const fixed = body.fixedClose === true;
+    await setSetting(env, 'live', JSON.stringify({ on: false, fixedClose: fixed }), now);
+    return [200, { on: false, fixedClose: fixed, noStream: true }];
+  }
   // Changing the links mid-stream keeps the chat that is already there.
   const before = await liveState(env);
   const fixedClose = body.fixedClose === true;
