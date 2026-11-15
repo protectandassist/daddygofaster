@@ -1871,7 +1871,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   }
 
   function load(){
-    if(demo){ paint(demoData); return; }
+    if(demo){ paint(demoData); demoMine(); return; }
     fetch(CONFIG.api + '/board', {headers: {'Accept': 'application/json'}})
       .then(function(r){ if(!r.ok) throw new Error('board ' + r.status); return r.json(); })
       .then(function(d){ paint(d); loadMine(); })
