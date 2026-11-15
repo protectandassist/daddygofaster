@@ -326,7 +326,7 @@ p{margin:0}
 
 /* ---- sections ---------------------------------------------- */
 .sec{padding:clamp(60px,7vw,96px) 0;border-bottom:1px solid var(--line)}
-.sec--alt{background:var(--bg-2)}
+.sec--alt{background:rgba(255,255,255,.022)}   /* a tint, not a wall, so the fire behind shows through */
 .sec h2{font-size:clamp(2rem,3.6vw,3rem);font-weight:800;letter-spacing:-.045em}
 .lead{margin-top:14px;max-width:39em;color:var(--muted);font-size:1.08rem}
 .sec__head{margin-bottom:clamp(28px,4vw,40px)}
@@ -430,17 +430,10 @@ p{margin:0}
 .stat__v.is-bump{animation:statBump 1s ease-out}
 @keyframes statBump{0%{transform:scale(1)}30%{transform:scale(1.22);text-shadow:0 0 22px rgba(239,149,2,.9)}100%{transform:scale(1);text-shadow:none}}
 .stat__v.is-urgent{color:var(--bad);animation:livePulse 1s ease-in-out infinite}
-/* Fire comes up the screen when a bid lands. */
-.fire{position:fixed;inset:0;pointer-events:none;z-index:55;overflow:hidden}
-.fire i{position:absolute;bottom:-20vh;left:var(--l);width:var(--w);height:calc(var(--w) * 1.55);border-radius:50% 50% 46% 46% / 64% 64% 36% 36%;
-  background:radial-gradient(ellipse at 50% 78%,#fff3c4 0%,#ffcf57 20%,#ff9220 46%,rgba(255,74,12,.6) 66%,rgba(255,40,0,0) 78%);
-  mix-blend-mode:screen;filter:blur(3px);opacity:0;will-change:transform,opacity;animation:flameUp var(--t) cubic-bezier(.22,.61,.3,1) var(--d) forwards}
-@keyframes flameUp{0%{transform:translate3d(0,0,0) scale(.75);opacity:0}10%{opacity:.95}55%{opacity:.75}
-  100%{transform:translate3d(var(--x),-128vh,0) scale(.22) rotate(var(--r));opacity:0}}
-.fire::after{content:"";position:absolute;left:0;right:0;bottom:0;height:48vh;opacity:0;
-  background:linear-gradient(0deg,rgba(255,112,12,.6),rgba(255,166,28,.2) 45%,transparent)}
-.fire.is-lit::after{animation:fireGlow 2.6s ease-out}
-@keyframes fireGlow{0%{opacity:0}14%{opacity:1}100%{opacity:0}}
+/* Fire when a bid lands. It burns along the bottom of the window, BEHIND the page:
+   the cards and text stay on top and readable, and the flames show in the gaps. */
+.fire{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+main,.foot{position:relative;z-index:1}
 .feed__sound{flex:0 0 auto;border:1px solid var(--line-2);border-radius:999px;background:transparent;color:var(--muted);font:600 .72rem var(--body);padding:4px 10px;cursor:pointer}
 .feed__sound:hover{color:var(--text);border-color:var(--accent)}
 .feed__sound[aria-pressed="true"]{color:var(--accent-hi);border-color:var(--accent)}
@@ -948,7 +941,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     </div>
   </section>
 </main>
-<div class="fire" id="fire" aria-hidden="true"></div>
+<canvas class="fire" id="fire" aria-hidden="true"></canvas>
 <div class="hype" id="hype" role="status" aria-live="polite"><img src="/assets/torchhive-mark.png" width="114" height="192" alt=""><div><b id="hypeTitle"></b><span id="hypeText"></span></div></div>
 
 <footer class="foot">
@@ -1121,6 +1114,20 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   var chipNames = ['The five-mile doughnut', 'Coin-flip walk', 'Watermelon carry', 'GPS dinosaur', '10,000 steps first', 'A to Z photo hunt',
     'Overengineer a bell', 'Spaghetti bridge', 'Garage mini golf', 'Card tower', 'Chopstick coin sort', 'Gas station feast', 'Cardboard arcade',
     'Toothbrush vs. patio', '100-piece cleanup', 'Fork vs. leaves', 'Junk grabber', '$10 thrift rescue'];
+  /* The ideas are put in one fixed order, with the three kinds of scene taking
+     turns, so stepping 1, 2, 3 changes the picture every time and the numbers
+     always mean the same idea. */
+  (function(){
+    var piles = {}, order = [], scenes = [], more = true;
+    ideas.forEach(function(idea, i){ if(!piles[idea.scene]){ piles[idea.scene] = []; scenes.push(idea.scene); } piles[idea.scene].push(i); });
+    while(more){
+      more = false;
+      scenes.forEach(function(scene){ if(piles[scene].length){ order.push(piles[scene].shift()); more = true; } });
+    }
+    var sortedIdeas = order.map(function(i){ return ideas[i]; }), sortedNames = order.map(function(i){ return chipNames[i]; });
+    ideas.length = 0; chipNames.length = 0;
+    sortedIdeas.forEach(function(x){ ideas.push(x); }); sortedNames.forEach(function(x){ chipNames.push(x); });
+  })();
   (function(){
     /* three different suggestions each visit, one from each kind of scene when there are enough */
     var chips = document.querySelectorAll('#bid .chips[aria-label="Ideas"] .chipbtn');
@@ -1140,7 +1147,9 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   var sceneNames = {sunrise:'Take the long way', workshop:'Make it ridiculous', cleanup:'Chores with a catch'};
   var inspiration = $('inspiration'), category = 'all', deck = [], ideaIndex = -1;
   var ideaTimer = null, ideaPaused = reduce, ideaHovered = false, ideaVisible = true, workOpen = false;
+  /* each visit opens on the idea after the one last seen */
   try { ideaIndex = Number(localStorage.getItem('dgfIdeaLast') || -1); } catch(e) {}
+  if(!(ideaIndex >= -1 && ideaIndex < ideas.length)) ideaIndex = -1;
   function mix(list){
     for(var i = list.length - 1; i > 0; i--){
       var j = Math.floor(Math.random() * (i + 1)), temp = list[i]; list[i] = list[j]; list[j] = temp;
@@ -1224,14 +1233,17 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     try { localStorage.setItem('dgfIdeaLast', String(ideaIndex)); } catch(e) {}
     scheduleIdea();
   }
+  /* Next and previous go in order: 1, 2, 3 and round again. Shuffle is the only thing that jumps. */
   function nextIdea(announce){
-    if(!deck.length) shuffleDeck();
-    showIdea(deck.shift(), announce);
+    showIdea((ideaIndex + 1 + ideas.length) % ideas.length, announce);
   }
   function prevIdea(){
-    trail.pop();   /* the one on show */
-    var before = trail.length ? trail[trail.length - 1] : (ideaIndex - 1 + ideas.length) % ideas.length;
-    showIdea(before, true, true);
+    showIdea((ideaIndex - 1 + ideas.length) % ideas.length, true);
+  }
+  function randomIdea(){
+    var pick = ideaIndex;
+    while(ideas.length > 1 && pick === ideaIndex) pick = Math.floor(Math.random() * ideas.length);
+    showIdea(pick, true);
   }
   function paintPause(){
     var label = ideaPaused ? 'Resume changing ideas' : 'Pause changing ideas';
@@ -1241,7 +1253,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       : '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M5 4h3v12H5zM12 4h3v12h-3z"/></svg>';
   }
   $('ideaControls').hidden = false;
-  $('ideaShuffle').addEventListener('click', function(){ deck = []; nextIdea(true); });
+  $('ideaShuffle').addEventListener('click', randomIdea);
   [$('ideaNext'), $('sceneNext')].forEach(function(b){ b.addEventListener('click', function(){ nextIdea(true); }); });
   [$('ideaPrev'), $('scenePrev')].forEach(function(b){ b.addEventListener('click', prevIdea); });
   /* swipe the picture on a phone; left and right arrow keys anywhere in the box */
@@ -1590,23 +1602,58 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     if(lead) announce('New leader', lead.text);
     else if(news.some(function(n){ return n.kind === 'clock'; })) announce('Clock extended', news.filter(function(n){ return n.kind === 'clock'; })[0].text);
   }
-  /* Flames rise from the bottom of the screen: more of them, and bigger, when the lead changes. */
+  /* Fire along the bottom of the window, drawn as hundreds of small soft sparks of
+     light that rise, sway, cool from white-yellow through orange to red, and go
+     out. It stays low (about a third of the window, higher for a new leader),
+     lasts a couple of seconds, and is drawn behind the page content. */
+  var fireCanvas = $('fire'), firePen = null, sparks = [], fireUntil = 0, fireFrame = null, firePower = 0, fireSprites = null;
+  function sprite(r, g, b){
+    var c = document.createElement('canvas'); c.width = c.height = 64;
+    var p = c.getContext('2d'), grad = p.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',1)');
+    grad.addColorStop(.35, 'rgba(' + r + ',' + g + ',' + b + ',.55)');
+    grad.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+    p.fillStyle = grad; p.fillRect(0, 0, 64, 64);
+    return c;
+  }
   function igniteFire(big){
-    if(reduce) return;
-    var box = $('fire'), n = big ? 54 : 30, wide = window.innerWidth;
-    for(var i = 0; i < n; i++){
-      var f = document.createElement('i'), w = (big ? 70 : 46) + Math.random() * (big ? 170 : 110);
-      if(wide < 700) w *= .62;
-      f.style.setProperty('--l', (Math.random() * 104 - 4) + '%');
-      f.style.setProperty('--w', w.toFixed(0) + 'px');
-      f.style.setProperty('--t', (1.5 + Math.random() * 1.5).toFixed(2) + 's');
-      f.style.setProperty('--d', (Math.random() * (big ? .9 : .5)).toFixed(2) + 's');
-      f.style.setProperty('--x', (Math.random() * 26 - 13).toFixed(1) + 'vw');
-      f.style.setProperty('--r', (Math.random() * 90 - 45).toFixed(0) + 'deg');
-      box.appendChild(f);
+    if(reduce || !fireCanvas.getContext) return;
+    if(!firePen){
+      firePen = fireCanvas.getContext('2d');
+      fireSprites = [sprite(255, 214, 120), sprite(255, 158, 44), sprite(244, 98, 18), sprite(170, 36, 8)];   /* hottest to coolest */
     }
-    box.classList.remove('is-lit'); void box.offsetWidth; box.classList.add('is-lit');
-    setTimeout(function(){ for(var k = 0; k < n && box.firstChild; k++) box.removeChild(box.firstChild); }, 4200);
+    fireCanvas.width = Math.ceil(window.innerWidth / 2); fireCanvas.height = Math.ceil(window.innerHeight / 2);   /* half size: soft and cheap */
+    firePower = Math.max(firePower, big ? 1 : .62);
+    fireUntil = performance.now() + (big ? 3000 : 2000);
+    if(!fireFrame) fireFrame = requestAnimationFrame(burn);
+  }
+  function burn(now){
+    var w = fireCanvas.width, h = fireCanvas.height, pen = firePen, tall = h / 400, i;
+    pen.globalCompositeOperation = 'source-over';
+    pen.clearRect(0, 0, w, h);
+    if(now < fireUntil){
+      var fresh = Math.min(46, Math.round(w / 24 * firePower));   /* the same fire on a phone and on a wide monitor */
+      for(i = 0; i < fresh; i++){
+        sparks.push({
+          x: Math.random() * w, y: h + Math.random() * 8 * tall,
+          rise: (1.5 + Math.random() * 2.7) * firePower * tall, drift: (Math.random() - .5) * .5,
+          size: (12 + Math.random() * 24) * tall * (.75 + firePower * .45),
+          life: 1, fade: .013 + Math.random() * .022, sway: Math.random() * 6.3
+        });
+      }
+    }
+    pen.globalCompositeOperation = 'lighter';   /* light adds up, the way overlapping flame does */
+    for(i = sparks.length - 1; i >= 0; i--){
+      var f = sparks[i];
+      f.sway += .13; f.x += f.drift + Math.sin(f.sway) * .8 * tall; f.y -= f.rise; f.rise *= .991; f.size *= .986; f.life -= f.fade;
+      if(f.life <= 0){ sparks.splice(i, 1); continue; }
+      var heat = f.life > .86 ? 0 : f.life > .58 ? 1 : f.life > .28 ? 2 : 3;
+      pen.globalAlpha = Math.min(1, f.life * 1.1) * .2;   /* faint each, so they build to orange and never to a white glare */
+      pen.drawImage(fireSprites[heat], f.x - f.size, f.y - f.size * 1.9, f.size * 2, f.size * 3.1);   /* taller than wide: a tongue of flame */
+    }
+    pen.globalAlpha = 1;
+    if(sparks.length || now < fireUntil){ fireFrame = requestAnimationFrame(burn); }
+    else { pen.clearRect(0, 0, w, h); fireFrame = null; firePower = 0; }
   }
   /* The fire sound is made in the browser: a rush of low noise with crackles.
      Browsers only allow sound after the visitor has clicked or tapped once. */
