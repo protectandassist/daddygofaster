@@ -378,7 +378,7 @@ p{margin:0}
 .openjob__acts .chipbtn--quiet{border-color:var(--line-2);color:var(--muted)}
 .openjob__acts .chipbtn--quiet:hover{color:var(--text);border-color:var(--accent)}
 .openjob__acts .chipbtn[aria-pressed="true"]{border-color:var(--good);color:var(--good)}
-/* Comments on an open job, from people who put money on it. */
+/* Comments on an open job, from anyone with an account. */
 .thread{display:grid;gap:10px;width:100%;max-width:52ch;padding:12px 14px;border:1px solid var(--line-2);border-radius:10px;background:var(--field);white-space:normal}
 .thread__item{font-size:.88rem;font-weight:400;line-height:1.45;overflow-wrap:anywhere}
 .thread__item b{font-weight:600;margin-right:6px}
@@ -922,7 +922,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>One win per person per week, and up to five jobs a day each.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A new high bid in the last five minutes extends bidding by five minutes. While the bids keep climbing, bidding stays open.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>You choose whether your job is secret or open. A secret job stays hidden until the video. An open job is shown on the board, and anyone can add $2 or more to it. The job's total is what competes, so a crowd can outbid one big bidder. Everyone who adds money is charged only if that job wins.</span></li>
-            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Sign in with a link sent to your email to vote and comment on open jobs. Votes show interest; money decides who wins. Comments are for people who have put money on that job. Swearing, slurs and attacks on anyone are not posted, and any comment can be reported.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Sign in with Google or a link sent to your email to vote and comment on open jobs. Votes show interest; money decides who wins. Anyone with an account can comment. Swearing, slurs and attacks on anyone are not posted, and any comment can be reported.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>You can raise your bid as often as you like. Send the same job with a higher amount, and the same rules apply.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Set a maximum and your bid rises on its own, one cent at a time, only when someone outbids you. Your maximum is never shown on the site.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>If the winner's card does not go through, the next highest bid wins.</span></li>
@@ -941,7 +941,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         <div>
           <p class="eyebrow">Free. No password.</p>
           <h2>Create your own TorchHive account</h2>
-          <p>Pick your own username, vote on open jobs, comment on the ones you put money behind, and get alerts by email or on your phone. Sign in with Google, or enter your email and we send you a link. Either one creates your account.</p>
+          <p>Pick your own username, vote on open jobs, comment on them, and get alerts by email or on your phone. Sign in with Google, or enter your email and we send you a link. Either one creates your account.</p>
         </div>
         <div>
           <div id="joinWays">
@@ -1853,7 +1853,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       {id: 1, name: 'Priya', text: 'In for $5. He has to keep the stickers on.', at: new Date(now - 40 * min).toISOString()},
       {id: 2, name: 'big_al', text: 'Two miles is nothing. Make it uphill.', at: new Date(now - 22 * min).toISOString()}
     ]};
-    me = {email: 'you@example.com', name: null, votes: [], canComment: ['demo00000001']};
+    me = {email: 'you@example.com', name: null, votes: []};
     paint(demoData, 'Sample data for preview. These are not real bids. Vote, comment and chip in to try it: nothing is sent.');
     /* every few seconds something happens in the pretend round */
     var demoNames = ['lena_p', 'coach_d', 'rustbucket', 'ms_ortiz', 'gary2', 'nightowl', 'pat_k'], demoStep = 0;
@@ -2025,7 +2025,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   /* ---------- signing in, voting and commenting ----------
      Sign-in is a link sent by email: no password. The browser keeps a session
      key and sends it with votes and comments. Votes show interest only. Comments
-     come from people who have put money on that job. */
+     come from anyone who is signed in. */
   function demoCall(method, path, body){
     var out = {ok: true, status: 200, d: {}}, job = body && body.job;
     var row = job && demoData.bids.filter(function(b){ return b.id === job; })[0];
@@ -2278,7 +2278,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     if(!session){ me = null; paintAcct(); return; }
     call('GET', '/me').then(function(res){
       if(res.ok){
-        me = {email: res.d.email, name: res.d.name, emailAlerts: Boolean(res.d.emailAlerts), votes: res.d.votes || [], canComment: res.d.canComment || []};
+        me = {email: res.d.email, name: res.d.name, emailAlerts: Boolean(res.d.emailAlerts), votes: res.d.votes || []};
         if(!$('email').value) $('email').value = me.email;   /* one less thing to type on the bid form */
         /* a brand-new account starts with the alerts box ticked; it is only saved with the username */
         if(!me.name) me.emailAlerts = true;
@@ -2365,10 +2365,6 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         ask.type = 'button'; ask.className = 'chipbtn'; ask.textContent = 'Sign in to comment';
         ask.addEventListener('click', function(){ askSignIn('Sign in to comment.'); });
         box.appendChild(ask);
-        return;
-      }
-      if(me.canComment.indexOf(job) < 0){
-        box.appendChild(note('Comments are for people who have put money on this job. Chip in with the email you signed in with, then come back.'));
         return;
       }
       var form = document.createElement('form'), words = document.createElement('textarea'), send = document.createElement('button'), said = note('');

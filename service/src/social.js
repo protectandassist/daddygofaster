@@ -4,9 +4,9 @@
 // link's code and the browser's session key are random, and only their hashes
 // are stored, so the database alone cannot be used to sign in as anyone.
 //
-// Votes show interest in an open job; they never decide who wins. Comments on
-// an open job come only from people who have put money on it, so there is a
-// card behind every commenter.
+// Votes show interest in an open job; they never decide who wins. Anyone with
+// an account can comment on an open job. What keeps it civil is the language
+// filter, the pause between comments, reports, and the owner's Remove and Block.
 import { sha256, randomHex, providerKey } from './store.js';
 import { sendEmail } from './mail.js';
 import { LIMITS } from './rules.js';
@@ -126,16 +126,6 @@ export async function authEnd(request, env, now) {
 
 // ---- who am I, what have I voted for, where can I comment --------------------------
 
-// Open jobs this person has money on: ones they posted, and ones they added to.
-async function backedJobs(env, email) {
-  const { results } = await env.DB.prepare(
-    `SELECT b.pid FROM bids b WHERE b.email = ?1 AND b.shared = 1 AND b.status = 'qualified'
-     UNION
-     SELECT b.pid FROM pledges p JOIN bids b ON b.id = p.bid_id WHERE p.email = ?1 AND p.status IN ('active', 'paid') AND b.shared = 1`,
-  ).bind(email).all();
-  return results.map((r) => r.pid).filter(Boolean);
-}
-
 export async function getMe(request, env, now) {
   const user = await sessionUser(request, env, now);
   if (!user) return [401, { message: 'Sign in first.' }];
@@ -144,7 +134,7 @@ export async function getMe(request, env, now) {
   ).bind(user.id).all();
   return [200, {
     email: user.email, name: user.name ?? null, emailAlerts: user.alerts === 1,
-    votes: results.map((r) => r.pid), canComment: await backedJobs(env, user.email),
+    votes: results.map((r) => r.pid),
   }];
 }
 
@@ -237,9 +227,6 @@ export async function postComment(request, env, now) {
   if (!job) return [404, { message: 'That job is not open for comments.' }];
   const round = await env.DB.prepare('SELECT status FROM auctions WHERE day = ?').bind(job.day).first();
   if (round.status !== 'open' && job.win_state !== 'won') return [409, { message: 'Comments on that job are closed.' }];
-  if (!(await backedJobs(env, user.email)).includes(body.job)) {
-    return [403, { message: 'Add money to this job to comment on it. Use the same email you signed in with.' }];
-  }
   const text = String(body?.text ?? '').replace(/\s+/g, ' ').trim();
   if (text.length < 2) return [400, { message: 'Write a comment first.' }];
   if (text.length > COMMENT_MAX) return [400, { message: `Keep it to ${COMMENT_MAX} characters.` }];

@@ -9,7 +9,7 @@
 //          POST /auth/start      email a sign-in link;  POST /auth/finish  use it;  POST /auth/end  sign out
 //          GET  /me              who is signed in, their votes, and where they can comment
 //          POST /votes           vote for an open job, or take the vote back (signed in)
-//          GET  /comments        comments on an open job;  POST /comments  add one (signed in, with money on it)
+//          GET  /comments        comments on an open job;  POST /comments  add one (signed in)
 //          POST /a               count a visit or a step in the bid form (see stats.js)
 //          GET  /stop            turn off outbid emails for one bid
 // Owner:   GET  /admin           the owner's page (asks for the admin key)
