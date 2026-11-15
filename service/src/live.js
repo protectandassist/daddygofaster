@@ -39,11 +39,12 @@ export function tiktokLink(link) {
 export async function liveState(env) {
   try {
     const live = JSON.parse((await getSetting(env, 'live')) || 'null');
-    return live && live.on ? { on: true, youtube: live.youtube || null, tiktok: live.tiktok || null, since: live.since || null } : { on: false };
+    return live && live.on ? { on: true, youtube: live.youtube || null, tiktok: live.tiktok || null, since: live.since || null, fixedClose: Boolean(live.fixedClose) } : { on: false };
   } catch { return { on: false }; }
 }
 
-// Owner: POST /admin/api/live { on, youtube, tiktok }
+// Owner: POST /admin/api/live { on, youtube, tiktok, fixedClose }
+// fixedClose: while live, a late bid does not move the close back.
 export async function setLive(env, body, now) {
   if (!body || body.on !== true) {
     await setSetting(env, 'live', JSON.stringify({ on: false }), now);
@@ -54,8 +55,11 @@ export async function setLive(env, body, now) {
   if (body.youtube && !youtube) return [400, { message: 'That does not look like a YouTube link. Paste the link to the live video.' }];
   if (body.tiktok && !tiktok) return [400, { message: 'That does not look like a TikTok link.' }];
   if (!youtube && !tiktok) return [400, { message: 'Paste the YouTube link to the live video (a TikTok link can be added too).' }];
-  await setSetting(env, 'live', JSON.stringify({ on: true, youtube, tiktok, since: now }), now);
-  return [200, { on: true, youtube, tiktok }];
+  // Changing the links mid-stream keeps the chat that is already there.
+  const before = await liveState(env);
+  const fixedClose = body.fixedClose === true;
+  await setSetting(env, 'live', JSON.stringify({ on: true, youtube, tiktok, fixedClose, since: before.on && before.since ? before.since : now }), now);
+  return [200, { on: true, youtube, tiktok, fixedClose }];
 }
 
 const line = (c) => ({ id: c.id, name: c.name, text: c.text, at: new Date(c.created_at).toISOString() });

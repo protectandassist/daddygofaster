@@ -123,6 +123,12 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
   var $ = function(id){ return document.getElementById(id); };
   var key = '';
   try { key = sessionStorage.getItem('dgfKey') || ''; } catch (e) {}
+  /* Arriving from the site while signed in as the owner: the sign-in comes along after the "#",
+     which is never sent to a server, and is taken out of the address bar at once. */
+  try {
+    var handed = /[#&]s=([0-9a-f]{64})/.exec(location.hash);
+    if(handed){ key = handed[1]; sessionStorage.setItem('dgfKey', key); history.replaceState(null, '', location.pathname); }
+  } catch (e) {}
   var timer = null, SITE = 'https://torchhive.com';
 
   function el(tag, cls, text){ var e = document.createElement(tag); if(cls) e.className = cls; if(text !== undefined && text !== null) e.textContent = text; return e; }

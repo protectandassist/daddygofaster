@@ -34,7 +34,7 @@ import {
   storeAdminKey, adminKeyIsSet, adminKeyMatches,
 } from './store.js';
 import {
-  signInOn, emailLinksOn, sessionUser, namedUser, authGoogle, postMe, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, reportComment, recentComments, removeComment, restoreComment, blockCommenter,
+  signInOn, emailLinksOn, sessionUser, namedUser, isAdminEmail, authGoogle, postMe, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, reportComment, recentComments, removeComment, restoreComment, blockCommenter,
 } from './social.js';
 import { record, report, tidy } from './stats.js';
 import ADMIN_HTML from './admin.html';
@@ -161,7 +161,9 @@ async function settleStandings(request, env, s, ctx, a, before, now) {
 
   // A higher high bid in the last few minutes moves the close back. No cap:
   // while people keep outbidding each other, the round runs on.
-  const closesAt = extendedClose(a.closes_at, now, s.extend);
+  // While he is live with a fixed close, the time he announced stands: late bids add nothing.
+  const live = await liveState(env);
+  const closesAt = live.on && live.fixedClose ? a.closes_at : extendedClose(a.closes_at, now, s.extend);
   if (standing.highCents > (before ? before.amount_cents : 0) && closesAt !== a.closes_at) {
     await env.DB.prepare(
       "UPDATE auctions SET closes_at = ?, extensions = extensions + 1 WHERE day = ? AND status = 'open' AND closes_at = ?",
@@ -816,15 +818,33 @@ async function adminSetup(request, env, now) {
 
 async function adminRoute(request, env, s, ctx, path, now) {
   if (request.method === 'POST' && path === '/admin/api/setup') return adminSetup(request, env, now);
-  if (!(await adminKeyIsSet(env))) return [503, { message: 'The admin key has not been set yet.' }];
+  // Two ways in: the admin key, or being signed in as the owner's own account.
   const given = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
-  if (!(await adminKeyMatches(env, given))) return [401, { message: 'Wrong or missing admin key.' }];
+  const signedIn = await sessionUser(request, env, now);
+  if (!(signedIn && isAdminEmail(env, signedIn.email))) {
+    if (!(await adminKeyIsSet(env))) return [503, { message: 'The admin key has not been set yet.' }];
+    if (!(await adminKeyMatches(env, given))) return [401, { message: 'Wrong or missing admin key.' }];
+  }
   const url = new URL(request.url);
   let m;
   if (request.method === 'GET' && path === '/admin/api/report') return [200, await report(env, s, now, url.searchParams)];
   if (request.method === 'GET' && path === '/admin/api/state') return [200, await adminState(env, s, now, url.searchParams.get('jobs') === '1')];
   if (request.method === 'POST' && (m = /^\/admin\/api\/bids\/(\d+)\/decide$/.exec(path))) return adminDecide(request, env, s, ctx, Number(m[1]), now);
-  if (request.method === 'POST' && path === '/admin/api/live') return setLive(env, await request.json().catch(() => null), now);
+  if (request.method === 'POST' && path === '/admin/api/live') {
+    const body = await request.json().catch(() => null);
+    const [status, out] = await setLive(env, body, now);
+    // "Close bidding in N minutes": the round's end is moved to a time he can say out loud on the stream.
+    const mins = Number(body?.closeInMinutes);
+    if (status === 200 && out.on && Number.isFinite(mins) && mins > 0) {
+      if (!s.open) return [200, { ...out, note: 'Bidding is not open, so there was no round to set a closing time on.' }];
+      if (mins < 1 || mins > 720) return [400, { message: 'Close bidding in between 1 and 720 minutes.' }];
+      const a = await currentAuction(env, s, now);
+      const closesAt = now + Math.round(mins * 60_000);
+      await env.DB.prepare("UPDATE auctions SET closes_at = ?, noticed = noticed & ~1 WHERE day = ? AND status = 'open'").bind(closesAt, a.day).run();
+      return [200, { ...out, closesAt: new Date(closesAt).toISOString() }];
+    }
+    return [status, out];
+  }
   if (request.method === 'POST' && (m = /^\/admin\/api\/chat\/(\d+)\/(remove|block)$/.exec(path))) return (m[2] === 'remove' ? removeChat : blockChatter)(env, Number(m[1]));
   if (request.method === 'POST' && (m = /^\/admin\/api\/comments\/(\d+)\/(remove|restore|block)$/.exec(path))) {
     return (m[2] === 'remove' ? removeComment : m[2] === 'restore' ? restoreComment : blockCommenter)(env, Number(m[1]));

@@ -134,6 +134,7 @@ export async function getMe(request, env, now) {
   ).bind(user.id).all();
   return [200, {
     email: user.email, name: user.name ?? null, emailAlerts: user.alerts === 1,
+    ...(isAdminEmail(env, user.email) ? { owner: true } : {}), // the page then shows the links to the owner pages
     votes: results.map((r) => r.pid),
   }];
 }
@@ -143,9 +144,15 @@ function cleanName(value) {
   return name.length >= LIMITS.nameMin && name.length <= LIMITS.nameMax && NAME_OK.test(name) ? name : null;
 }
 
-// The site's own account: the address(es) in SITE_ACCOUNTS may hold a reserved name such as "TorchHive".
+// The owner's own account(s): the Worker secret ADMIN_EMAILS, a comma-separated list kept
+// out of this repository. Signed in as one of them, the owner pages open without the admin key.
+export function isAdminEmail(env, email) {
+  return Boolean(email) && String(env.ADMIN_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean).includes(String(email).toLowerCase());
+}
+
+// Who may hold a reserved name such as "TorchHive": the site's own address in SITE_ACCOUNTS, and the owner.
 function siteAccount(env, email) {
-  return String(env.SITE_ACCOUNTS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean).includes(email);
+  return isAdminEmail(env, email) || String(env.SITE_ACCOUNTS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean).includes(email);
 }
 
 // Two usernames are the same when they match with capitals, spaces and punctuation

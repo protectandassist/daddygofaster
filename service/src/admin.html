@@ -96,6 +96,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <div class="row">
         <input id="liveYoutube" type="url" placeholder="YouTube link to the live video" style="flex:2 1 260px">
         <input id="liveTiktok" type="url" placeholder="TikTok link (optional)" style="flex:1 1 200px">
+        <label class="small" style="flex:1 0 100%"><input type="checkbox" id="liveFixed"> Fixed close: while I am live, late bids do not add time to the clock</label>
+        <label class="small" style="flex:1 0 100%">Close bidding in <input id="liveClose" type="number" min="1" max="720" step="1" placeholder="--" style="width:5.5em"> minutes (leave empty to keep the round's own closing time)</label>
         <button id="liveOn">Show it on the site</button>
         <button id="liveOff" class="bad" hidden>End live on the site</button>
       </div>
@@ -120,6 +122,12 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   var $ = function(id){ return document.getElementById(id); };
   var key = '';
   try { key = sessionStorage.getItem('dgfKey') || ''; } catch (e) {}
+  /* Arriving from the site while signed in as the owner: the sign-in comes along after the "#",
+     which is never sent to a server, and is taken out of the address bar at once. */
+  try {
+    var handed = /[#&]s=([0-9a-f]{64})/.exec(location.hash);
+    if(handed){ key = handed[1]; sessionStorage.setItem('dgfKey', key); history.replaceState(null, '', location.pathname); }
+  } catch (e) {}
   var timer = null;
 
   function money(c){ return '$' + (c / 100).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
@@ -215,6 +223,12 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       ? 'You are live on the site now. The stream and the chat are showing. End it here when the stream is over.'
       : 'When you are live, paste the link to the live video here. The site then shows the stream with a chat beside it, open to anyone with an account. TikTok cannot be shown on another site, so its link becomes a button.';
     $('liveOff').hidden = !live.on;
+    if(live.on){
+      if(!$('liveYoutube').value && live.youtube) $('liveYoutube').value = 'https://youtu.be/' + live.youtube;
+      if(!$('liveTiktok').value && live.tiktok) $('liveTiktok').value = live.tiktok;
+      $('liveFixed').checked = Boolean(live.fixedClose);
+      $('liveNote').textContent += live.fixedClose ? ' The close is fixed: late bids add no time.' : ' Late bids still add time to the clock.';
+    }
     $('liveOn').textContent = live.on ? 'Change the links' : 'Show it on the site';
     $('chatList').textContent = '';
     (live.on ? d.chat || [] : []).forEach(function(c){
@@ -293,7 +307,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     }
   }
 
-  $('liveOn').addEventListener('click', function(){ act('/admin/api/live', {on: true, youtube: $('liveYoutube').value.trim(), tiktok: $('liveTiktok').value.trim()}); });
+  $('liveOn').addEventListener('click', function(){ act('/admin/api/live', {on: true, youtube: $('liveYoutube').value.trim(), tiktok: $('liveTiktok').value.trim(), fixedClose: $('liveFixed').checked, closeInMinutes: $('liveClose').value === '' ? undefined : Number($('liveClose').value)}).then(function(){ $('liveClose').value = ''; }); });
   $('liveOff').addEventListener('click', function(){ act('/admin/api/live', {on: false}); });
   function load(){
     return api('/admin/api/state?jobs=' + ($('showJobs').checked ? '1' : '0')).then(function(d){

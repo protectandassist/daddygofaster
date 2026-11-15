@@ -854,6 +854,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
         <div>
           <div class="live__video" id="liveVideo"></div>
           <div class="live__links" id="liveLinks"></div>
+          <p class="fine" id="liveClose" hidden></p>
         </div>
         <div class="card chat">
           <div class="chat__head">Live chat</div>
@@ -898,6 +899,11 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
             <div class="acct__row" id="pushRow" hidden>
               <span id="pushText">Get the same alerts on this device, even when TorchHive is closed.</span>
               <button class="chipbtn" type="button" id="pushBtn">Turn on notifications</button>
+            </div>
+            <div class="acct__row" id="ownerRow" hidden>
+              <span>You are signed in as the owner.</span>
+              <a class="chipbtn chipbtn--go" id="ownerAdmin" href="#" target="_blank" rel="noopener" style="text-decoration:none">Owner page: go live, approve bids</a>
+              <a class="chipbtn" id="ownerReports" href="#" target="_blank" rel="noopener" style="text-decoration:none;color:var(--text)">Stats</a>
             </div>
             <span class="acct__msg" id="panelMsg" role="status"></span>
           </div>
@@ -2213,6 +2219,11 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     paintPush();
     paintGoogle();
     paintChatForm();
+    /* the owner's own account carries its sign-in to the owner pages, after the "#" so no server sees it */
+    var owner = Boolean(me && me.owner && session);
+    $('ownerRow').hidden = !owner;
+    $('ownerAdmin').href = owner ? CONFIG.api + '/admin#s=' + session : '#';
+    $('ownerReports').href = owner ? CONFIG.api + '/reports#s=' + session : '#';
     /* the "Create your own TorchHive account" section, and the links to it */
     $('join').hidden = !signInOn;
     $('navJoin').hidden = $('navJoinMobile').hidden = !signInOn || Boolean(me);
@@ -2387,6 +2398,9 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       if(d.youtube) link('Open on YouTube ↗', 'https://www.youtube.com/watch?v=' + encodeURIComponent(d.youtube));
       if(d.tiktok && /^https:\/\/([\w-]+\.)*tiktok\.com\//.test(d.tiktok)) link('Open on TikTok ↗', d.tiktok);
     }
+    var closes = lastBoard && lastBoard.status === 'open' && lastBoard.closesAt ? new Date(lastBoard.closesAt) : null;
+    $('liveClose').hidden = !(d.fixedClose && closes);
+    if(d.fixedClose && closes) $('liveClose').textContent = 'Bidding closes at ' + closes.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}) + ' sharp. While I am live, late bids do not add time.';
     var list = $('chatList'), atEnd = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
     (d.removed || []).forEach(function(id){ var gone = list.querySelector('[data-id="' + id + '"]'); if(gone) list.removeChild(gone); });
     (d.chat || []).forEach(function(c){
@@ -2506,7 +2520,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     if(!session){ me = null; paintAcct(); return; }
     call('GET', '/me').then(function(res){
       if(res.ok){
-        me = {email: res.d.email, name: res.d.name, emailAlerts: Boolean(res.d.emailAlerts), votes: res.d.votes || []};
+        me = {email: res.d.email, name: res.d.name, emailAlerts: Boolean(res.d.emailAlerts), votes: res.d.votes || [], owner: Boolean(res.d.owner)};
         if(!$('email').value) $('email').value = me.email;   /* one less thing to type on the bid form */
         /* a brand-new account starts with the alerts box ticked; it is only saved with the username */
         if(!me.name) me.emailAlerts = true;
