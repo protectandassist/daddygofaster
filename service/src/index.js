@@ -27,13 +27,14 @@ import {
   MAX_CARD_FAILS, MAX_HOLDS, heldSummary, takeHold, releaseHold, releaseBidHolds, undoCharge, chargeWinner, chargeBackers, settleMoney, unsettledDays, sweepStale, costCents } from './holds.js';
 import { screenBid } from './screen.js';
 import { shouldEmail, outbidEmail, sendEmail } from './mail.js';
+import { liveState, setLive, getLive, postChat, recentChat, removeChat, blockChatter } from './live.js';
 import { pushKey, pushSubscribe, pushUnsubscribe, pushNext, outbidNotices, roundNotices, sendNotices, stopAlerts } from './alerts.js';
 import {
   sha256, randomHex, sameText, getSetting, setSetting, deleteSetting, seal, providerKey,
   storeAdminKey, adminKeyIsSet, adminKeyMatches,
 } from './store.js';
 import {
-  signInOn, emailLinksOn, sessionUser, authGoogle, postMe, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, reportComment, recentComments, removeComment, restoreComment, blockCommenter,
+  signInOn, emailLinksOn, sessionUser, namedUser, authGoogle, postMe, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, reportComment, recentComments, removeComment, restoreComment, blockCommenter,
 } from './social.js';
 import { record, report, tidy } from './stats.js';
 import ADMIN_HTML from './admin.html';
@@ -232,7 +233,7 @@ async function signInWays(env, s) {
 
 async function getBoard(env, s, now) {
   // Before bidding opens there is no board, but people can already make an account.
-  if (!s.open) return { status: 'soon', bids: [], alerts: false, ...(await signInWays(env, s)) };
+  if (!s.open) return { status: 'soon', bids: [], alerts: false, live: (await liveState(env)).on, ...(await signInWays(env, s)) };
   const a = await currentAuction(env, s, now);
   const { results } = await env.DB.prepare(
     `SELECT name, amount_cents, created_at, shared, pid, task, backers,
@@ -249,6 +250,7 @@ async function getBoard(env, s, now) {
     pooling: Boolean(cardKeys(env)), // can people add money to an open job? It needs card holds.
     minPledgeCents: LIMITS.minPledgeCents,
     ...(await signInWays(env, s)),
+    live: (await liveState(env)).on, // is he streaming right now? The page then shows the stream and its chat.
     // A secret job gives name, amount and time only: the job itself never leaves the database
     // here. An open job, which its poster chose to show, also gives the job, a public
     // handle to add money to, and how many people have. Never an email or a maximum.
@@ -746,6 +748,8 @@ async function adminState(env, s, now, showJobs) {
     auction: auction ? { day: auction.day, status: auction.status, closesAt: new Date(auction.closes_at).toISOString() } : null,
     bids: bids.map((b) => adminBid(b, s, showJobs, cardsOn ? cards : null)),
     comments: auction ? await recentComments(env, auction.day) : [],
+    live: await liveState(env),
+    chat: await recentChat(env),
     previous,
   };
 }
@@ -820,6 +824,8 @@ async function adminRoute(request, env, s, ctx, path, now) {
   if (request.method === 'GET' && path === '/admin/api/report') return [200, await report(env, s, now, url.searchParams)];
   if (request.method === 'GET' && path === '/admin/api/state') return [200, await adminState(env, s, now, url.searchParams.get('jobs') === '1')];
   if (request.method === 'POST' && (m = /^\/admin\/api\/bids\/(\d+)\/decide$/.exec(path))) return adminDecide(request, env, s, ctx, Number(m[1]), now);
+  if (request.method === 'POST' && path === '/admin/api/live') return setLive(env, await request.json().catch(() => null), now);
+  if (request.method === 'POST' && (m = /^\/admin\/api\/chat\/(\d+)\/(remove|block)$/.exec(path))) return (m[2] === 'remove' ? removeChat : blockChatter)(env, Number(m[1]));
   if (request.method === 'POST' && (m = /^\/admin\/api\/comments\/(\d+)\/(remove|restore|block)$/.exec(path))) {
     return (m[2] === 'remove' ? removeComment : m[2] === 'restore' ? restoreComment : blockCommenter)(env, Number(m[1]));
   }
@@ -857,7 +863,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
 
 // ---- entry ------------------------------------------------------------------------
 
-const PUBLIC = new Set(['/board', '/check', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/auth/google', '/me', '/push/sub', '/push/unsub', '/push/next', '/votes', '/comments', '/comments/report', '/a']);
+const PUBLIC = new Set(['/board', '/live', '/chat', '/check', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/auth/google', '/me', '/push/sub', '/push/unsub', '/push/next', '/votes', '/comments', '/comments/report', '/a']);
 // Signing in, votes and comments: [method, path] to handler. Each answers [status, body].
 const SOCIAL = {
   'POST /auth/start': (request, env, s, now) => authStart(request, env, s, now),
@@ -873,6 +879,12 @@ const SOCIAL = {
   'POST /push/unsub': async (request, env) => pushUnsubscribe(env, await request.json().catch(() => null)),
   'POST /push/next': async (request, env) => pushNext(env, await request.json().catch(() => null)),
   'POST /votes': (request, env, s, now) => (s.open ? postVote(request, env, now) : [403, { message: 'Bidding is not open yet.' }]),
+  'GET /live': (request, env) => getLive(env, new URL(request.url)),
+  'POST /chat': async (request, env, s, now) => {
+    const body = await request.json().catch(() => null);
+    const who = await namedUser(request, env, body?.name, now);
+    return who.user ? postChat(env, who.user, body, now) : [who.status, who.body];
+  },
   'GET /comments': (request, env) => getComments(env, new URL(request.url)),
   'POST /comments/report': (request, env, s, now) => reportComment(request, env, now),
   'POST /comments': (request, env, s, now) => (s.open ? postComment(request, env, now) : [403, { message: 'Bidding is not open yet.' }]),

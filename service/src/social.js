@@ -175,6 +175,17 @@ async function setName(env, user, value, now) {
   return { name };
 }
 
+// The signed-in person, with a username: set from `value` if they have none yet.
+// Answers { user } or { status, body } to send back.
+export async function namedUser(request, env, value, now) {
+  const user = await sessionUser(request, env, now);
+  if (!user) return { status: 401, body: { message: 'Sign in first.' } };
+  if (user.name) return { user };
+  const set = await setName(env, user, value, now);
+  if (!set.name) return { status: 400, body: { message: value ? set.message : 'Pick a username first.', needName: true } };
+  return { user: { ...user, name: set.name } };
+}
+
 // POST /me { name?, emailAlerts? }: the account's own settings.
 export async function postMe(request, env, now) {
   const user = await sessionUser(request, env, now);

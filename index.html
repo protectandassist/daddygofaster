@@ -405,6 +405,27 @@ p{margin:0}
 .acct__form input:focus{outline:none;border-color:var(--accent)}
 .acct__msg{flex:1 0 100%;color:var(--text)}
 .acct__msg:empty{display:none}
+/* Live: the stream and its chat, shown only while he is streaming */
+.live{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(280px,1fr);gap:clamp(12px,2vw,20px);align-items:stretch}
+@media(max-width:860px){.live{grid-template-columns:1fr}}
+.live__video{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#000;border:1px solid var(--line-2)}
+.live__video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.live__video--none{display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted);aspect-ratio:auto;min-height:180px;background:var(--field)}
+.live__badge{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#ff6b70}
+.live__badge::before{content:"";width:9px;height:9px;border-radius:50%;background:#ff3b42;animation:flicker 1.1s ease-in-out infinite}
+.live__links{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chat{display:flex;flex-direction:column;min-height:300px;max-height:min(70vh,560px);padding:0;overflow:hidden}
+@media(max-width:860px){.chat{max-height:420px}}
+.chat__head{padding:12px 16px;border-bottom:1px solid var(--line);font-weight:700;font-size:.95rem}
+.chat__list{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:9px;overscroll-behavior:contain}
+.chat__list p{margin:0;font-size:.93rem;line-height:1.4;overflow-wrap:anywhere}
+.chat__list p b{color:var(--accent-hi);font-weight:600;margin-right:6px}
+.chat__list .chat__empty{color:var(--muted)}
+.chat__form{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+.chat__form input{flex:1 1 140px;min-width:0;background:var(--field);border:1px solid var(--line-2);border-radius:8px;color:var(--text);font:400 1rem var(--body);padding:9px 11px}
+.chat__form input:focus{outline:none;border-color:var(--accent)}
+.chat__msg{flex:1 0 100%;font-size:.84rem;color:var(--muted)}
+.chat__msg:empty{display:none}
 .acct__panel{flex:1 0 100%;display:grid;gap:12px;padding-top:10px;margin-top:2px;border-top:1px solid var(--line)}
 .acct__panel h3{font:600 .95rem/1.3 var(--body);color:var(--text);margin:0}
 .acct__row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -821,6 +842,33 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   </section>
 
   <!-- ===== THE BOARD ======================================= -->
+  <!-- ===== LIVE NOW ======================================== -->
+  <section class="sec" id="live" hidden>
+    <div class="wrap">
+      <div class="sec__head">
+        <p class="live__badge">Live now</p>
+        <h2>Watch it happen</h2>
+        <p class="lead">I am live right now. Watch here, talk in the chat, and bid below.</p>
+      </div>
+      <div class="live">
+        <div>
+          <div class="live__video" id="liveVideo"></div>
+          <div class="live__links" id="liveLinks"></div>
+        </div>
+        <div class="card chat">
+          <div class="chat__head">Live chat</div>
+          <div class="chat__list" id="chatList" aria-live="polite" aria-label="Live chat"></div>
+          <form class="chat__form" id="chatForm" novalidate>
+            <input type="text" id="chatName" maxlength="24" placeholder="Pick a username" aria-label="Pick a username" hidden>
+            <input type="text" id="chatText" maxlength="200" placeholder="Say something" aria-label="Your message" autocomplete="off">
+            <button class="chipbtn chipbtn--go" type="submit" id="chatSend">Send</button>
+            <span class="chat__msg" id="chatMsg" role="status"></span>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="sec sec--alt" id="board">
     <div class="wrap">
       <div class="sec__head rise">
@@ -1067,6 +1115,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   var cardKey = null, stripe = null, cardEl = null, stripeLoading = false;
   var session = null, me = null, signInOn = false, lastBoard = null, openThread = null, drafts = {};
   var emailLinks = false, googleId = null, pushKey = null, pushOn = false, panelOpen = false, nameTyped = false;
+  var liveOn = false, liveShown = null, chatLast = 0, chatTimer = null, chatDemo = null;   /* the live stream and its chat */
   try { session = localStorage.getItem('dgfSession') || null; } catch (e) {}
   var pooling = false, minPledge = 200, backing = null;   /* backing: the open job this visitor is adding money to */
 
@@ -1555,6 +1604,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     emailLinks = data.emailLinks === undefined ? signInOn : Boolean(data.emailLinks);
     googleId = data.google || null;
     pushKey = data.pushKey || null;
+    setLive(Boolean(data.live));
     paintAcct();
     var body = $('boardBody');
     var typing = body.contains(document.activeElement) && /^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName);
@@ -1899,6 +1949,11 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       {id: 2, name: 'big_al', text: 'Two miles is nothing. Make it uphill.', at: new Date(now - 22 * min).toISOString()}
     ]};
     me = {email: 'you@example.com', name: null, votes: []};
+    chatDemo = {on: true, youtube: null, tiktok: null, chat: [
+      {id: 1, name: 'mike_r', text: 'Here from YouTube. Is the watermelon one still winning?'},
+      {id: 2, name: 'sarahk', text: 'Not for long'},
+      {id: 3, name: 'coach_d', text: 'Chipped in two dollars. Do it in the rain'}]};
+    demoData.live = /[?&]live\b/.test(location.search);
     paint(demoData, 'Sample data for preview. These are not real bids. Vote, comment and chip in to try it: nothing is sent.');
     /* every few seconds something happens in the pretend round */
     var demoNames = ['lena_p', 'coach_d', 'rustbucket', 'ms_ortiz', 'gary2', 'nightowl', 'pat_k'], demoStep = 0;
@@ -2157,6 +2212,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     }
     paintPush();
     paintGoogle();
+    paintChatForm();
     /* the "Create your own TorchHive account" section, and the links to it */
     $('join').hidden = !signInOn;
     $('navJoin').hidden = $('navJoinMobile').hidden = !signInOn || Boolean(me);
@@ -2296,6 +2352,102 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       paintPush(); paintTellMe();
     }).catch(function(){});
   }
+
+  /* ---- live: the stream and its chat ----
+     Shown only while he is streaming. The chat is read by anyone and written by
+     anyone with an account; it asks the service for new lines every few seconds. */
+  function chatLine(c){
+    var p = document.createElement('p'), who = document.createElement('b');
+    who.textContent = c.name; p.appendChild(who); p.appendChild(document.createTextNode(c.text));
+    p.setAttribute('data-id', c.id);
+    return p;
+  }
+  function paintLive(d){
+    var key = (d.youtube || '') + '|' + (d.tiktok || '');
+    if(key !== liveShown){   /* the player is only rebuilt when the stream changes, or it would restart */
+      liveShown = key;
+      var box = $('liveVideo'), links = $('liveLinks');
+      box.textContent = ''; links.textContent = '';
+      box.className = 'live__video' + (d.youtube ? '' : ' live__video--none');
+      if(d.youtube){
+        var f = document.createElement('iframe');
+        f.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(d.youtube) + '?autoplay=1&mute=1&playsinline=1&rel=0';
+        f.title = 'TorchHive live stream'; f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'; f.allowFullscreen = true;
+        f.referrerPolicy = 'strict-origin-when-cross-origin';
+        box.appendChild(f);
+      } else {
+        box.textContent = demo ? 'Preview: your live video plays here while you are streaming.' : 'The stream is on TikTok right now. Open it there, and keep the chat and the bidding here.';
+      }
+      function link(text, href){
+        var a = document.createElement('a');
+        a.className = 'chipbtn'; a.textContent = text; a.href = href; a.target = '_blank'; a.rel = 'noopener';
+        a.style.color = 'var(--text)'; a.style.textDecoration = 'none';
+        links.appendChild(a);
+      }
+      if(d.youtube) link('Open on YouTube ↗', 'https://www.youtube.com/watch?v=' + encodeURIComponent(d.youtube));
+      if(d.tiktok && /^https:\/\/([\w-]+\.)*tiktok\.com\//.test(d.tiktok)) link('Open on TikTok ↗', d.tiktok);
+    }
+    var list = $('chatList'), atEnd = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+    (d.removed || []).forEach(function(id){ var gone = list.querySelector('[data-id="' + id + '"]'); if(gone) list.removeChild(gone); });
+    (d.chat || []).forEach(function(c){
+      if(c.id <= chatLast) return;
+      chatLast = c.id;
+      var empty = list.querySelector('.chat__empty'); if(empty) list.removeChild(empty);
+      list.appendChild(chatLine(c));
+    });
+    if(!list.firstChild){ var e = document.createElement('p'); e.className = 'chat__empty'; e.textContent = 'Nobody has said anything yet. Go first.'; list.appendChild(e); }
+    while(list.children.length > 120) list.removeChild(list.firstChild);
+    if(atEnd) list.scrollTop = list.scrollHeight;
+    paintChatForm();
+  }
+  function paintChatForm(){
+    $('chatName').hidden = !me || Boolean(me.name);
+    $('chatText').placeholder = me ? 'Say something' : 'Sign in to join the chat';
+    $('chatSend').textContent = me ? 'Send' : 'Sign in';
+  }
+  function loadLive(){
+    if(demo || !liveOn || document.hidden) return;
+    call('GET', '/live' + (chatLast ? '?after=' + chatLast : '')).then(function(res){
+      if(!res.ok) return;
+      if(!res.d.on) return setLive(false);
+      paintLive(res.d);
+    }).catch(function(){});
+  }
+  function setLive(on){
+    if(on === liveOn) return;
+    liveOn = on;
+    $('live').hidden = !on;
+    clearInterval(chatTimer); chatTimer = null;
+    if(!on){ liveShown = null; chatLast = 0; $('liveVideo').textContent = ''; $('chatList').textContent = ''; return; }
+    tap('Saw the live stream');
+    if(demo) return paintLive(chatDemo);
+    loadLive();
+    chatTimer = setInterval(loadLive, 4000);
+  }
+  $('chatForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var note = $('chatMsg'), text = $('chatText').value.replace(/\s+/g, ' ').trim();
+    if(!me) return askSignIn('Sign in to join the chat.');
+    if(!text){ $('chatText').focus(); return; }
+    if(!me.name && $('chatName').value.trim().length < 2){ note.textContent = 'Pick a username first.'; return $('chatName').focus(); }
+    $('chatSend').disabled = true;
+    if(demo){
+      me.name = me.name || $('chatName').value.trim();
+      chatDemo.chat.push({id: chatLast + 1, name: me.name, text: text});
+      $('chatText').value = ''; note.textContent = ''; $('chatSend').disabled = false;
+      return paintLive(chatDemo);
+    }
+    call('POST', '/chat', {text: text, name: me.name ? undefined : $('chatName').value.trim()}).then(function(res){
+      $('chatSend').disabled = false;
+      if(res.status === 401){ me = null; keepSession(null); paintAcct(); return askSignIn('Sign in again to chat.'); }
+      if(!res.ok){ note.textContent = res.d.message || 'That did not go through. Try again.'; return; }
+      if(!me.name){ me.name = res.d.line.name; paintAcct(); }
+      note.textContent = ''; $('chatText').value = '';
+      tap('Sent a chat message');
+      paintLive({youtube: (liveShown || '|').split('|')[0] || null, tiktok: (liveShown || '|').split('|')[1] || null, chat: [res.d.line]});
+      $('chatList').scrollTop = $('chatList').scrollHeight;
+    }).catch(function(){ $('chatSend').disabled = false; note.textContent = 'That did not go through. Check your connection and try again.'; });
+  });
 
   /* ---- sign in with Google ----
      Google's own button. It hands this page a signed note saying who the person

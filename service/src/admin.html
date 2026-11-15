@@ -90,9 +90,21 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <p class="muted small">Who came, from where, and what they did: <a href="/reports" style="color:var(--gold)">open Reports</a>.</p>
     </section>
 
+    <section class="card" id="liveCard">
+      <h2>Going live</h2>
+      <p class="muted small" id="liveNote">When you are live, paste the link to the live video here. The site then shows the stream with a chat beside it, open to anyone with an account. TikTok cannot be shown on another site, so its link becomes a button.</p>
+      <div class="row">
+        <input id="liveYoutube" type="url" placeholder="YouTube link to the live video" style="flex:2 1 260px">
+        <input id="liveTiktok" type="url" placeholder="TikTok link (optional)" style="flex:1 1 200px">
+        <button id="liveOn">Show it on the site</button>
+        <button id="liveOff" class="bad" hidden>End live on the site</button>
+      </div>
+      <div id="chatList"></div>
+    </section>
+
     <section class="card" id="commentsCard" hidden>
       <h2>Comments in this auction</h2>
-      <p class="muted small">Written by people who put money on an open job. Swearing, slurs, attacks and shouting are turned away before they post. Reported comments come first; three reports hide one until you decide.</p>
+      <p class="muted small">Written by people with an account. Swearing, slurs, attacks and shouting are turned away before they post. Reported comments come first; three reports hide one until you decide.</p>
       <div id="comments"></div>
     </section>
 
@@ -198,6 +210,26 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       body.appendChild(tr);
     });
 
+    var live = d.live || {on: false};
+    $('liveNote').textContent = live.on
+      ? 'You are live on the site now. The stream and the chat are showing. End it here when the stream is over.'
+      : 'When you are live, paste the link to the live video here. The site then shows the stream with a chat beside it, open to anyone with an account. TikTok cannot be shown on another site, so its link becomes a button.';
+    $('liveOff').hidden = !live.on;
+    $('liveOn').textContent = live.on ? 'Change the links' : 'Show it on the site';
+    $('chatList').textContent = '';
+    (live.on ? d.chat || [] : []).forEach(function(c){
+      var item = el('div', 'held-item'), top = el('div', 'row');
+      top.appendChild(el('b', null, c.name));
+      top.appendChild(el('span', 'muted small', when(c.at)));
+      var rm = el('button', 'bad', 'Remove'); rm.style.marginLeft = 'auto';
+      rm.addEventListener('click', function(){ act('/admin/api/chat/' + c.id + '/remove'); });
+      var bl = el('button', 'bad', 'Block this person');
+      bl.addEventListener('click', function(){ if(confirm('Stop ' + c.name + ' from chatting and commenting, and take down their chat messages?')) act('/admin/api/chat/' + c.id + '/block'); });
+      top.appendChild(rm); top.appendChild(bl);
+      item.appendChild(top); item.appendChild(el('div', 'job', c.text));
+      $('chatList').appendChild(item);
+    });
+
     var notes = d.comments || [];
     $('commentsCard').hidden = notes.length === 0;
     $('comments').textContent = '';
@@ -261,6 +293,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     }
   }
 
+  $('liveOn').addEventListener('click', function(){ act('/admin/api/live', {on: true, youtube: $('liveYoutube').value.trim(), tiktok: $('liveTiktok').value.trim()}); });
+  $('liveOff').addEventListener('click', function(){ act('/admin/api/live', {on: false}); });
   function load(){
     return api('/admin/api/state?jobs=' + ($('showJobs').checked ? '1' : '0')).then(function(d){
       $('login').hidden = true; $('app').hidden = false; $('signout').hidden = false;
