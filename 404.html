@@ -5,7 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Page not found — TorchHive</title>
 <meta name="robots" content="noindex">
-<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<script>
+/* torchhive.com/<name> is a creator's page */
+(function(){ var m = /^\/([a-z0-9][a-z0-9-]{1,22}[a-z0-9])\/?$/i.exec(location.pathname); if(m) location.replace('/c/?u=' + m[1].toLowerCase()); })();
+</script>
+<link rel="icon" href="/assets/favicon.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@800&family=Inter:wght@400;600&display=swap" rel="stylesheet">

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Creators on TorchHive: run your own page</title>
+<meta name="description" content="Creators on TorchHive, and how to get a page of your own where your audience bids on what you do next.">
+<meta name="theme-color" content="#0C0D10">
+<link rel="canonical" href="https://torchhive.com/creators/">
+<link rel="icon" href="/assets/favicon.png" type="image/png" sizes="64x64">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/pages.css">
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="/"><img src="/assets/torchhive-mark.png" alt="">Torch<b>Hive</b></a>
+  <nav aria-label="Sections"><a href="/">Bid</a><a href="#all">Creators</a><a href="#start">Start a page</a></nav>
+</div></header>
+
+<section class="hero"><div class="wrap">
+  <p class="eyebrow">For creators</p>
+  <h1>Your audience decides.<br><em>You get paid to do it.</em></h1>
+  <p class="lead">TorchHive is where viewers bid on what a creator does next. Get a page of your own at torchhive.com/yourname and send your audience there.</p>
+  <div class="links"><a class="btn" href="#start">Start your page</a><a class="btn btn--ghost" href="#all">See who is here</a></div>
+</div></section>
+
+<section class="sec" id="all"><div class="wrap">
+  <h2>Creators on TorchHive</h2>
+  <p>Follow a creator to be told when bidding opens on their page.</p>
+  <div class="grid" id="list"><p class="none">Loading…</p></div>
+</div></section>
+
+<section class="sec" id="how" style="padding-top:0"><div class="wrap">
+  <h2>How a page works</h2>
+  <p>The same thing you see on the home page, with your name on it.</p>
+  <div class="steps">
+    <div class="card"><b>1. Ask for a page</b><span>Pick your address, say who you are and where you post. Each page is looked at before it goes public.</span></div>
+    <div class="card"><b>2. Send people to it</b><span>Put your TorchHive link in your video descriptions and bios. Viewers follow you there to be told when bidding opens.</span></div>
+    <div class="card"><b>3. They bid, you do it</b><span>The highest bid sets the job, you do it on camera, and you are paid. TorchHive keeps 5% of each winning bid.</span></div>
+  </div>
+  <p class="note" style="margin-top:22px">Pages are open now. Bidding on creator pages is not open yet: it is being built. Get your page and your followers in place first, and you will be told the moment bidding opens.</p>
+</div></section>
+
+<section class="sec" id="start" style="padding-top:0"><div class="wrap">
+  <h2 id="startHead">Start your page</h2>
+  <p id="startLead">It is free. You need a TorchHive account, which takes a minute and has no password.</p>
+  <div id="needSignIn" hidden><a class="btn" href="/?account">Sign in or create an account</a></div>
+  <p class="note" id="status" hidden></p>
+  <form class="card form" id="form" hidden novalidate>
+    <label>Your page's address <small>Chosen once: it cannot be changed later, so links you share keep working.</small>
+      <div class="addr"><span>torchhive.com/</span><input id="slug" maxlength="24" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="yourname"></div></label>
+    <label>Name shown on the page<input id="name" maxlength="40" autocomplete="off" placeholder="Your channel or your name"></label>
+    <label>About you <small>A few lines: what you make, and what people might bid on. Up to 300 characters.</small><textarea id="bio" maxlength="300"></textarea></label>
+    <label>YouTube <small>Your @handle or channel link. At least one of these three is needed.</small><input id="youtube" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="@yourchannel"></label>
+    <label>TikTok<input id="tiktok" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="@yourname"></label>
+    <label>Twitch<input id="twitch" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="yourchannel"></label>
+    <p class="msg" id="msg" role="status"></p>
+    <button class="btn" type="submit" id="send">Ask for my page</button>
+  </form>
+</div></section>
+
+<footer class="foot"><div class="wrap"><a href="/">TorchHive home</a><a href="/privacy/">Privacy</a><a href="mailto:hello@torchhive.com">Contact</a></div></footer>
+
+<script>
+(function(){
+  var API = 'https://dgf-bids.trevor-c2b.workers.dev';
+  var $ = function(id){ return document.getElementById(id); };
+  var session = null;
+  try { session = localStorage.getItem('dgfSession'); } catch (e) {}
+  function call(method, path, body){
+    var headers = {'Accept': 'application/json'};
+    if(body) headers['Content-Type'] = 'application/json';
+    if(session) headers['Authorization'] = 'Bearer ' + session;
+    return fetch(API + path, {method: method, headers: headers, body: body ? JSON.stringify(body) : undefined})
+      .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(d){ return {ok: r.ok, status: r.status, d: d}; }); });
+  }
+
+  /* ---- everyone with a public page ---- */
+  call('GET', '/creators').then(function(res){
+    var list = $('list'), all = (res.d && res.d.creators) || [];
+    list.textContent = '';
+    all.forEach(function(c){
+      var a = document.createElement('a'), b = document.createElement('b'), s = document.createElement('span'), f = document.createElement('small');
+      a.className = 'card maker'; a.href = '/' + c.slug;
+      b.textContent = c.name; s.textContent = c.bio || 'On TorchHive.';
+      f.textContent = 'torchhive.com/' + c.slug + ' · ' + c.followers + (c.followers === 1 ? ' follower' : ' followers');
+      a.appendChild(b); a.appendChild(s); a.appendChild(f); list.appendChild(a);
+    });
+    if(!all.length){ var p = document.createElement('p'); p.className = 'none'; p.textContent = 'No creator pages are public yet. Yours could be the first.'; list.appendChild(p); }
+  }).catch(function(){ $('list').textContent = 'The list could not be loaded. Try again in a moment.'; });
+
+  /* ---- your own page ---- */
+  var mine = null;
+  function say(text, good){ $('msg').textContent = text || ''; $('msg').className = 'msg' + (text ? (good ? ' is-good' : ' is-bad') : ''); }
+  function fill(c){
+    mine = c;
+    $('form').hidden = false;
+    $('slug').value = c ? c.slug : $('slug').value;
+    $('slug').readOnly = Boolean(c);
+    if(c){
+      $('name').value = c.name; $('bio').value = c.bio || '';
+      $('youtube').value = c.youtube ? '@' + c.youtube.split('@').pop() : '';
+      $('tiktok').value = c.tiktok ? '@' + c.tiktok.split('@').pop() : '';
+      $('twitch').value = c.twitch ? c.twitch.split('/').pop() : '';
+      $('startHead').textContent = 'Your page';
+      $('startLead').textContent = 'Change what your page says here. The address stays the same.';
+      $('send').textContent = 'Save changes';
+      $('status').hidden = false;
+      $('status').textContent = '';
+      var words = c.status === 'live' ? 'Your page is public at ' : c.status === 'pending' ? 'Your page is waiting to be approved. Until then only you can see it, at ' : 'Your page has been taken down for now. You can still see it at ';
+      $('status').appendChild(document.createTextNode(words));
+      var a = document.createElement('a'); a.href = '/' + c.slug; a.textContent = 'torchhive.com/' + c.slug;
+      $('status').appendChild(a);
+      $('status').appendChild(document.createTextNode(c.status === 'pending' ? '. You will get an email when it is public.' : '.'));
+    }
+  }
+  if(!session){ $('needSignIn').hidden = false; }
+  else call('GET', '/me/creator').then(function(res){
+    if(res.status === 401){ $('needSignIn').hidden = false; return; }
+    fill(res.d.creator || null);
+  }).catch(function(){ $('needSignIn').hidden = false; });
+
+  $('slug').addEventListener('input', function(){ if(!this.readOnly) this.value = this.value.toLowerCase().replace(/[^a-z0-9-]/g, ''); });
+  $('form').addEventListener('submit', function(e){
+    e.preventDefault();
+    say('');
+    $('send').disabled = true;
+    call('POST', '/me/creator', {slug: $('slug').value.trim(), name: $('name').value.trim(), bio: $('bio').value.trim(), youtube: $('youtube').value.trim(), tiktok: $('tiktok').value.trim(), twitch: $('twitch').value.trim()}).then(function(res){
+      $('send').disabled = false;
+      if(res.status === 401){ $('form').hidden = true; $('needSignIn').hidden = false; return; }
+      if(!res.ok){ say(res.d.message || 'That did not go through. Try again.'); if(res.d.field && $(res.d.field)) $(res.d.field).focus(); return; }
+      fill(res.d.creator);
+      say(res.d.created ? (res.d.creator.status === 'live' ? 'Your page is public.' : 'Sent. Your page will be looked at, and you will get an email when it is public.') : 'Saved.', true);
+    }).catch(function(){ $('send').disabled = false; say('That did not go through. Check your connection and try again.'); });
+  });
+})();
+</script>
+</body>
+</html>

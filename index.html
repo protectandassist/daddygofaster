@@ -1069,6 +1069,23 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     </div>
   </section>
 
+  <!-- ===== FOR CREATORS ==================================== -->
+  <section class="sec" id="creators">
+    <div class="wrap">
+      <div class="card join rise">
+        <div>
+          <p class="eyebrow">For creators</p>
+          <h2>Run your own TorchHive page</h2>
+          <p>Have a channel of your own? Get a page at torchhive.com/yourname where your audience bids on what you do next. Pages are open now; bidding on creator pages is being built.</p>
+        </div>
+        <div style="display:grid;gap:10px;align-content:center">
+          <a class="btn btn--primary btn--block" href="/creators/#start">Start your page</a>
+          <a class="btn btn--block" href="/creators/" style="border:1px solid var(--line-2);color:var(--text)">See the creators</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== SPONSORS ======================================== -->
   <section class="sec" id="sponsors">
     <div class="wrap">
@@ -1179,6 +1196,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     <nav class="foot__links" aria-label="Footer">
       <a href="#rules">Rules</a>
       <a href="#sponsors">Sponsors</a>
+      <a href="/creators/">Creators</a>
       <a href="/privacy/">Privacy</a>
       <a href="https://www.youtube.com/@Torchhive" target="_blank" rel="noopener">YouTube</a>
       <a href="mailto:hello@torchhive.com">Contact</a>
@@ -1212,6 +1230,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   var liveOn = false, liveShown = null, chatLast = 0, chatTimer = null, chatDemo = null;   /* the live stream and its chat */
   var liveNow = null, liveSource = null;   /* what is streaming, and which player the viewer picked */
   var activityFor = null;   /* whose replies and bids the account sheet is showing */
+  var wantAccount = /[?&]account(?:[&=#]|$)/.test(location.search);   /* sent here from another page to sign in */
   try { session = localStorage.getItem('dgfSession') || null; } catch (e) {}
   var pooling = false, minPledge = 200, backing = null;   /* backing: the open job this visitor is adding money to */
 
@@ -1702,6 +1721,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
     pushKey = data.pushKey || null;
     setLive(Boolean(data.live));
     paintAcct();
+    if(wantAccount && signInOn && !session){ wantAccount = false; askSignIn(''); }   /* sent here to sign in */
     var body = $('boardBody');
     var typing = body.contains(document.activeElement) && /^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName);
     if(!typing){   /* a refresh must not pull the box out from under someone writing a comment */
@@ -2747,7 +2767,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
   });
   function loadMe(fresh){
     if(demo){ paintAcct(); return; }   /* the preview has its own pretend visitor */
-    if(!session){ me = null; paintAcct(); return; }
+    if(!session){ me = null; paintAcct(); if(wantAccount && signInOn){ wantAccount = false; askSignIn(''); } return; }
     call('GET', '/me').then(function(res){
       if(res.ok){
         me = {email: res.d.email, name: res.d.name, emailAlerts: Boolean(res.d.emailAlerts), votes: res.d.votes || [], owner: Boolean(res.d.owner), unread: res.d.unread || 0};
@@ -2759,6 +2779,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       paintAcct();
       checkPush();
       if(me && fresh) openPanel(me.name ? 'You are signed in.' : 'You are signed in. Pick the username people will see.');
+      else if(wantAccount){ wantAccount = false; if(me) openPanel(); else askSignIn(''); }
       else if(!me && panelOpen) paintAcct();
       if(lastBoard) paint(lastBoard);
     }).catch(function(){});

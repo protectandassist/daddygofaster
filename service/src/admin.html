@@ -98,11 +98,17 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
         <input id="liveTwitch" type="text" placeholder="Twitch channel or link (optional)" style="flex:1 1 200px">
         <input id="liveTiktok" type="url" placeholder="TikTok link (optional)" style="flex:1 1 200px">
         <label class="small" style="flex:1 0 100%"><input type="checkbox" id="liveFixed"> Fixed close: while I am live, late bids do not add time to the clock</label>
-        <label class="small" style="flex:1 0 100%">Close bidding in <input id="liveClose" type="number" min="1" max="720" step="1" placeholder="--" style="width:5.5em"> minutes (leave empty to keep the round's own closing time)</label>
+        <label class="small" style="flex:1 0 100%">Close bidding at <input id="liveAt" type="time" style="width:8.5em"> your time, or in <input id="liveClose" type="number" min="1" max="720" step="1" placeholder="--" style="width:5.5em"> minutes (leave both empty to keep the round's own closing time)</label>
         <button id="liveOn">Show it on the site</button>
         <button id="liveOff" class="bad" hidden>End live on the site</button>
       </div>
       <div id="chatList"></div>
+    </section>
+
+    <section class="card" id="creatorsCard">
+      <h2>Creators <span class="muted small" id="creatorsCount"></span></h2>
+      <p class="muted small">People who asked for a page of their own. A page is not public until you approve it. Pause takes one down.</p>
+      <div id="creatorsList"></div>
     </section>
 
     <section class="card" id="membersCard">
@@ -255,6 +261,23 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       $('chatList').appendChild(item);
     });
 
+    var makers = d.creators || [], waiting = makers.filter(function(c){ return c.status === 'pending'; }).length;
+    $('creatorsCount').textContent = makers.length + (makers.length === 1 ? ' page' : ' pages') + (waiting ? ', ' + waiting + ' waiting for you' : '');
+    $('creatorsList').textContent = '';
+    makers.forEach(function(c){
+      var item = el('div', 'held-item'), top = el('div', 'row');
+      top.appendChild(el('b', null, c.name));
+      top.appendChild(el('span', 'muted small', 'torchhive.com/' + c.slug + ' · ' + c.email + ' · ' + c.followers + (c.followers === 1 ? ' follower' : ' followers')));
+      top.appendChild(el('span', 'tag ' + (c.status === 'live' ? 'qualified' : c.status === 'pending' ? 'held' : 'refused'), c.status === 'live' ? 'public' : c.status === 'pending' ? 'waiting for you' : 'paused'));
+      if(c.status !== 'live'){ var yes = el('button', null, c.status === 'pending' ? 'Approve' : 'Make public again'); yes.style.marginLeft = 'auto'; yes.addEventListener('click', function(){ act('/admin/api/creators/' + c.id + '/approve'); }); top.appendChild(yes); }
+      if(c.status !== 'paused'){ var no = el('button', 'bad', c.status === 'pending' ? 'Decline' : 'Pause'); if(c.status === 'live') no.style.marginLeft = 'auto'; no.addEventListener('click', function(){ act('/admin/api/creators/' + c.id + '/pause'); }); top.appendChild(no); }
+      item.appendChild(top);
+      item.appendChild(el('div', 'job', c.bio || '(no description)'));
+      item.appendChild(el('div', 'muted small', [c.youtube, c.tiktok, c.twitch].filter(Boolean).join('   ')));
+      $('creatorsList').appendChild(item);
+    });
+    if(!makers.length) $('creatorsList').appendChild(el('p', 'muted small', 'Nobody has asked for a page yet.'));
+
     var mem = d.members || {count: 0, list: []};
     $('membersCount').textContent = mem.count + (mem.count === 1 ? ' account' : ' accounts') + ', ' + (mem.withAlerts || 0) + ' with email alerts on';
     $('membersBody').textContent = '';
@@ -333,8 +356,16 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     }
   }
 
-  $('liveOn').addEventListener('click', function(){ act('/admin/api/live', {on: true, youtube: $('liveYoutube').value.trim(), twitch: $('liveTwitch').value.trim(), tiktok: $('liveTiktok').value.trim(), fixedClose: $('liveFixed').checked, closeInMinutes: $('liveClose').value === '' ? undefined : Number($('liveClose').value)}).then(function(){ $('liveClose').value = ''; }); });
+  $('liveOn').addEventListener('click', function(){ act('/admin/api/live', {on: true, youtube: $('liveYoutube').value.trim(), twitch: $('liveTwitch').value.trim(), tiktok: $('liveTiktok').value.trim(), fixedClose: $('liveFixed').checked, closeAt: closeAtFromClock($('liveAt').value), closeInMinutes: $('liveAt').value || $('liveClose').value === '' ? undefined : Number($('liveClose').value)}).then(function(){ $('liveClose').value = ''; $('liveAt').value = ''; }); });
   $('liveOff').addEventListener('click', function(){ act('/admin/api/live', {on: false}); });
+  /* "8:15 PM" on this device's clock: today if that is still ahead, otherwise tomorrow */
+  function closeAtFromClock(value){
+    var m = /^(\d{1,2}):(\d{2})$/.exec(value || '');
+    if(!m) return undefined;
+    var t = new Date(); t.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    if(t.getTime() < Date.now() + 60000) t.setDate(t.getDate() + 1);
+    return t.toISOString();
+  }
   function load(){
     return api('/admin/api/state?jobs=' + ($('showJobs').checked ? '1' : '0')).then(function(d){
       $('login').hidden = true; $('app').hidden = false; $('signout').hidden = false;

@@ -27,6 +27,7 @@ import {
   MAX_CARD_FAILS, MAX_HOLDS, heldSummary, takeHold, releaseHold, releaseBidHolds, undoCharge, chargeWinner, chargeBackers, settleMoney, unsettledDays, sweepStale, costCents } from './holds.js';
 import { screenBid } from './screen.js';
 import { shouldEmail, outbidEmail, sendEmail } from './mail.js';
+import { listCreators, getCreator, myCreator, saveCreator, followCreator, adminCreators, decideCreator } from './creators.js';
 import { liveState, setLive, getLive, postChat, recentChat, removeChat, blockChatter } from './live.js';
 import { pushKey, pushSubscribe, pushUnsubscribe, pushNext, outbidNotices, roundNotices, sendNotices, stopAlerts } from './alerts.js';
 import {
@@ -753,6 +754,7 @@ async function adminState(env, s, now, showJobs) {
     live: await liveState(env),
     chat: await recentChat(env),
     members: await listMembers(env),
+    creators: await adminCreators(env),
     previous,
   };
 }
@@ -831,16 +833,21 @@ async function adminRoute(request, env, s, ctx, path, now) {
   if (request.method === 'GET' && path === '/admin/api/report') return [200, await report(env, s, now, url.searchParams)];
   if (request.method === 'GET' && path === '/admin/api/state') return [200, await adminState(env, s, now, url.searchParams.get('jobs') === '1')];
   if (request.method === 'POST' && (m = /^\/admin\/api\/bids\/(\d+)\/decide$/.exec(path))) return adminDecide(request, env, s, ctx, Number(m[1]), now);
+  if (request.method === 'POST' && (m = /^\/admin\/api\/creators\/(\d+)\/(approve|pause)$/.exec(path))) return decideCreator(env, s, Number(m[1]), m[2], now);
   if (request.method === 'POST' && path === '/admin/api/live') {
     const body = await request.json().catch(() => null);
     const [status, out] = await setLive(env, body, now);
     // "Close bidding in N minutes": the round's end is moved to a time he can say out loud on the stream.
+    // Or "close bidding at 8:15": the owner page sends that moment as closeAt.
     const mins = Number(body?.closeInMinutes);
-    if (status === 200 && out.on && Number.isFinite(mins) && mins > 0) {
+    const at = typeof body?.closeAt === 'string' ? Date.parse(body.closeAt) : NaN;
+    if (status === 200 && out.on && (Number.isFinite(at) || (Number.isFinite(mins) && mins > 0))) {
       if (!s.open) return [200, { ...out, note: 'Bidding is not open, so there was no round to set a closing time on.' }];
-      if (mins < 1 || mins > 720) return [400, { message: 'Close bidding in between 1 and 720 minutes.' }];
+      if (Number.isFinite(at) ? (at < now + 60_000 || at > now + 24 * 3_600_000) : (mins < 1 || mins > 720)) {
+        return [400, { message: 'Pick a closing time between a minute from now and 24 hours from now.' }];
+      }
       const a = await currentAuction(env, s, now);
-      const closesAt = now + Math.round(mins * 60_000);
+      const closesAt = Number.isFinite(at) ? at : now + Math.round(mins * 60_000);
       await env.DB.prepare("UPDATE auctions SET closes_at = ?, noticed = noticed & ~1 WHERE day = ? AND status = 'open'").bind(closesAt, a.day).run();
       return [200, { ...out, closesAt: new Date(closesAt).toISOString() }];
     }
@@ -923,7 +930,7 @@ export default {
     const cors = corsHeaders(request, s);
 
     try {
-      if (PUBLIC.has(path)) {
+      if (PUBLIC.has(path) || path === '/creators' || path.startsWith('/creators/') || path === '/me/creator') {
         if (request.method === 'OPTIONS') {
           return new Response(null, {
             status: 204,
@@ -935,6 +942,17 @@ export default {
           return new Response(null, { status: 204, headers: cors });
         }
         if (path === '/board' && request.method === 'GET') return json(await getBoard(env, s, now), 200, cors);
+        // Creator pages: the list, one page, following it, and a person's own page.
+        let cm;
+        if (request.method !== 'OPTIONS' && (path === '/creators' || path === '/me/creator' || (cm = /^\/creators\/([a-z0-9-]{3,24})(\/follow)?$/i.exec(path)))) {
+          const out = path === '/creators' && request.method === 'GET' ? await listCreators(env)
+            : path === '/me/creator' && request.method === 'GET' ? await myCreator(request, env, now)
+            : path === '/me/creator' && request.method === 'POST' ? await saveCreator(request, env, s, now)
+            : cm && !cm[2] && request.method === 'GET' ? await getCreator(request, env, cm[1], now)
+            : cm && cm[2] && request.method === 'POST' ? await followCreator(request, env, cm[1], now)
+            : [405, { message: 'Method not allowed.' }];
+          return json(out[1], out[0], cors);
+        }
         const social = SOCIAL[request.method + ' ' + path];
         if (social) {
           const [status, body] = await social(request, env, s, now);

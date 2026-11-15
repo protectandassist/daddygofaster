@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TorchHive</title>
+<meta name="theme-color" content="#0C0D10">
+<link rel="icon" href="/assets/favicon.png" type="image/png" sizes="64x64">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/pages.css">
+</head>
+<body>
+<!-- One creator's page. Reached as torchhive.com/<name>: the site's "not found" page sends that here. -->
+<header class="top"><div class="wrap">
+  <a class="logo" href="/"><img src="/assets/torchhive-mark.png" alt="">Torch<b>Hive</b></a>
+  <nav aria-label="Sections"><a href="/">Home</a><a href="/creators/">All creators</a></nav>
+</div></header>
+
+<section class="hero"><div class="wrap">
+  <p class="eyebrow" id="eyebrow">On TorchHive</p>
+  <h1 id="name">&nbsp;</h1>
+  <p class="lead" id="bio"></p>
+  <p class="note" id="status" style="margin-top:20px" hidden></p>
+  <div class="links" id="acts" hidden>
+    <button class="btn" type="button" id="follow">Tell me when bidding opens</button>
+  </div>
+  <p class="msg" id="msg" role="status" style="margin-top:12px"></p>
+  <div class="links" id="links"></div>
+</div></section>
+
+<section class="sec" id="body" hidden><div class="wrap">
+  <h2>What happens here</h2>
+  <p id="pitch"></p>
+  <div class="steps">
+    <div class="card"><b>1. You say what you want</b><span>Describe a job and what you would pay to see it done.</span></div>
+    <div class="card"><b>2. The highest bid wins</b><span>Bidding runs to a set time. Only the winner pays.</span></div>
+    <div class="card"><b>3. It gets done on camera</b><span>The job is done and the video goes up for everyone.</span></div>
+  </div>
+  <p class="note" style="margin-top:22px">Bidding on this page is not open yet. Follow to be told the moment it is. In the meantime you can bid on <a href="/">the main TorchHive page</a>.</p>
+</div></section>
+
+<section class="sec" id="missing" hidden><div class="wrap">
+  <h2>There is no page at this address</h2>
+  <p>It may have been mistyped, or the page is not public yet.</p>
+  <div class="links"><a class="btn" href="/creators/">See all creators</a><a class="btn btn--ghost" href="/">TorchHive home</a></div>
+</div></section>
+
+<footer class="foot"><div class="wrap"><a href="/">TorchHive home</a><a href="/creators/">Get your own page</a><a href="/privacy/">Privacy</a></div></footer>
+
+<script>
+(function(){
+  var API = 'https://dgf-bids.trevor-c2b.workers.dev';
+  var $ = function(id){ return document.getElementById(id); };
+  var m = /[?&]u=([a-z0-9-]{3,24})(?:&|$)/i.exec(location.search), slug = m ? m[1].toLowerCase() : null;
+  var session = null;
+  try { session = localStorage.getItem('dgfSession'); } catch (e) {}
+  function call(method, path, body){
+    var headers = {'Accept': 'application/json'};
+    if(body) headers['Content-Type'] = 'application/json';
+    if(session) headers['Authorization'] = 'Bearer ' + session;
+    return fetch(API + path, {method: method, headers: headers, body: body ? JSON.stringify(body) : undefined})
+      .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(d){ return {ok: r.ok, status: r.status, d: d}; }); });
+  }
+  function missing(){ $('name').textContent = 'Not found'; $('eyebrow').textContent = 'TorchHive'; $('missing').hidden = false; }
+  if(!slug) return missing();
+  /* the address people share is the short one */
+  try { history.replaceState(null, '', '/' + slug); } catch (e) {}
+
+  var page = null;
+  function paintFollow(){
+    $('follow').textContent = page.following ? 'Following · ' + page.followers : 'Tell me when bidding opens';
+    $('follow').className = 'btn' + (page.following ? ' btn--ghost' : '');
+  }
+  call('GET', '/creators/' + slug).then(function(res){
+    if(!res.ok) return missing();
+    page = res.d;
+    document.title = page.name + ' on TorchHive';
+    $('name').textContent = page.name;
+    $('bio').textContent = page.bio || '';
+    $('pitch').textContent = 'Viewers bid on what ' + page.name + ' does next. The highest bid sets the job.';
+    $('body').hidden = false;
+    if(page.status !== 'live'){
+      $('status').hidden = false;
+      $('status').textContent = page.status === 'pending'
+        ? 'This page is waiting to be approved. Only you can see it for now.'
+        : 'This page has been taken down for now. Only you can see it.';
+    } else { $('acts').hidden = false; paintFollow(); }
+    [['Watch on YouTube', page.youtube], ['TikTok', page.tiktok], ['Twitch', page.twitch]].forEach(function(pair){
+      if(!pair[1]) return;
+      var a = document.createElement('a');
+      a.className = 'btn btn--ghost'; a.textContent = pair[0] + ' ↗'; a.href = pair[1]; a.target = '_blank'; a.rel = 'noopener';
+      $('links').appendChild(a);
+    });
+    if(page.mine){ var e = document.createElement('a'); e.className = 'btn btn--ghost'; e.href = '/creators/#start'; e.textContent = 'Edit my page'; $('links').appendChild(e); }
+  }).catch(missing);
+
+  $('follow').addEventListener('click', function(){
+    if(!session){ location.href = '/?account'; return; }
+    var want = !page.following;
+    $('follow').disabled = true;
+    call('POST', '/creators/' + slug + '/follow', {on: want}).then(function(res){
+      $('follow').disabled = false;
+      if(res.status === 401){ location.href = '/?account'; return; }
+      if(!res.ok){ $('msg').textContent = res.d.message || 'That did not go through. Try again.'; return; }
+      page.following = res.d.following; page.followers = res.d.followers;
+      $('msg').textContent = page.following ? 'You will be told when bidding opens here. Make sure alerts are on in your account.' : '';
+      paintFollow();
+    }).catch(function(){ $('follow').disabled = false; });
+  });
+})();
+</script>
+</body>
+</html>
