@@ -383,6 +383,9 @@ p{margin:0}
 .thread__item b{font-weight:600;margin-right:6px}
 .thread__item time{color:var(--faint);font-size:.78rem;margin-left:6px;white-space:nowrap}
 .thread__note{font-size:.84rem;font-weight:400;color:var(--muted)}
+.thread__flag{border:0;background:none;padding:0;margin-left:10px;color:var(--faint);font:400 .76rem var(--body);text-decoration:underline;cursor:pointer}
+.thread__flag:hover{color:var(--bad)}
+.thread__flag[disabled]{text-decoration:none;cursor:default;color:var(--faint)}
 .thread form{display:grid;gap:8px}
 .thread input,.thread textarea{width:100%;background:var(--bg-2);border:1px solid var(--line-2);border-radius:8px;color:var(--text);font:400 .9rem/1.45 var(--body);padding:9px 11px}
 .thread textarea{min-height:58px;resize:vertical}
@@ -869,7 +872,7 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>One win per person per week, and up to five jobs a day each.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>A new high bid in the last five minutes extends bidding by five minutes. While the bids keep climbing, bidding stays open.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>You choose whether your job is secret or open. A secret job stays hidden until the video. An open job is shown on the board, and anyone can add $2 or more to it. The job's total is what competes, so a crowd can outbid one big bidder. Everyone who adds money is charged only if that job wins.</span></li>
-            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Sign in with a link sent to your email to vote and comment on open jobs. Votes show interest; money decides who wins. Comments are for people who have put money on that job.</span></li>
+            <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Sign in with a link sent to your email to vote and comment on open jobs. Votes show interest; money decides who wins. Comments are for people who have put money on that job. Swearing, slurs and attacks on anyone are not posted, and any comment can be reported.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>You can raise your bid as often as you like. Send the same job with a higher amount, and the same rules apply.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>Set a maximum and your bid rises on its own, one cent at a time, only when someone outbids you. Your maximum is never shown on the site.</span></li>
             <li><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/></svg><span>If the winner's card does not go through, the next highest bid wins.</span></li>
@@ -1781,8 +1784,8 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       ]
     };
     demoThreads = {demo00000001: [
-      {name: 'Priya', text: 'In for $5. He has to keep the stickers on.', at: new Date(now - 40 * min).toISOString()},
-      {name: 'big_al', text: 'Two miles is nothing. Make it uphill.', at: new Date(now - 22 * min).toISOString()}
+      {id: 1, name: 'Priya', text: 'In for $5. He has to keep the stickers on.', at: new Date(now - 40 * min).toISOString()},
+      {id: 2, name: 'big_al', text: 'Two miles is nothing. Make it uphill.', at: new Date(now - 22 * min).toISOString()}
     ]};
     me = {email: 'you@example.com', name: null, votes: [], canComment: ['demo00000001']};
     paint(demoData, 'Sample data for preview. These are not real bids. Vote, comment and chip in to try it: nothing is sent.');
@@ -1968,6 +1971,8 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       (demoThreads[job] = demoThreads[job] || []).push(c);
       if(row) row.comments = (row.comments || 0) + 1;
       out.d = {comment: c, name: c.name};
+    } else if(path === '/comments/report'){
+      out.d = {message: 'Thanks. It has been reported.', hidden: false};
     } else if(path === '/votes'){
       var on = body.on !== false;
       if(row) row.votes = Math.max(0, (row.votes || 0) + (on ? 1 : -1));
@@ -2075,6 +2080,19 @@ a.spot:hover{border-color:var(--accent);transform:translateY(-3px)}
       var p = document.createElement('p'), who = document.createElement('b'), when = document.createElement('time');
       p.className = 'thread__item'; who.textContent = c.name; when.textContent = ago(c.at);
       p.appendChild(who); p.appendChild(document.createTextNode(c.text)); p.appendChild(when);
+      if(c.id){   /* anyone signed in can report a comment; three reports hide it until the owner looks */
+        var flag = document.createElement('button');
+        flag.type = 'button'; flag.className = 'thread__flag'; flag.textContent = 'Report';
+        flag.addEventListener('click', function(){
+          if(!me) return askSignIn('Sign in to report a comment.');
+          flag.disabled = true;
+          call('POST', '/comments/report', {id: c.id}).then(function(res){
+            flag.textContent = res.ok ? 'Reported' : (res.d.message || 'Could not report');
+            if(res.ok && res.d.hidden) load();
+          }).catch(function(){ flag.disabled = false; });
+        });
+        p.appendChild(flag);
+      }
       return p;
     }
     function note(text){ var p = document.createElement('p'); p.className = 'thread__note'; p.textContent = text; return p; }

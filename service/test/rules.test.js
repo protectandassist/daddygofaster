@@ -277,3 +277,36 @@ test('money added to an open job: a real name and email, and at least $2', () =>
   assert.equal(validatePledge({ ...ok, name: 'x' }).ok, false);
   assert.equal(validatePledge(null).ok, false);
 });
+
+import { badLanguage, shouting } from '../src/language.js';
+
+test('ordinary comments get through, including words that only look rude', () => {
+  for (const fine of [
+    'Do it in the rain, no umbrella.', 'In for $5. He has to keep the stickers on.', 'Grape harvest in Scunthorpe?', 'Push it harder next time',
+    'A cocktail on the cockpit, classic', 'Assess the class before you pass', 'Damn, that hill is hell', 'Document the torpedo run', 'Title it "bass night"',
+    'Two miles is nothing. Make it uphill.', 'I would die laughing', 'No way he finishes it',
+  ]) assert.equal(badLanguage(fine), null, fine);
+});
+
+test('swearing and slurs are caught, however they are dressed up', () => {
+  for (const bad of ['fuck this', 'What the FUCK', 'sh1t idea', 'b!tch please', 'fuuuuuck', 'f u c k that', 'F.U.C.K', 'you a$$hole', 'total bullshit', 'what a d1ckhead', 'f4ggot', 'stfu']) {
+    assert.equal(badLanguage(bad), 'language', bad);
+  }
+});
+
+test('an attack on a person is caught as a threat', () => {
+  for (const bad of ['kill yourself', 'Just go die already', 'I hope you die', 'i know where you live']) assert.equal(badLanguage(bad), 'threat', bad);
+});
+
+test('shouting is long and mostly capitals; short capitals are fine', () => {
+  assert.equal(shouting('THIS IS THE WORST IDEA EVER POSTED'), true);
+  assert.equal(shouting('OK'), false);
+  assert.equal(shouting('NASA and the FBI walk into a bar'), false);
+  assert.equal(shouting('Make it uphill, please.'), false);
+});
+
+test('a rude name cannot go on the board', () => {
+  const bid = { task: 'Walk to the hardware store instead of driving.', email: 'a@b.co', amountCents: 500 };
+  assert.equal(validateBid({ ...bid, name: 'sh1thead' }).ok, false);
+  assert.equal(validateBid({ ...bid, name: 'Sandra' }).ok, true);
+});

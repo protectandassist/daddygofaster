@@ -10,6 +10,7 @@
 import { sha256, randomHex, providerKey } from './store.js';
 import { sendEmail } from './mail.js';
 import { LIMITS } from './rules.js';
+import { badLanguage, shouting, LANGUAGE_MESSAGES } from './language.js';
 
 const LOGIN_MINUTES = 20;
 const SESSION_DAYS = 60;
@@ -17,6 +18,8 @@ const LINKS_PER_EMAIL_PER_HOUR = 5;
 const LINKS_PER_IP_PER_HOUR = 20;
 const COMMENT_MAX = 280;
 const COMMENTS_PER_DAY = 20;
+const COMMENT_GAP_MS = 20_000; // one person cannot post faster than this
+const REPORTS_TO_HIDE = 3; // this many different people reporting a comment hides it until the owner looks
 const NAME_OK = /^[\p{L}\p{N} ._-]+$/u;
 const EMAIL_OK = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const HEX32 = /^[0-9a-f]{64}$/; // 32 random bytes
@@ -33,7 +36,7 @@ export async function sessionUser(request, env, now) {
   const key = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
   if (!HEX32.test(key)) return null;
   return env.DB.prepare(
-    'SELECT u.id, u.email, u.name, s.id AS session_id FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.key_hash = ? AND s.expires_at > ?',
+    'SELECT u.id, u.email, u.name, u.blocked, s.id AS session_id FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.key_hash = ? AND s.expires_at > ?',
   ).bind(await sha256(key), now).first();
 }
 
@@ -161,6 +164,7 @@ export async function getComments(env, url) {
 export async function postComment(request, env, now) {
   const user = await sessionUser(request, env, now);
   if (!user) return [401, { message: 'Sign in to comment.' }];
+  if (user.blocked) return [403, { message: 'You can no longer comment here.' }];
   const body = await read(request);
   const job = await openJob(env, body?.job);
   if (!job) return [404, { message: 'That job is not open for comments.' }];
@@ -173,29 +177,77 @@ export async function postComment(request, env, now) {
   if (text.length < 2) return [400, { message: 'Write a comment first.' }];
   if (text.length > COMMENT_MAX) return [400, { message: `Keep it to ${COMMENT_MAX} characters.` }];
   if (/https?:\/\/|www\./i.test(text)) return [400, { message: 'Links are not allowed in comments.' }];
+  // Swearing, slurs, attacks on a person and shouting are turned away before anyone sees them.
+  const trouble = badLanguage(text);
+  if (trouble) return [400, { message: LANGUAGE_MESSAGES[trouble], rejected: trouble }];
+  if (shouting(text)) return [400, { message: LANGUAGE_MESSAGES.shouting, rejected: 'shouting' }];
   let name = user.name;
   if (!name) {
     name = cleanName(body?.name);
+    if (name && badLanguage(name)) return [400, { message: 'Pick a different name to show beside your comment.', needName: true }];
     if (!name) return [400, { message: `Add a name of ${LIMITS.nameMin} to ${LIMITS.nameMax} letters or numbers to show beside your comment.`, needName: true }];
     await env.DB.prepare('UPDATE users SET name = ? WHERE id = ? AND name IS NULL').bind(name, user.id).run();
   }
   const today = await env.DB.prepare('SELECT COUNT(*) AS n FROM comments WHERE user_id = ? AND created_at > ?').bind(user.id, now - 86_400_000).first();
   if (today.n >= COMMENTS_PER_DAY) return [429, { message: 'That is a lot of comments for one day. Try again tomorrow.' }];
+  // No storms: a pause between comments, and the same words cannot be posted again.
+  const { results: mine } = await env.DB.prepare('SELECT text, created_at FROM comments WHERE user_id = ? ORDER BY created_at DESC LIMIT 5').bind(user.id).all();
+  if (mine.length && now - mine[0].created_at < COMMENT_GAP_MS) return [429, { message: 'Give it a moment before posting again.' }];
+  if (mine.some((c) => c.text.toLowerCase() === text.toLowerCase())) return [400, { message: 'You already said that.' }];
   const made = await env.DB.prepare('INSERT INTO comments (bid_id, user_id, name, text, created_at) VALUES (?, ?, ?, ?, ?)')
     .bind(job.id, user.id, name, text, now).run();
   return [200, { comment: { id: made.meta.last_row_id, name, text, at: new Date(now).toISOString() }, name }];
 }
 
+// Anyone signed in can report a comment. One report each; enough of them hide it
+// until the owner has looked.
+export async function reportComment(request, env, now) {
+  const user = await sessionUser(request, env, now);
+  if (!user) return [401, { message: 'Sign in to report a comment.' }];
+  const body = await read(request);
+  const id = Number(body?.id);
+  const c = Number.isInteger(id) ? await env.DB.prepare("SELECT id, user_id FROM comments WHERE id = ? AND status = 'shown'").bind(id).first() : null;
+  if (!c) return [404, { message: 'That comment is not there any more.' }];
+  if (c.user_id === user.id) return [400, { message: 'That is your own comment.' }];
+  await env.DB.prepare('INSERT OR IGNORE INTO comment_reports (comment_id, user_id, created_at) VALUES (?, ?, ?)').bind(id, user.id, now).run();
+  const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM comment_reports WHERE comment_id = ?').bind(id).first();
+  if (count.n >= REPORTS_TO_HIDE) await env.DB.prepare("UPDATE comments SET status = 'hidden' WHERE id = ? AND status = 'shown'").bind(id).run();
+  return [200, { message: 'Thanks. It has been reported.', hidden: count.n >= REPORTS_TO_HIDE }];
+}
+
 // ---- owner ----------------------------------------------------------------------
 
+// Reported comments first, then the newest. Hidden ones are included: they wait here for the owner.
 export async function recentComments(env, day) {
   const { results } = await env.DB.prepare(
-    "SELECT c.id, c.name, c.text, c.created_at, b.name AS job_name FROM comments c JOIN bids b ON b.id = c.bid_id WHERE b.day = ? AND c.status = 'shown' ORDER BY c.created_at DESC LIMIT 50",
+    `SELECT c.id, c.name, c.text, c.status, c.created_at, b.name AS job_name,
+            (SELECT COUNT(*) FROM comment_reports r WHERE r.comment_id = c.id) AS reports
+     FROM comments c JOIN bids b ON b.id = c.bid_id
+     WHERE b.day = ? AND c.status IN ('shown', 'hidden') ORDER BY reports DESC, c.created_at DESC LIMIT 60`,
   ).bind(day).all();
-  return results.map((c) => ({ id: c.id, name: c.name, text: c.text, on: c.job_name, at: new Date(c.created_at).toISOString() }));
+  return results.map((c) => ({ id: c.id, name: c.name, text: c.text, on: c.job_name, hidden: c.status === 'hidden', reports: c.reports, at: new Date(c.created_at).toISOString() }));
 }
 
 export async function removeComment(env, id) {
-  const r = await env.DB.prepare("UPDATE comments SET status = 'removed' WHERE id = ? AND status = 'shown'").bind(id).run();
+  const r = await env.DB.prepare("UPDATE comments SET status = 'removed' WHERE id = ? AND status IN ('shown', 'hidden')").bind(id).run();
   return r.meta.changes ? [200, { status: 'removed' }] : [404, { message: 'No such comment.' }];
+}
+
+// A reported comment the owner is happy with goes back up, with its reports cleared.
+export async function restoreComment(env, id) {
+  const r = await env.DB.prepare("UPDATE comments SET status = 'shown' WHERE id = ? AND status = 'hidden'").bind(id).run();
+  if (!r.meta.changes) return [404, { message: 'That comment is not hidden.' }];
+  await env.DB.prepare('DELETE FROM comment_reports WHERE comment_id = ?').bind(id).run();
+  return [200, { status: 'shown' }];
+}
+
+// Stops whoever wrote a comment from commenting again, and takes down everything they wrote.
+export async function blockCommenter(env, id) {
+  const c = await env.DB.prepare('SELECT user_id FROM comments WHERE id = ?').bind(id).first();
+  if (!c) return [404, { message: 'No such comment.' }];
+  await env.DB.batch([
+    env.DB.prepare('UPDATE users SET blocked = 1 WHERE id = ?').bind(c.user_id),
+    env.DB.prepare("UPDATE comments SET status = 'removed' WHERE user_id = ? AND status IN ('shown', 'hidden')").bind(c.user_id),
+  ]);
+  return [200, { status: 'blocked' }];
 }

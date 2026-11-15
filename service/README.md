@@ -93,6 +93,17 @@ Looking, bidding and adding money need no account. Voting and commenting do.
 
 Nobody's email is ever shown: a comment carries the chosen name, and a vote is a count.
 
+**Keeping comments civil** (`src/language.js`). Before a comment posts it is checked for
+swearing, slurs and attacks on a person, including the usual dodges (sh1t, fuuuck,
+f u c k), and for shouting in capitals; those are turned away with a plain reason. The
+same check covers the name beside a comment and the name on the board. One person cannot
+post faster than every 20 seconds or repeat themselves. Any signed-in visitor can report
+a comment: three different people reporting one hides it until the owner decides. In
+`/admin` the owner sees reported comments first and can remove one, put a hidden one
+back, or block its writer, which takes down everything they wrote. The filter judges
+words, not meaning, so a polite-sounding insult gets past it; reports and the owner
+cover that.
+
 ## Visitor counts and Reports
 
 The site counts its own visits (`src/stats.js`): no cookies, no outside service, no ad

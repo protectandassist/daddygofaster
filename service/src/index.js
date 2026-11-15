@@ -33,7 +33,7 @@ import {
   storeAdminKey, adminKeyIsSet, adminKeyMatches,
 } from './store.js';
 import {
-  signInOn, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, recentComments, removeComment,
+  signInOn, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, reportComment, recentComments, removeComment, restoreComment, blockCommenter,
 } from './social.js';
 import { record, report, tidy } from './stats.js';
 import ADMIN_HTML from './admin.html';
@@ -755,7 +755,9 @@ async function adminRoute(request, env, s, ctx, path, now) {
   if (request.method === 'GET' && path === '/admin/api/report') return [200, await report(env, s, now, url.searchParams)];
   if (request.method === 'GET' && path === '/admin/api/state') return [200, await adminState(env, s, now, url.searchParams.get('jobs') === '1')];
   if (request.method === 'POST' && (m = /^\/admin\/api\/bids\/(\d+)\/decide$/.exec(path))) return adminDecide(request, env, s, ctx, Number(m[1]), now);
-  if (request.method === 'POST' && (m = /^\/admin\/api\/comments\/(\d+)\/remove$/.exec(path))) return removeComment(env, Number(m[1]));
+  if (request.method === 'POST' && (m = /^\/admin\/api\/comments\/(\d+)\/(remove|restore|block)$/.exec(path))) {
+    return (m[2] === 'remove' ? removeComment : m[2] === 'restore' ? restoreComment : blockCommenter)(env, Number(m[1]));
+  }
   if (request.method === 'POST' && (m = /^\/admin\/api\/auctions\/(\d{4}-\d{2}-\d{2})\/close$/.exec(path))) {
     if (!(await closeAuction(env, m[1], now))) return [409, { message: 'That round is not open.' }];
     // Charge the winner and release the other holds now, so the owner sees the result.
@@ -790,7 +792,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
 
 // ---- entry ------------------------------------------------------------------------
 
-const PUBLIC = new Set(['/board', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/me', '/votes', '/comments', '/a']);
+const PUBLIC = new Set(['/board', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/me', '/votes', '/comments', '/comments/report', '/a']);
 // Signing in, votes and comments: [method, path] to handler. Each answers [status, body].
 const SOCIAL = {
   'POST /auth/start': (request, env, s, now) => authStart(request, env, s, now),
@@ -799,6 +801,7 @@ const SOCIAL = {
   'GET /me': (request, env, s, now) => getMe(request, env, now),
   'POST /votes': (request, env, s, now) => (s.open ? postVote(request, env, now) : [403, { message: 'Bidding is not open yet.' }]),
   'GET /comments': (request, env) => getComments(env, new URL(request.url)),
+  'POST /comments/report': (request, env, s, now) => reportComment(request, env, now),
   'POST /comments': (request, env, s, now) => (s.open ? postComment(request, env, now) : [403, { message: 'Bidding is not open yet.' }]),
 };
 

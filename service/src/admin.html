@@ -92,7 +92,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 
     <section class="card" id="commentsCard" hidden>
       <h2>Comments in this auction</h2>
-      <p class="muted small">Written by people who put money on an open job. Remove anything that should not be there.</p>
+      <p class="muted small">Written by people who put money on an open job. Swearing, slurs, attacks and shouting are turned away before they post. Reported comments come first; three reports hide one until you decide.</p>
       <div id="comments"></div>
     </section>
 
@@ -204,9 +204,19 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       var item = el('div', 'held-item'), top = el('div', 'row');
       top.appendChild(el('b', null, c.name));
       top.appendChild(el('span', 'muted small', 'on ' + c.on + '\'s job, ' + when(c.at)));
+      if(c.reports) top.appendChild(el('span', 'tag held', 'reported ' + c.reports + (c.reports === 1 ? ' time' : ' times')));
+      if(c.hidden) top.appendChild(el('span', 'tag refused', 'hidden from the site'));
       var rm = el('button', 'bad', 'Remove'); rm.style.marginLeft = 'auto';
       rm.addEventListener('click', function(){ act('/admin/api/comments/' + c.id + '/remove'); });
       top.appendChild(rm);
+      if(c.hidden){
+        var back = el('button', 'ghost', 'It is fine: put it back');
+        back.addEventListener('click', function(){ act('/admin/api/comments/' + c.id + '/restore'); });
+        top.appendChild(back);
+      }
+      var block = el('button', 'bad', 'Block this person');
+      block.addEventListener('click', function(){ if(confirm('Stop ' + c.name + ' from commenting and take down everything they wrote?')) act('/admin/api/comments/' + c.id + '/block'); });
+      top.appendChild(block);
       item.appendChild(top);
       item.appendChild(el('div', 'job', c.text));
       $('comments').appendChild(item);
