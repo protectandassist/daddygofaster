@@ -980,7 +980,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
 
 // ---- entry ------------------------------------------------------------------------
 
-const PUBLIC = new Set(['/overlay/test', '/board', '/live', '/chat', '/check', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/auth/google', '/me', '/me/activity', '/me/seen', '/me/delete', '/push/sub', '/push/unsub', '/push/next', '/votes', '/comments', '/comments/report', '/a']);
+const PUBLIC = new Set(['/overlay/test', '/overlay/state', '/board', '/live', '/chat', '/check', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/auth/google', '/me', '/me/activity', '/me/seen', '/me/delete', '/push/sub', '/push/unsub', '/push/next', '/votes', '/comments', '/comments/report', '/a']);
 // Signing in, votes and comments: [method, path] to handler. Each answers [status, body].
 const SOCIAL = {
   'POST /auth/start': (request, env, s, now) => authStart(request, env, s, now),
@@ -1019,6 +1019,11 @@ async function publicRoute(request, env, ctx, s, url, path, now, cors) {
     }
     if (path === '/board' && request.method === 'GET') return json(await getBoard(env, s, now), 200, cors);
     if (path === '/overlay/test' && request.method === 'GET') return json({ test: await overlayTest(env, now) }, 200, cors);
+    // Everything the stream overlay shows, in one answer: it asks once every few seconds, not three times.
+    if (path === '/overlay/state' && request.method === 'GET') {
+      const [, live] = await getLive(env, url);
+      return json({ board: await getBoard(env, s, now), test: await overlayTest(env, now), live }, 200, cors);
+    }
     // Creator pages: the list, one page, following it, and a person's own page.
     let cm, dm;
     if (request.method !== 'OPTIONS' && (path === '/creators' || path === '/me/creator' || path.startsWith('/me/creator/') || (cm = /^\/creators\/([a-z0-9-]{3,24})(\/follow)?$/i.exec(path)))) {

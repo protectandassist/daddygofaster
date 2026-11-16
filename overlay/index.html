@@ -328,34 +328,31 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
     return;
   }
 
-  /* The same board the website reads, asked for every few seconds. */
-  function board(){
-    fetch(API + '/board', {cache: 'no-store'}).then(function(r){ return r.json(); }).then(paint).catch(function(){});
+  /* The same board the website reads, with the overlay test and the chat, in ONE request each time.
+     Asked for every 4 seconds while something is going on (he is live, a bid changed in the last ten
+     minutes, the round closes within half an hour, or a test bid is up) and every 10 seconds otherwise.
+     OBS keeps this page open all day, and every request counts against the service's daily allowance. */
+  var chatLast = 0, first = true, lastChange = 0, lastSig = null, liveOn = false;
+  function busy(){
+    return liveOn || pretend || Date.now() - lastChange < 600000 || (status === 'open' && closesAt && closesAt - Date.now() < 1800000);
   }
-  function test(){
-    fetch(API + '/overlay/test', {cache: 'no-store'}).then(function(r){ return r.json(); }).then(function(d){
-      var t = d.test || null;
-      if((t && t.id) === (pretend && pretend.id)) return;
-      pretend = t;
-      if(lastBoard) paint(lastBoard);
-    }).catch(function(){});
-  }
-  var chatLast = 0, first = true;
-  function live(){
-    if(!showChat) return;
-    fetch(API + '/live' + (chatLast ? '?after=' + chatLast : ''), {cache: 'no-store'}).then(function(r){ return r.json(); }).then(function(d){
-      (d.chat || []).forEach(function(c){
+  function poll(){
+    fetch(API + '/overlay/state' + (showChat && chatLast ? '?after=' + chatLast : ''), {cache: 'no-store'}).then(function(r){ return r.json(); }).then(function(d){
+      var t = d.test || null, sig = JSON.stringify((d.board && d.board.bids || []).map(function(x){ return [x.name, x.amountCents]; }));
+      if(lastSig !== null && sig !== lastSig) lastChange = Date.now();
+      lastSig = sig;
+      if((t && t.id) !== (pretend && pretend.id)) pretend = t;
+      if(d.board) paint(d.board);
+      liveOn = Boolean(d.live && d.live.on);
+      if(showChat) (d.live && d.live.chat || []).forEach(function(c){
         if(c.id <= chatLast) return;
         chatLast = c.id;
         if(!first) line('', c.name, c.text);   /* only what is said while the overlay is up */
       });
       first = false;
-    }).catch(function(){});
+    }).catch(function(){}).then(function(){ setTimeout(poll, busy() ? 4000 : 10000); });
   }
-  board(); live();
-  setInterval(board, 3000);
-  test(); setInterval(test, 3000);
-  setInterval(live, 4000);
+  poll();
 })();
 </script>
 </body>
