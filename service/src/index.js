@@ -37,7 +37,7 @@ import {
 import {
   signInOn, emailLinksOn, sessionUser, namedUser, isAdminEmail, listMembers, getActivity, postSeen, deleteAccount, authGoogle, postMe, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, reportComment, recentComments, removeComment, restoreComment, blockCommenter,
 } from './social.js';
-import { record, report, tidy } from './stats.js';
+import { record, report, tidy, liveNow } from './stats.js';
 import ADMIN_HTML from './admin.html';
 import REPORTS_HTML from './reports.html';
 
@@ -953,6 +953,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
   const url = new URL(request.url);
   let m;
   if (request.method === 'GET' && path === '/admin/api/report') return [200, await report(env, s, now, url.searchParams)];
+  if (request.method === 'GET' && path === '/admin/api/now') return [200, await liveNow(env, now)];
   if (request.method === 'GET' && path === '/admin/api/state') return [200, await adminState(env, s, now, url.searchParams.get('jobs') === '1')];
   if (request.method === 'POST' && (m = /^\/admin\/api\/bids\/(\d+)\/decide$/.exec(path))) return adminDecide(request, env, s, ctx, Number(m[1]), now);
   if (request.method === 'POST' && (m = /^\/admin\/api\/bids\/(\d+)\/remove$/.exec(path))) return adminRemove(request, env, s, ctx, Number(m[1]), now);

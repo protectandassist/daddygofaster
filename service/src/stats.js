@@ -205,3 +205,52 @@ export async function report(env, s, now, query) {
     visits: list.slice(0, 300), moreVisits: Math.max(0, list.length - 300),
   };
 }
+
+// ---- right now --------------------------------------------------------------------
+
+const LIVE_LOOKBACK_MS = 3 * 3_600_000; // far enough back to know how a visit that is still going began
+const HERE_MS = 30 * 60_000;            // a page left open and untouched this long is counted as gone
+const LEFT_MS = 15 * 60_000;            // people who left stay on the list this long
+
+// GET /admin/api/now   Who has the site open at this moment, and what just happened.
+// The page says when it is opened, when it is put away, and when a button is tapped; it sends
+// nothing while someone is only reading. So "here" means: the page was opened or used in the
+// last half hour and has not said it was put away.
+export async function liveNow(env, now) {
+  const { results: rows } = await env.DB.prepare(
+    'SELECT at, kind, visitor, ref, device, country, region, city, label, src FROM events WHERE at >= ? ORDER BY at LIMIT 5000',
+  ).bind(now - LIVE_LOOKBACK_MS).all();
+  const visits = new Map(); // visitor -> the visit they are in, or were last in
+  for (const r of rows) {
+    let v = visits.get(r.visitor);
+    if (!v || r.at - v.last > VISIT_GAP_MS) {
+      v = { visitor: r.visitor, start: r.at, last: r.at, first: null, rows: [] };
+      visits.set(r.visitor, v);
+    }
+    if (!v.first && r.kind === 'view') v.first = r;
+    v.rows.push(r); v.last = r.at;
+  }
+  const what = (r) => (r.kind === 'tap' ? r.label : r.kind === 'hide' ? 'Put the page away' : WHAT[r.kind]);
+  const people = [];
+  for (const v of visits.values()) {
+    if (!v.first) continue; // a stray moment with no page open is not a visit
+    const lastRow = v.rows[v.rows.length - 1];
+    const here = lastRow.kind !== 'hide' && now - v.last <= HERE_MS;
+    if (!here && now - v.last > LEFT_MS) continue;
+    const did = v.rows.filter((r) => r.kind !== 'hide');
+    people.push({
+      visitor: v.visitor.slice(0, 6), here, place: placeName(v.first), source: sourceName(v.first.ref, v.first.src), device: v.first.device,
+      since: new Date(v.start).toISOString(), lastAt: new Date(v.last).toISOString(),
+      bidding: did.some((r) => r.kind === 'start') && !did.some((r) => r.kind === 'placed'),
+      placed: did.some((r) => r.kind === 'placed'),
+      trail: did.slice(-6).map((r) => what(r)),
+    });
+  }
+  people.sort((a, b) => Number(b.here) - Number(a.here) || (a.lastAt < b.lastAt ? 1 : -1));
+  const known = new Set(people.map((p) => p.visitor));
+  const feed = rows.filter((r) => now - r.at <= 3_600_000 && visits.get(r.visitor)?.first).slice(-40).reverse().map((r) => ({
+    at: new Date(r.at).toISOString(), visitor: r.visitor.slice(0, 6), kind: r.kind, what: what(r),
+    place: placeName(visits.get(r.visitor).first), onList: known.has(r.visitor.slice(0, 6)),
+  }));
+  return { at: new Date(now).toISOString(), here: people.filter((p) => p.here).length, people, feed };
+}

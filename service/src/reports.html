@@ -40,6 +40,23 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
 .code{font-family:ui-monospace,Consolas,monospace;color:var(--muted)}
 .err{color:var(--bad)}
 .scroll{overflow-x:auto}
+.now{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:18px;margin-top:12px}
+@media (max-width:760px){.now{grid-template-columns:1fr}}
+.count{font-size:2.6rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--faint);margin-right:8px}
+.dot.on{background:var(--good);box-shadow:0 0 0 4px rgba(61,214,140,.18)}
+.person{padding:10px 0;border-bottom:1px solid var(--line)}
+.person:last-child{border-bottom:0}
+.person.gone{opacity:.55}
+.tag{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:99px;font-size:.76rem;font-weight:600;background:rgba(239,149,2,.16);color:var(--accent)}
+.tag.good{background:rgba(61,214,140,.16);color:var(--good)}
+.feed{list-style:none;margin:0;padding:0;max-height:340px;overflow-y:auto}
+.feed li{padding:6px 0;border-bottom:1px solid var(--line);font-size:.88rem}
+.feed li:last-child{border-bottom:0}
+.feed li.new{animation:flash 2.4s ease-out}
+@keyframes flash{from{background:rgba(239,149,2,.22)}to{background:transparent}}
+label.check{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+label.check input{width:18px;height:18px;padding:0}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -63,6 +80,28 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
   </section>
 
   <div id="app" hidden style="display:grid;gap:18px">
+    <section class="card" id="nowCard">
+      <div class="row">
+        <h2 style="margin:0">Right now</h2>
+        <span class="muted small" id="nowUpdated"></span>
+        <label class="check small muted" style="margin-left:auto"><input type="checkbox" id="nowSound"> Play a sound when someone arrives or starts a bid</label>
+      </div>
+      <p class="why" style="margin:6px 0 0">Checked every 5 seconds while this page is showing. Someone counts as here from when they open the site until they put it away, or for half an hour if they leave it open and untouched. Your own devices are left out once you have opened the link below on them.</p>
+      <p class="err small" id="nowErr" hidden></p>
+      <div class="now">
+        <div>
+          <div class="row" style="gap:12px"><span class="count" id="nowCount">0</span><span class="muted" id="nowLabel">people on the site</span></div>
+          <p class="muted small" id="nowNobody" style="margin:12px 0 0">Nobody has the site open at the moment.</p>
+          <div id="nowPeople" style="margin-top:6px"></div>
+        </div>
+        <div>
+          <b class="small">Just happened</b>
+          <p class="muted small" id="nowQuiet" style="margin:8px 0 0">Nothing in the last hour.</p>
+          <ul class="feed" id="nowFeed"></ul>
+        </div>
+      </div>
+    </section>
+
     <section class="card">
       <div class="row">
         <label class="small muted" for="period">Period</label>
@@ -208,6 +247,79 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
     if(d.partial) $('loadErr').textContent = 'This period has more activity than one report can hold, so the figures cover its first part only. Pick a shorter period.';
   }
 
+  /* ---------- right now ---------- */
+  var nowTimer = null, newestSeen = null, audio = null;
+  function ago(iso){
+    var s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+    if(s < 10) return 'just now';
+    if(s < 60) return s + ' s ago';
+    if(s < 3600) return Math.floor(s / 60) + ' min ago';
+    return Math.floor(s / 3600) + ' h ago';
+  }
+  /* two short notes for an arrival, three rising ones for a bid; browsers allow sound only after a click, which ticking the box is */
+  function chime(big){
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      (big ? [660, 880, 1100] : [520, 660]).forEach(function(hz, i){
+        var o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + i * 0.14;
+        o.type = 'sine'; o.frequency.value = hz;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+        o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + 0.24);
+      });
+    } catch (e) {}
+  }
+  function renderNow(d){
+    $('nowCount').textContent = String(d.here);
+    $('nowLabel').textContent = d.here === 1 ? 'person on the site' : 'people on the site';
+    $('nowUpdated').textContent = 'Checked ' + new Date().toLocaleTimeString();
+    $('nowNobody').hidden = d.here > 0;
+    var box = $('nowPeople'); box.textContent = '';
+    d.people.forEach(function(p){
+      var row = el('div', 'person' + (p.here ? '' : ' gone')), head = el('div');
+      head.appendChild(el('span', 'dot' + (p.here ? ' on' : '')));
+      head.appendChild(el('b', null, p.place));
+      if(p.placed) head.appendChild(el('span', 'tag good', 'Placed a bid'));
+      else if(p.bidding) head.appendChild(el('span', 'tag', 'Bidding'));
+      row.appendChild(head);
+      row.appendChild(el('div', 'muted small', (p.here ? 'Here since ' + new Date(p.since).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}) : 'Left ' + ago(p.lastAt)) + ' · ' + (p.device || 'unknown') + ' · ' + p.source + ' · visitor ' + p.visitor));
+      row.appendChild(el('div', 'small', p.trail.join(' → ')));
+      box.appendChild(row);
+    });
+    var feed = $('nowFeed'), fresh = [];
+    feed.textContent = '';
+    $('nowQuiet').hidden = d.feed.length > 0;
+    d.feed.forEach(function(f){
+      var isNew = newestSeen !== null && f.at > newestSeen;
+      var li = el('li', isNew ? 'new' : null);
+      li.appendChild(el('b', null, f.what)); li.appendChild(document.createTextNode(' · ' + f.place + ' '));
+      li.appendChild(el('span', 'muted', ago(f.at)));
+      feed.appendChild(li);
+      if(isNew) fresh.push(f);
+    });
+    if(fresh.length && $('nowSound').checked){
+      if(fresh.some(function(f){ return f.kind === 'start' || f.kind === 'placed' || f.kind === 'pledged'; })) chime(true);
+      else if(fresh.some(function(f){ return f.kind === 'view'; })) chime(false);
+    }
+    newestSeen = d.feed.length ? d.feed[0].at : (newestSeen === null ? '' : newestSeen);
+    document.title = (d.here ? '(' + d.here + ') ' : '') + 'Reports — TorchHive';
+  }
+  function loadNow(){
+    return api('/admin/api/now').then(function(d){ $('nowErr').hidden = true; renderNow(d); }).catch(function(e){
+      $('nowErr').textContent = 'Could not check who is here: ' + e.message; $('nowErr').hidden = false;
+    });
+  }
+  function startNow(){
+    clearInterval(nowTimer);
+    loadNow();
+    nowTimer = setInterval(function(){ if(!document.hidden) loadNow(); }, 5000);
+  }
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden && nowTimer) loadNow(); });
+  try { $('nowSound').checked = localStorage.getItem('thNowSound') === '1'; } catch (e) {}
+  $('nowSound').addEventListener('change', function(){
+    try { localStorage.setItem('thNowSound', $('nowSound').checked ? '1' : '0'); } catch (e) {}
+    if($('nowSound').checked) chime(false);
+  });
+
   function load(){
     return api('/admin/api/report?' + query()).then(function(d){
       $('login').hidden = true; $('app').hidden = false; $('signout').hidden = false;
@@ -217,6 +329,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
   }
   function start(){
     load().then(function(){
+      startNow();
       clearInterval(timer);
       timer = setInterval(function(){ if(!document.hidden) load().catch(function(){}); }, 60000);
     }).catch(function(e){
@@ -240,7 +353,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
   });
   $('signout').addEventListener('click', function(){
     key = ''; try { sessionStorage.removeItem('dgfKey'); } catch (err) {}
-    clearInterval(timer);
+    clearInterval(timer); clearInterval(nowTimer); nowTimer = null;
+    document.title = 'Reports — TorchHive';
     $('app').hidden = true; $('login').hidden = false; $('signout').hidden = true; $('key').value = '';
   });
   if(key) start();
