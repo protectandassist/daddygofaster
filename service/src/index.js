@@ -980,7 +980,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
 
 // ---- entry ------------------------------------------------------------------------
 
-const PUBLIC = new Set(['/board', '/live', '/chat', '/check', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/auth/google', '/me', '/me/activity', '/me/seen', '/me/delete', '/push/sub', '/push/unsub', '/push/next', '/votes', '/comments', '/comments/report', '/a']);
+const PUBLIC = new Set(['/overlay/test', '/board', '/live', '/chat', '/check', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/auth/google', '/me', '/me/activity', '/me/seen', '/me/delete', '/push/sub', '/push/unsub', '/push/next', '/votes', '/comments', '/comments/report', '/a']);
 // Signing in, votes and comments: [method, path] to handler. Each answers [status, body].
 const SOCIAL = {
   'POST /auth/start': (request, env, s, now) => authStart(request, env, s, now),
