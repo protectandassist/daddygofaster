@@ -210,7 +210,8 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
   function paintBoard(d, bids, changed){
     if(!showBoard) return;
     var rows = $('rows'), open = d.status === 'open';
-    $('boardK').textContent = open ? 'Live bids' : (d.status === 'closed' ? 'Final bids' : 'Bidding opens soon');
+    var nx = !open && d.nextOpensAt ? new Date(d.nextOpensAt) : null;
+    $('boardK').textContent = open ? 'Live bids' : nx ? 'Next bidding ' + nx.toLocaleDateString([], {weekday: 'long'}) + ' ' + nx.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}) : (d.status === 'closed' ? 'Final bids' : 'Bidding opens soon');
     $('boardN').textContent = bids.length ? bids.length + (bids.length === 1 ? ' bid' : ' bids') : '';
     var empty = rows.querySelector('.board__empty');
     if(!bids.length){
@@ -268,13 +269,15 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
     bids.sort(function(a, b){ return b.amountCents - a.amountCents; });
     var top = bids[0];
     status = d.status; closesAt = d.closesAt ? new Date(d.closesAt).getTime() : null;
-    $('k').textContent = d.status === 'open' ? (top ? 'High bid' : 'Reserve') : 'Bidding';
+    var nextAt = d.status !== 'open' && d.nextOpensAt ? new Date(d.nextOpensAt) : null;
+    var nextText = nextAt ? nextAt.toLocaleDateString([], {weekday: 'short'}) + ' ' + nextAt.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}) : '';
+    $('k').textContent = d.status === 'open' ? (top ? 'High bid' : 'Reserve') : nextAt ? 'Next bidding' : 'Bidding';
     if(d.status === 'open' && top){
       if(seen && shownCents !== top.amountCents){ $('amt').classList.remove('is-bump'); void $('amt').offsetWidth; $('amt').classList.add('is-bump'); }
       countTo(top.amountCents);
     } else {
       clearInterval(countTimer); shownCents = null;
-      $('amt').textContent = d.status === 'open' ? '$0.50' : (d.status === 'closed' ? 'Closed' : 'Opens soon');
+      $('amt').textContent = d.status === 'open' ? '$0.50' : nextAt ? nextText : (d.status === 'closed' ? 'Closed' : 'Opens soon');
     }
     $('who').textContent = '';
     if(top){

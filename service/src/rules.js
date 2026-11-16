@@ -415,6 +415,35 @@ export function nominalAuction(nowMs, tz, closeHour) {
   return { day: ymd(job), closesAt };
 }
 
+// The owner's weekly schedule: bidding is online on the chosen weekdays (0 is Sunday), from
+// `open` to `close`, both minutes after local midnight. Returns the window that `nowMs` is in,
+// or the next one to come: { on, opensAt, closesAt, day } where `day` is the job day, the
+// day after the close. Null when no weekday is chosen.
+export function scheduleWindow(nowMs, tz, sch) {
+  const p = localParts(nowMs, tz);
+  const at = (o, mins) => zonedToUtc(o.y, o.m, o.d, Math.floor(mins / 60), tz) + (mins % 60) * 60_000;
+  for (let i = 0; i <= 7; i++) {
+    const o = shift(p.y, p.m, p.d, i);
+    if (!sch.days.includes(new Date(Date.UTC(o.y, o.m - 1, o.d)).getUTCDay())) continue;
+    const closesAt = at(o, sch.close);
+    if (nowMs >= closesAt) continue;
+    const opensAt = at(o, sch.open);
+    return { on: nowMs >= opensAt, opensAt, closesAt, day: ymd(shift(o.y, o.m, o.d, 1)) };
+  }
+  return null;
+}
+
+// What the owner sent for the schedule, checked: { days, open, close } or null for "every day".
+export function readSchedule(body) {
+  const days = [...new Set((Array.isArray(body?.days) ? body.days : []).map(Number))].filter((d) => Number.isInteger(d) && d >= 0 && d <= 6).sort();
+  if (!days.length) return null;
+  const mins = (v) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(v ?? '')); return m && Number(m[1]) < 24 && Number(m[2]) < 60 ? Number(m[1]) * 60 + Number(m[2]) : NaN; };
+  const open = mins(body.open), close = mins(body.close);
+  if (!Number.isFinite(open) || !Number.isFinite(close)) return { error: 'Give both times, like 8:00 AM and 8:00 PM.' };
+  if (close - open < 10) return { error: 'The closing time has to be at least ten minutes after the opening time, on the same day.' };
+  return { days, open, close };
+}
+
 // A new high bid in the last `extendMinutes` adds `extendMinutes` to the clock.
 // There is no cap: while people keep outbidding each other, the round runs on.
 export function extendedClose(closesAt, nowMs, extendMinutes) {

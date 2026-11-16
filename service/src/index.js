@@ -20,7 +20,7 @@
 // is also what charges the winner's card and releases every other hold.
 import {
   LIMITS, TIME_POLICY, money, describeMinutes, coveredMinutes, timeAllowance, approveDuration, validateBid, validateRaise, validatePledge, applyScreen, raiseVerdict,
-  resolveStandings, HELD_MESSAGE, nominalAuction, extendedClose, dayShift, pickWinner, holdTarget, extraHold, readCostItems, checkReply, taskKey, roundKey, roundDate, roundCreator,
+  resolveStandings, HELD_MESSAGE, nominalAuction, scheduleWindow, readSchedule, extendedClose, dayShift, pickWinner, holdTarget, extraHold, readCostItems, checkReply, taskKey, roundKey, roundDate, roundCreator,
 } from './rules.js';
 import { cardKeys, readIntent } from './cards.js';
 import {
@@ -129,6 +129,46 @@ async function settleDue(env, now) {
   for (const a of results) await closeAuction(env, a.day, now);
 }
 
+// The owner's weekly schedule, applied to the site's own page. On a bidding day, inside the
+// hours, a round runs and closes at the schedule's time. Outside them bidding reads as not
+// open, and `nextOpensAt` says when it is back. A round already running is never cut short.
+async function applySchedule(env, s, now) {
+  let sch = null;
+  try { sch = JSON.parse((await getSetting(env, 'schedule')) || 'null'); } catch { sch = null; }
+  if (!sch || !Array.isArray(sch.days) || !sch.days.length) return s;
+  s.schedule = sch;
+  if (!s.open) return s;
+  const running = await env.DB.prepare("SELECT closes_at FROM auctions WHERE status = 'open' AND creator_id = 0 AND closes_at > ? LIMIT 1").bind(now).first();
+  if (running) {
+    const after = scheduleWindow(running.closes_at, s.tz, sch);
+    if (after) s.nextOpensAt = after.opensAt;
+    return s;
+  }
+  const w = scheduleWindow(now, s.tz, sch);
+  if (!w) return s;
+  if (w.on) {
+    // One round a day: if today's has already closed (he closed it early), the next day is next.
+    const had = await env.DB.prepare('SELECT status FROM auctions WHERE day = ?').bind(roundKey(w.day, 0)).first();
+    const after = scheduleWindow(w.closesAt, s.tz, sch);
+    if (!had) { s.window = w; if (after) s.nextOpensAt = after.opensAt; return s; }
+    s.open = false; s.offDay = true;
+    if (after) s.nextOpensAt = after.opensAt;
+    return s;
+  }
+  s.open = false; s.offDay = true; s.nextOpensAt = w.opensAt;
+  return s;
+}
+
+// Owner: save the weekly schedule, or clear it to go back to a round every day.
+async function adminSchedule(request, env, s, now) {
+  const body = await request.json().catch(() => null);
+  const sch = readSchedule(body);
+  if (sch && sch.error) return [400, { message: sch.error }];
+  if (!sch) { await deleteSetting(env, 'schedule'); return [200, { status: 'cleared', message: 'Saved. A new round opens every day, as before.' }]; }
+  await setSetting(env, 'schedule', JSON.stringify(sch), now);
+  return [200, { status: 'saved', message: 'Saved. A round that is already open keeps its own closing time; the schedule applies from the next one.' }];
+}
+
 // The round people are bidding in right now. Creates it on the first visit
 // after the last one closed.
 async function currentAuction(env, s, now) {
@@ -136,7 +176,7 @@ async function currentAuction(env, s, now) {
   const page = s.creatorId || 0; // 0 is the site's own page
   const open = await env.DB.prepare("SELECT * FROM auctions WHERE status = 'open' AND creator_id = ? ORDER BY closes_at LIMIT 1").bind(page).first();
   if (open) return open;
-  const n = nominalAuction(now, s.tz, s.closeHour);
+  const n = s.window && !page ? s.window : nominalAuction(now, s.tz, s.closeHour);
   const key = roundKey(n.day, page);
   await env.DB.prepare("INSERT OR IGNORE INTO auctions (day, closes_at, status, creator_id) VALUES (?, ?, 'open', ?)").bind(key, n.closesAt, page).run();
   return env.DB.prepare('SELECT * FROM auctions WHERE day = ?').bind(key).first();
@@ -254,7 +294,7 @@ async function sendOverlayTest(env, s, now) {
 
 async function getBoard(env, s, now) {
   // Before bidding opens there is no board, but people can already make an account.
-  if (!s.open) return { status: 'soon', bids: [], alerts: false, live: s.creator ? false : (await liveState(env)).on, ...(s.creator ? { creator: s.creator } : {}), ...(await signInWays(env, s)) };
+  if (!s.open) return { status: 'soon', ...(s.nextOpensAt ? { nextOpensAt: new Date(s.nextOpensAt).toISOString() } : {}), bids: [], alerts: false, live: s.creator ? false : (await liveState(env)).on, ...(s.creator ? { creator: s.creator } : {}), ...(await signInWays(env, s)) };
   const a = await currentAuction(env, s, now);
   const { results } = await env.DB.prepare(
     `SELECT name, amount_cents, created_at, shared, pid, task, backers,
@@ -266,6 +306,7 @@ async function getBoard(env, s, now) {
     status: a.status === 'open' ? 'open' : 'closed',
     day: a.day,
     closesAt: new Date(a.closes_at).toISOString(),
+    ...(s.nextOpensAt ? { nextOpensAt: new Date(s.nextOpensAt).toISOString() } : {}),
     alerts: Boolean(s.mailFrom && (await mailKey(env))), // can the service email an outbid bidder?
     cardKey: cardKeys(env)?.publishable ?? null, // set when a bid needs a card; the page shows the card box
     pooling: Boolean(cardKeys(env)), // can people add money to an open job? It needs card holds.
@@ -780,7 +821,9 @@ async function adminState(env, s, now, showJobs) {
     };
   }
   return {
-    open: s.open,
+    open: s.open || Boolean(s.offDay),
+    schedule: s.schedule || null,
+    nextOpensAt: s.nextOpensAt ? new Date(s.nextOpensAt).toISOString() : null,
     screen: (await openaiKey(env)) || (await aiKey(env)) ? 'ai' : 'manual',
     email: s.mailFrom && (await mailKey(env)) ? 'on' : 'off',
     cards: cardsOn ? 'on' : 'off',
@@ -912,6 +955,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
   if (request.method === 'POST' && (m = /^\/admin\/api\/bids\/(\d+)\/remove$/.exec(path))) return adminRemove(request, env, s, ctx, Number(m[1]), now);
   if (request.method === 'POST' && (m = /^\/admin\/api\/creators\/(\d+)\/(approve|pause)$/.exec(path))) return decideCreator(env, s, Number(m[1]), m[2], now);
   if (request.method === 'POST' && path === '/admin/api/overlay/test') return sendOverlayTest(env, s, now);
+  if (request.method === 'POST' && path === '/admin/api/schedule') return adminSchedule(request, env, s, now);
   if (request.method === 'POST' && path === '/admin/api/live') {
     const body = await request.json().catch(() => null);
     const [status, out] = await setLive(env, body, now);
@@ -1094,7 +1138,7 @@ export default {
           if (!scoped) return json({ verdict: 'invalid', message: 'There is no page at this address.' }, 404, cors);
           return publicRoute(request, env, ctx, scoped, url, path, now, cors);
         }
-        return publicRoute(request, env, ctx, s, url, path, now, cors);
+        return publicRoute(request, env, ctx, await applySchedule(env, s, now), url, path, now, cors);
       }
       if (path === '/stop' && request.method === 'GET') return stopEmails(env, url.searchParams.get('t'), url.searchParams.get('u'));
       if ((path === '/admin' || path === '/reports') && request.method === 'GET') {
@@ -1107,7 +1151,7 @@ export default {
         });
       }
       if (path.startsWith('/admin/api/')) {
-        const [status, body] = await adminRoute(request, env, s, ctx, path, now);
+        const [status, body] = await adminRoute(request, env, await applySchedule(env, s, now), ctx, path, now);
         return json(body, status);
       }
       if (path === '/') return json({ service: 'dgf-bids', open: s.open });
@@ -1125,6 +1169,7 @@ export default {
     const s = settings(env);
     try {
       await settleDue(env, now);
+      await applySchedule(env, s, now);
       const key = cardKeys(env)?.secret ?? null;
       for (const day of await unsettledDays(env, now)) await settleMoney(env, key, day, now, chooseWinner);
       if (key) await sweepStale(env, key, now);

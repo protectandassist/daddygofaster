@@ -90,6 +90,18 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <p class="muted small">Who came, from where, and what they did: <a href="/reports" style="color:var(--gold)">open Reports</a>.</p>
     </section>
 
+    <section class="card" id="schedCard">
+      <h2>Bidding days</h2>
+      <p class="muted small" id="schedNote">Tick the days bidding goes online, and the hours. On the other days the site shows when bidding is next. Tick no days for a new round every day.</p>
+      <div class="row" id="schedDays"></div>
+      <div class="row">
+        <label class="small">Opens at <input id="schedOpen" type="time" value="08:00" style="width:8.5em"></label>
+        <label class="small">Closes at <input id="schedClose" type="time" value="20:00" style="width:8.5em"></label>
+        <button id="schedSave" type="button">Save</button>
+        <p class="small" id="schedMsg" role="status" style="flex:1 0 100%" hidden></p>
+      </div>
+    </section>
+
     <section class="card" id="liveCard">
       <h2>Going live</h2>
       <p class="muted small" id="liveNote">The stream links are optional: you can set the closing time and the fixed close now and add a link later. When you are live, paste your stream links here. The site plays the YouTube or Twitch stream with a chat beside it, open to anyone with an account; with both, viewers pick which to watch. TikTok does not allow its live streams to be played on another site, so its link becomes a button. For your stream descriptions, send people to torchhive.com/live</p>
@@ -269,6 +281,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       if(c.told) box.appendChild(el('div', 'muted small', 'Told: ' + c.told));
       cl.appendChild(box);
     });
+    paintSchedule(d);
     var live = d.live || {on: false};
     $('liveNote').textContent = live.on
       ? 'You are live on the site now. The stream and the chat are showing. End it here when the stream is over.'
@@ -409,6 +422,33 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     $('actionErr').hidden = true;
     api('/admin/api/overlay/test', {method: 'POST', body: '{}'}).then(function(res){ $('liveMsg').textContent = res.message || 'Sent.'; $('liveMsg').hidden = false; })
       .catch(function(e){ $('actionErr').textContent = e.message; $('actionErr').hidden = false; });
+  });
+  /* Bidding days: the weekly schedule */
+  var DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], schedDrawn = false;
+  function clock(mins){ return (mins < 600 ? '0' : '') + Math.floor(mins / 60) + ':' + (mins % 60 < 10 ? '0' : '') + (mins % 60); }
+  function paintSchedule(d){
+    var box = $('schedDays'), sch = d.schedule;
+    if(!schedDrawn){   /* drawn once, so a refresh never undoes a tick he has not saved yet */
+      schedDrawn = true;
+      [1, 2, 3, 4, 5, 6, 0].forEach(function(n){
+        var lab = el('label', 'small'), cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.value = String(n); cb.checked = Boolean(sch && sch.days.indexOf(n) >= 0);
+        lab.appendChild(cb); lab.appendChild(document.createTextNode(' ' + DAY_NAMES[n]));
+        box.appendChild(lab);
+      });
+      if(sch){ $('schedOpen').value = clock(sch.open); $('schedClose').value = clock(sch.close); }
+    }
+    var tz = d.settings && d.settings.timeZone ? ' Times are ' + d.settings.timeZone.replace('_', ' ') + ' time.' : '';
+    $('schedNote').textContent = (sch
+      ? 'Bidding is online on ' + sch.days.map(function(n){ return DAY_NAMES[n]; }).join(', ') + '.' + (d.nextOpensAt ? ' Next opening: ' + new Date(d.nextOpensAt).toLocaleString([], {weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'}) + '.' : '')
+      : 'A new round opens every day. Tick the days bidding goes online to change that; on the other days the site shows when bidding is next.') + tz;
+  }
+  $('schedSave').addEventListener('click', function(){
+    var days = [].slice.call($('schedDays').querySelectorAll('input:checked')).map(function(c){ return Number(c.value); });
+    $('actionErr').hidden = true;
+    api('/admin/api/schedule', {method: 'POST', body: JSON.stringify({days: days, open: $('schedOpen').value, close: $('schedClose').value})}).then(function(res){
+      $('schedMsg').textContent = res.message || 'Saved.'; $('schedMsg').hidden = false; load();
+    }).catch(function(e){ $('schedMsg').textContent = e.message; $('schedMsg').hidden = false; });
   });
   $('liveOff').addEventListener('click', function(){ act('/admin/api/live', {on: false}); });
   /* "8:15 PM" on this device's clock: today if that is still ahead, otherwise tomorrow */
