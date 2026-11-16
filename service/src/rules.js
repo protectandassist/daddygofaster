@@ -439,7 +439,7 @@ export function readSchedule(body) {
   if (!days.length) return null;
   const mins = (v) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(v ?? '')); return m && Number(m[1]) < 24 && Number(m[2]) < 60 ? Number(m[1]) * 60 + Number(m[2]) : NaN; };
   const open = mins(body.open), close = mins(body.close);
-  if (!Number.isFinite(open) || !Number.isFinite(close)) return { error: 'Give both times, like 8:00 AM and 8:00 PM.' };
+  if (!Number.isFinite(open) || !Number.isFinite(close)) return { error: 'Give both times, like 8:00 AM and 9:00 PM.' };
   if (close - open < 10) return { error: 'The closing time has to be at least ten minutes after the opening time, on the same day.' };
   return { days, open, close };
 }

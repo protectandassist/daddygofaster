@@ -19,7 +19,7 @@ OPEN = "true"
 # each full $200 adds another hour to the cap. The owner approves actual duration.
 # Bidding for a job day closes at CLOSE_HOUR (24-hour clock) in TIME_ZONE the evening before.
 TIME_ZONE = "America/Chicago"
-CLOSE_HOUR = "20"
+CLOSE_HOUR = "21"
 # A bid in the last EXTEND_MINUTES adds EXTEND_MINUTES to the clock.
 EXTEND_MINUTES = "5"
 # Bids one email address may land per job day (tries that fall short or break a rule are capped at four times this).

@@ -47,7 +47,7 @@ neither can come down. There is no new screen and no new row, it does not count 
 limit. The same time caps apply. A raise that makes a longer job eligible moves it to
 owner review; it does not bypass approval or automatically extend an agreed duration.
 
-Bidding for a job day closes at 8 p.m. Central the evening before, and the next round
+Bidding for a job day closes at 9 p.m. Central the evening before, and the next round
 opens straight away. A round that has run past its close is settled the next time anyone
 loads the board, bids, or opens `/admin`, and by a timer that runs every minute. The
 highest qualifying bid wins and the earlier bid wins a tie.

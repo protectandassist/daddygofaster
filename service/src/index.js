@@ -67,7 +67,7 @@ function settings(env) {
   return {
     open: env.OPEN === 'true',
     tz: env.TIME_ZONE || 'America/Chicago',
-    closeHour: int(env.CLOSE_HOUR, 20),
+    closeHour: int(env.CLOSE_HOUR, 21),
     extend: int(env.EXTEND_MINUTES, 5),
     maxPerDay: int(env.MAX_BIDS_PER_DAY, 5),
     origins: (env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean),
@@ -140,7 +140,10 @@ async function applySchedule(env, s, now) {
   if (!s.open) return s;
   const running = await env.DB.prepare("SELECT closes_at FROM auctions WHERE status = 'open' AND creator_id = 0 AND closes_at > ? LIMIT 1").bind(now).first();
   if (running) {
-    const after = scheduleWindow(running.closes_at, s.tz, sch);
+    // A round that closes before its day's hours are over (closed early, or opened under an
+    // older schedule) still counts as that day's round: the next opening is the day after.
+    let after = scheduleWindow(running.closes_at, s.tz, sch);
+    if (after && after.opensAt <= now) after = scheduleWindow(after.closesAt, s.tz, sch);
     if (after) s.nextOpensAt = after.opensAt;
     return s;
   }
