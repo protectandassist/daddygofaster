@@ -102,6 +102,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
         <button id="liveOn">Save</button>
         <button id="liveOff" class="bad" hidden>End live on the site</button>
         <p class="small" id="liveMsg" role="status" style="flex:1 0 100%" hidden></p>
+        <p class="muted small" style="flex:1 0 100%;margin-bottom:0">Stream overlay for OBS: torchhive.com/overlay/ (add ?tall for TikTok). Check it is working on your stream:</p>
+        <button id="overlayTest" type="button">Simulate a bid on the overlay</button>
       </div>
       <div id="chatList"></div>
     </section>
@@ -402,6 +404,11 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       $('liveClose').value = ''; $('liveAt').value = '';
       return Promise.resolve(load()).then(function(){ $('liveMsg').textContent = said.join(' '); $('liveMsg').hidden = !said.length; });
     }).catch(function(e){ $('actionErr').textContent = e.message; $('actionErr').hidden = false; });
+  });
+  $('overlayTest').addEventListener('click', function(){
+    $('actionErr').hidden = true;
+    api('/admin/api/overlay/test', {method: 'POST', body: '{}'}).then(function(res){ $('liveMsg').textContent = res.message || 'Sent.'; $('liveMsg').hidden = false; })
+      .catch(function(e){ $('actionErr').textContent = e.message; $('actionErr').hidden = false; });
   });
   $('liveOff').addEventListener('click', function(){ act('/admin/api/live', {on: false}); });
   /* "8:15 PM" on this device's clock: today if that is still ahead, otherwise tomorrow */

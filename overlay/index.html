@@ -237,7 +237,7 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
       el.classList.toggle('row--lead', i === 0);
       el.querySelector('.row__rank').textContent = String(i + 1);
       el.querySelector('.row__name').textContent = b.name;
-      el.querySelector('.row__job').textContent = b.open ? b.task + (b.backers ? ' · ' + b.backers + ' chipped in' : '') : 'Secret job';
+      el.querySelector('.row__job').textContent = b.pretend ? 'Overlay test, not a real bid' : b.open ? b.task + (b.backers ? ' · ' + b.backers + ' chipped in' : '') : 'Secret job';
       el.querySelector('.row__amt').textContent = money(b.amountCents);
       el.querySelector('.row__bar').style.width = Math.max(6, Math.round(100 * b.amountCents / topCents)) + '%';
       rows.appendChild(el);   /* appending in order puts every row in its place */
@@ -259,9 +259,13 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
     if(bids.length > MAX_ROWS) $('more').textContent = '+ ' + (bids.length - MAX_ROWS) + ' more at torchhive.com';
   }
 
-  var seen = null, closesAt = null, status = 'soon';
+  var seen = null, closesAt = null, status = 'soon', pretend = null, lastBoard = null;
   function paint(d){
-    var bids = (d.bids || []).slice().sort(function(a, b){ return b.amountCents - a.amountCents; });
+    lastBoard = d;
+    var bids = (d.bids || []).slice();
+    /* a pretend bid sent from the owner page, to see the overlay react: on the stream only, never on the site */
+    if(pretend) bids.push({name: pretend.name, amountCents: pretend.amountCents, open: false, pretend: true});
+    bids.sort(function(a, b){ return b.amountCents - a.amountCents; });
     var top = bids[0];
     status = d.status; closesAt = d.closesAt ? new Date(d.closesAt).getTime() : null;
     $('k').textContent = d.status === 'open' ? (top ? 'High bid' : 'Reserve') : 'Bidding';
@@ -276,7 +280,7 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
     if(top){
       $('who').appendChild(document.createTextNode(top.name + ' '));
       var s = document.createElement('small');
-      s.textContent = top.open ? top.task : 'secret job';
+      s.textContent = top.pretend ? 'overlay test' : top.open ? top.task : 'secret job';
       $('who').appendChild(s);
     } else if(d.status === 'open'){ $('who').textContent = 'No bids yet. Be first.'; }
     /* what changed since the last look */
@@ -289,12 +293,12 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
         else if(b.amountCents > old){ changed[k] = true; line('bid', b.name, (b.open ? 'is up to ' : 'raised to ') + money(b.amountCents)); }
       });
       var lead = top ? keyOf(top) : null;
-      if(lead && lead !== seen.lead){ flash('New leader', top.name + ' · ' + money(top.amountCents)); line('lead', top.name, 'takes the lead at ' + money(top.amountCents)); }
+      if(lead && lead !== seen.lead && !seen.pretendLed){ flash('New leader', top.name + ' · ' + money(top.amountCents)); line('lead', top.name, 'takes the lead at ' + money(top.amountCents)); }
     }
     paintBoard(d, bids, changed);
     var rows = {};
     Object.keys(now_).forEach(function(k){ rows[k] = now_[k].amountCents; });
-    seen = {rows: rows, lead: top ? keyOf(top) : null};
+    seen = {rows: rows, lead: top ? keyOf(top) : null, pretendLed: Boolean(top && top.pretend)};
   }
   function tick(){
     var el = $('clock');
@@ -328,6 +332,14 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
   function board(){
     fetch(API + '/board', {cache: 'no-store'}).then(function(r){ return r.json(); }).then(paint).catch(function(){});
   }
+  function test(){
+    fetch(API + '/overlay/test', {cache: 'no-store'}).then(function(r){ return r.json(); }).then(function(d){
+      var t = d.test || null;
+      if((t && t.id) === (pretend && pretend.id)) return;
+      pretend = t;
+      if(lastBoard) paint(lastBoard);
+    }).catch(function(){});
+  }
   var chatLast = 0, first = true;
   function live(){
     if(!showChat) return;
@@ -342,6 +354,7 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
   }
   board(); live();
   setInterval(board, 3000);
+  test(); setInterval(test, 3000);
   setInterval(live, 4000);
 })();
 </script>

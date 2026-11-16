@@ -236,6 +236,22 @@ async function signInWays(env, s) {
   return { signIn: await signInOn(env, s), emailLinks: await emailLinksOn(env, s), google: env.GOOGLE_CLIENT_ID || null, pushKey: pushKey(env) };
 }
 
+// A pretend bid for the stream overlay only, sent from the owner page to see the overlay react.
+// It lasts 25 seconds, is never on the site's board, and no card or bidder is involved.
+async function overlayTest(env, now) {
+  try {
+    const t = JSON.parse((await getSetting(env, 'overlay_test')) || 'null');
+    return t && t.until > now ? { id: t.id, name: t.name, amountCents: t.amountCents } : null;
+  } catch { return null; }
+}
+async function sendOverlayTest(env, s, now) {
+  const a = s.open ? await currentAuction(env, s, now) : null;
+  const top = a ? await env.DB.prepare("SELECT MAX(amount_cents) AS c FROM bids WHERE day = ? AND status = 'qualified'").bind(a.day).first() : null;
+  const amountCents = (top && top.c ? top.c : 0) + 500; // five dollars over the high bid, so it takes the lead
+  await setSetting(env, 'overlay_test', JSON.stringify({ id: now, name: 'Test bid', amountCents, until: now + 25_000 }), now);
+  return [200, { status: 'sent', amountCents, message: `A pretend bid of ${money(amountCents)} is on the stream overlay for 25 seconds. It is not on the site and nobody is charged.` }];
+}
+
 async function getBoard(env, s, now) {
   // Before bidding opens there is no board, but people can already make an account.
   if (!s.open) return { status: 'soon', bids: [], alerts: false, live: s.creator ? false : (await liveState(env)).on, ...(s.creator ? { creator: s.creator } : {}), ...(await signInWays(env, s)) };
@@ -895,6 +911,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
   if (request.method === 'POST' && (m = /^\/admin\/api\/bids\/(\d+)\/decide$/.exec(path))) return adminDecide(request, env, s, ctx, Number(m[1]), now);
   if (request.method === 'POST' && (m = /^\/admin\/api\/bids\/(\d+)\/remove$/.exec(path))) return adminRemove(request, env, s, ctx, Number(m[1]), now);
   if (request.method === 'POST' && (m = /^\/admin\/api\/creators\/(\d+)\/(approve|pause)$/.exec(path))) return decideCreator(env, s, Number(m[1]), m[2], now);
+  if (request.method === 'POST' && path === '/admin/api/overlay/test') return sendOverlayTest(env, s, now);
   if (request.method === 'POST' && path === '/admin/api/live') {
     const body = await request.json().catch(() => null);
     const [status, out] = await setLive(env, body, now);
@@ -1001,6 +1018,7 @@ async function publicRoute(request, env, ctx, s, url, path, now, cors) {
       return new Response(null, { status: 204, headers: cors });
     }
     if (path === '/board' && request.method === 'GET') return json(await getBoard(env, s, now), 200, cors);
+    if (path === '/overlay/test' && request.method === 'GET') return json({ test: await overlayTest(env, now) }, 200, cors);
     // Creator pages: the list, one page, following it, and a person's own page.
     let cm, dm;
     if (request.method !== 'OPTIONS' && (path === '/creators' || path === '/me/creator' || path.startsWith('/me/creator/') || (cm = /^\/creators\/([a-z0-9-]{3,24})(\/follow)?$/i.exec(path)))) {
