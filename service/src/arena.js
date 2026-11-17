@@ -10,7 +10,8 @@
 //     shows the day's bids during it) before the next round starts with everyone small again;
 //   - pickups: fireballs to shoot, smoke (the other bees lose sight of you), honey (your trail
 //     slows instead of burns), royal jelly (instant growth), the queen (for 15 seconds every
-//     smaller bee nearby is drawn toward you, and only a dash gets it clear);
+//     smaller bee nearby is unable to dash, all the food nearby comes to you, and your own
+//     dashes cost nothing, so you can run them down);
 //   - the biggest bee wears the crown: a wasp comes for it every so often, and burning it down pays extra.
 //     The wasp can be killed: fire and fireballs wear it down, and a big enough bee can swallow it;
 //   - bees flown by the service fill the arena, named after the day's bidders where there are any;
@@ -28,10 +29,14 @@ const DEFAULTS = { round: 180, rest: 30 };
 const R = 1500;                 // the arena is a circle this wide from its middle, which is at (R, R)
 const RING_MIN = 320;           // how small the ring of fire gets
 const START = 20, EAT = 1.2, POLLEN = 520, BEES = 18, MIN_BOTS = 6, MAX_CHAT = 25, MAX_PATCHES = 500;
+// Someone else's fire takes this share of a bee's size each second it is in it. A bee chasing a
+// dasher down its trail is in fire about half the time, so it loses about 8% a second against the
+// 5.5% a second the dasher spends: it can power through, at a price a little higher than the runner's.
+export const BURN = 0.16;
 const HOT_MS = 8000;   // how long dropped size stays on the field
 const KINDS = ['fireball', 'smoke', 'honey', 'jelly', 'queen'];
 const WASP = { m: 60, dead: 20, fireball: 15, fire: 25, prize: 40 };   // three fireballs, or about a second and a half in fire
-export const QUEEN = { secs: 15, reach: 520, pull: 0.9 };   // the pull is nine tenths of a bee's own flying speed: flying away only holds it off, and a dash gets it clear
+export const QUEEN = { secs: 15, reach: 520, food: 260 };   // how long, how far it reaches, and how fast the food comes in
 const ADJ = ['Lucky', 'Swift', 'Golden', 'Smoky', 'Bold', 'Sly', 'Sunny', 'Mighty', 'Quiet', 'Wild', 'Amber', 'Brave', 'Fuzzy', 'Nimble', 'Rusty', 'Jolly'];
 const NOUN = ['Drone', 'Ember', 'Spark', 'Comet', 'Badger', 'Falcon', 'Otter', 'Hornet', 'Lantern', 'Rocket', 'Maple', 'Bandit', 'Pepper', 'Tiger', 'Walrus', 'Moose'];
 export const rad = (m) => Math.sqrt(m) * 4.2;
@@ -53,7 +58,7 @@ export class World {
   begin() {
     this.round++; this.phase = 'play'; this.phaseEnds = this.t + this.cfg.round * 1000; this.ring = R;
     this.bees = new Map(); this.pollen = new Map(); this.patches = new Map(); this.shots = []; this.pickups = new Map();
-    this.events = []; this.pAdd = []; this.pDel = []; this.fAdd = []; this.crown = 0; this.winner = null;
+    this.events = []; this.pAdd = []; this.pDel = []; this.fAdd = []; this.moved = new Set(); this.crown = 0; this.winner = null;
     this.nextPickup = this.t + 4000; this.nextWasp = this.t + Math.min(50, this.cfg.round * 0.3) * 1000; this.nextBots = 0;
     for (let i = 0; i < POLLEN; i++) this.grain();
     for (const p of this.players.values()) { p.bee = null; this.enter(p); }
@@ -224,6 +229,18 @@ export class World {
     for (const b of this.bees.values()) if (b.kind !== 'w' && (!top || b.m > top.m)) top = b;
     this.crown = top ? top.id : 0;
 
+    // the queen: all the food within reach comes to her, and no smaller bee within reach can dash
+    // (she dashes for nothing, so she runs them down)
+    for (const q of this.bees.values()) {
+      if (!(q.queen > 0)) continue;
+      for (const g of this.pollen.values()) {
+        const d = Math.hypot(q.x - g.x, q.y - g.y);
+        if (d < 1 || d > QUEEN.reach) continue;
+        g.x += (q.x - g.x) / d * QUEEN.food * dt; g.y += (q.y - g.y) / d * QUEEN.food * dt; this.moved.add(g.id);
+      }
+      for (const o of this.bees.values()) if (o !== q && o.kind !== 'w' && o.m < q.m && Math.hypot(q.x - o.x, q.y - o.y) <= QUEEN.reach) o.pulled = this.t + 150;
+    }
+
     for (const b of [...this.bees.values()]) {
       if (b.kind === 'w' && this.t >= b.leaves) { this.bees.delete(b.id); this.rosterDirty = true; continue; }
       const p = b.key && this.players.get(b.key), flown = b.kind !== 'p' || (p && p.auto);
@@ -231,7 +248,11 @@ export class World {
       const r = rad(b.m);
       for (const k of ['dashT', 'dashCd', 'shotCd', 'smoke', 'honey', 'queen', 'hitCd']) if (b[k] > 0) b[k] -= dt;
       // dashing: a burst of speed that costs a little size and leaves a trail (fire, or honey after that pickup)
-      if (b.dash && b.dashCd <= 0 && b.m > 24 && b.kind !== 'w') { b.dashT = 0.45; b.dashCd = 0.9; b.spent = b.m * 0.05 / 8; b.m *= 0.95; }   // what the dash cost is left along its trail, an eighth at a time
+      // (a smaller bee near a queen cannot dash at all, and the queen dashes for nothing)
+      if (b.dash && b.dashCd <= 0 && b.m > 24 && b.kind !== 'w' && !(b.pulled > this.t)) {
+        b.dashT = 0.45; b.dashCd = 0.9;
+        if (b.queen > 0) b.spent = 0; else { b.spent = b.m * 0.05 / 8; b.m *= 0.95; }
+      }   // what the dash cost is left along its trail, an eighth at a time
       if (b.dashT > 0) { b.trail -= dt; if (b.trail <= 0) { b.trail = 0.06; this.patch(b.x - Math.cos(b.a) * r, b.y - Math.sin(b.a) * r, 18 + r * 0.3, b.honey > 0 ? 5000 : 3500, b.id, b.honey > 0 ? 'h' : 'f', b.spent || 0); } }
       if (b.fire) {
         b.fire = false;
@@ -272,22 +293,10 @@ export class World {
       b.burn = 0;
       for (const f of this.patches.values()) {
         if (f.owner === b.id || Math.hypot(f.x - b.x, f.y - b.y) > f.r + r * 0.6) continue;
-        if (f.kind === 'h') b.slow = this.t + 300; else { b.m -= b.m * 0.3 * dt; b.burn = f.owner || -1; }
+        if (f.kind === 'h') b.slow = this.t + 300; else if (!b.burn) { b.m -= b.m * BURN * dt; b.burn = f.owner || -1; }   // once a step, however many patches overlap
       }
       if (out > this.ring) { b.m -= Math.max(2, b.m * 0.25) * dt; b.burn = -2; }
       if (b.m < 9) this.kill(b, b.burn > 0 ? this.bees.get(b.burn) : null, b.burn === -2 ? 'ring' : 'burn');
-    }
-
-    // the queen: every smaller bee within reach is drawn toward her
-    for (const q of this.bees.values()) {
-      if (!(q.queen > 0)) continue;
-      for (const o of this.bees.values()) {
-        if (o === q || o.kind === 'w' || o.m >= q.m) continue;
-        const d = Math.hypot(q.x - o.x, q.y - o.y);
-        if (d < 1 || d > QUEEN.reach) continue;
-        const pull = QUEEN.pull * 300 / (1 + rad(o.m) / 70);
-        o.x += (q.x - o.x) / d * pull * dt; o.y += (q.y - o.y) / d * pull * dt;
-      }
     }
 
     this.shots = this.shots.filter((s) => {
@@ -341,7 +350,7 @@ export class World {
   roster() { return [...this.bees.values()].map((b) => [b.id, b.name, b.kind, b.owner ? 1 : 0, b.bidder ? 1 : 0]); }
   beesNow() {
     return [...this.bees.values()].map((b) => [b.id, Math.round(b.x), Math.round(b.y), Math.round(b.m * 10) / 10, Math.round(b.a * 100) / 100,
-      (b.dashT > 0 ? 1 : 0) | (b.smoke > 0 ? 2 : 0) | (b.id === this.crown ? 4 : 0) | (b.honey > 0 ? 8 : 0) | (b.burn ? 16 : 0) | (b.queen > 0 ? 32 : 0), b.fb]);
+      (b.dashT > 0 ? 1 : 0) | (b.smoke > 0 ? 2 : 0) | (b.id === this.crown ? 4 : 0) | (b.honey > 0 ? 8 : 0) | (b.burn ? 16 : 0) | (b.queen > 0 ? 32 : 0) | (b.pulled > this.t ? 64 : 0), b.fb]);
   }
   head(t) { return { t, n: Math.round(this.t), round: this.round, ph: this.phase, left: Math.max(0, Math.round(this.phaseEnds - this.t)), ring: Math.round(this.ring), win: this.winner, b: this.beesNow(), sh: this.shots.map((s) => [Math.round(s.x), Math.round(s.y)]), pk: [...this.pickups.values()].map((k) => [k.id, Math.round(k.x), Math.round(k.y), k.kind]) }; }
   // Everything, for a page that has just arrived or a round that has just begun.
@@ -351,12 +360,13 @@ export class World {
   }
   // What changed since the last one.
   snap() {
+    for (const id of this.moved) { const g = this.pollen.get(id); if (g) this.pAdd.push([g.id, Math.round(g.x), Math.round(g.y), g.m, g.until ? 1 : 0]); }   // food a queen is pulling in
     const s = { ...this.head('s'), pa: this.pAdd, pd: this.pDel, fa: this.fAdd, ev: this.events };
     if (this.rosterDirty) s.ro = this.roster();
     this.settle();
     return s;
   }
-  settle() { this.pAdd = []; this.pDel = []; this.fAdd = []; this.events = []; this.rosterDirty = false; this.fresh = false; }
+  settle() { this.pAdd = []; this.pDel = []; this.fAdd = []; this.moved = new Set(); this.events = []; this.rosterDirty = false; this.fresh = false; }
 }
 
 // ---- the owner's settings ------------------------------------------------------------

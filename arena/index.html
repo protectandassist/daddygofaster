@@ -106,7 +106,7 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
 
   var COLORS = ['#ff5a3c', '#ff9f1c', '#ffd23f', '#3dd68c', '#4cc9f0', '#b388ff', '#ff7ab6', '#aab3c2', '#7bd389', '#f4a261'];
   var ICON = {fireball: '🔥', smoke: '💨', honey: '🍯', jelly: '⭐', queen: '👸'};
-  var PICKED = {fireball: 'fireballs', smoke: 'smoke: nobody sees you until you are right on them', honey: 'a honey trail', jelly: 'royal jelly', queen: 'the queen: smaller bees are dragged to you for 15 seconds'};
+  var PICKED = {fireball: 'fireballs', smoke: 'smoke: nobody sees you until you are right on them', honey: 'a honey trail', jelly: 'royal jelly', queen: 'the queen: for 15 seconds food flies to you, smaller bees near you cannot dash, and your dashes are free'};
   function radius(m){ return Math.sqrt(m) * 4.2; }
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
   function mmss(ms){ var s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + (s % 60 < 10 ? '0' : '') + s % 60; }
@@ -316,7 +316,7 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
     if(!pred || Math.hypot(pred.x - s.x, pred.y - s.y) > 240) pred = {x: s.x, y: s.y, a: s.a};
     if(predCd > 0) predCd -= dt;
     if(predDash > 0) predDash -= dt;
-    if(dashing() && predCd <= 0 && s.m > 24){ predDash = .45; predCd = .9; }
+    if(dashing() && predCd <= 0 && s.m > 24 && !(b.flags & 64)){ predDash = .45; predCd = .9; }   /* no dashing near a queen */
     var t = target(pred), dx = t.x - pred.x, dy = t.y - pred.y, d = Math.hypot(dx, dy), vx = 0, vy = 0;
     var speed = 300 / (1 + r / 70) * (predDash > 0 || b.flags & 1 ? 2.3 : 1) * Math.min(1, d / 30);
     if(d > 1){
@@ -345,7 +345,7 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
     var info = roster[id] || {name: '', kind: 'b'}, r = radius(p.m), mine = id === myId, wasp = info.kind === 'w', flap = Math.sin(now / 38 + id) * .35;
     /* in smoke: nobody else sees this bee at all until it is within two of its own body widths of them */
     if(p.flags & 2 && !mine && !(meNow && Math.hypot(meNow.x - p.x, meNow.y - p.y) - radius(meNow.m) < r * 4)) return;
-    if(p.flags & 32){   /* the queen's pull, as far as it reaches */
+    if(p.flags & 32){   /* the queen's reach: food comes to her, and smaller bees inside it cannot dash */
       ctx.save(); ctx.globalAlpha = .1 + .05 * Math.sin(now / 160); ctx.fillStyle = '#c77dff'; ctx.beginPath(); ctx.arc(p.x, p.y, 520, 0, 6.2832); ctx.fill();
       ctx.globalAlpha = .7; ctx.lineWidth = 4; ctx.strokeStyle = '#e0aaff'; ctx.setLineDash([18, 14]); ctx.lineDashOffset = -now / 30; ctx.stroke(); ctx.restore();
     }
@@ -426,7 +426,7 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
       hudAt = now;
       var left = phaseEnds - sim, closing = Math.min(60, roundLen * .4) * 1000, people = 0;
       $('mass').textContent = me ? Math.round(me.m) : 0;
-      $('sub').textContent = auto ? 'Click to fly your bee' : myName + (wins ? ' · ' + wins + (wins === 1 ? ' round won' : ' rounds won') : '');
+      $('sub').textContent = auto ? 'Click to fly your bee' : me && me.flags & 64 ? 'A queen is near: you cannot dash' : myName + (wins ? ' · ' + wins + (wins === 1 ? ' round won' : ' rounds won') : '');
       var fb = me ? me.fb : 0; $('ammo').hidden = !fb; $('ammo').textContent = fb ? '🔥 x' + fb + (matchMedia('(pointer:coarse)').matches ? '  (double-tap)' : '  (double-click or F)') : ''; $('padFire').hidden = !fb;
       $('clock').hidden = false; $('clock').classList.toggle('closing', phase === 'play' && left < closing);
       $('clockK').textContent = phase === 'rest' ? 'Next round in' : left < closing ? 'The fire is closing in' : 'Round ' + roundNo;
