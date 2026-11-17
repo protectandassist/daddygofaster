@@ -121,10 +121,11 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <p class="muted small" id="gamesNote" style="margin:0 0 8px"></p>
       <div class="row">
         <select id="gamesMode" style="flex:0 1 240px">
-          <option value="mix">A mix of all three</option>
-          <option value="race">Bee race only</option>
+          <option value="mix">A mix of all four</option>
+          <option value="torch">Hold the torch only</option>
           <option value="trivia">Trivia only</option>
-          <option value="hilo">Higher or lower only</option>
+          <option value="guess">Closest guess only</option>
+          <option value="mind">Hive mind only</option>
         </select>
         <button id="gamesOn" type="button">Start the games</button>
         <button id="gamesOff" type="button" class="bad" hidden>Stop the games</button>
@@ -310,7 +311,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     var games = d.games || {on: false};
     $('gamesNote').textContent = games.on
       ? 'The games are running on the overlay now, one round after another. Viewers play free at torchhive.com/play, and Twitch viewers can type their pick in chat. Changing the game keeps everyone\'s points. They stop by themselves after six hours.'
-      : 'Free games that run by themselves on the overlay while you are live: a bee race, trivia, and higher or lower. Viewers play from their phone at torchhive.com/play with no account, for points and a place on the board. Nobody pays and there are no prizes.';
+      : 'Free games that run by themselves on the overlay while you are live: hold the torch (bank before the flame blows out), trivia, closest guess, and hive mind (vote with the majority). Viewers play from their phone at torchhive.com/play with no account, for points and a place on the board. Nobody pays and there are no prizes.';
     $('gamesOff').hidden = !games.on;
     $('gamesOn').textContent = games.on ? 'Change the game' : 'Start the games';
     if(games.on && document.activeElement !== $('gamesMode')) $('gamesMode').value = games.mode;

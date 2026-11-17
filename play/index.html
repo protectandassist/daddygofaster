@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Play along — TorchHive</title>
-<meta name="description" content="Free games that run during the TorchHive live stream: a bee race, trivia, and higher or lower. No account, no cost, no prizes. Just a place on the board.">
+<meta name="description" content="Free games that run during the TorchHive live stream: hold the torch, trivia, closest guess and hive mind. No account, no cost, no prizes. Just a place on the board.">
 <meta name="theme-color" content="#0C0D10">
 <link rel="icon" href="/assets/favicon.png" type="image/png" sizes="64x64">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
@@ -29,18 +29,29 @@ header b{display:block;font:800 1.25rem "Archivo",sans-serif;line-height:1.1}
 header span{font-size:.82rem;color:#B9BCC6}
 .card{background:#15171c;border:1px solid rgba(239,149,2,.45);border-radius:16px;padding:16px;margin-bottom:14px}
 .card.plain{border-color:var(--line)}
-.head{display:flex;align-items:baseline;gap:10px;font-size:.78rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--hot)}
+.head{display:flex;align-items:baseline;gap:10px;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--hot)}
 .head .phase{color:#C9CBD3;letter-spacing:.06em}
-.head .clock{margin-left:auto;font:800 1.5rem "Archivo",sans-serif;color:#fff;letter-spacing:0;font-variant-numeric:tabular-nums;line-height:1}
+.head span{white-space:nowrap}
+.head .clock{margin-left:auto;font:800 1.2rem "Archivo",sans-serif;color:#fff;letter-spacing:0;font-variant-numeric:tabular-nums;line-height:1}
 .head .clock.urgent{color:#ff6b70}
 .bar{height:6px;border-radius:99px;background:rgba(255,255,255,.1);margin:10px 0 14px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--accent);transform-origin:left center}
 .q{font-weight:700;font-size:1.15rem;line-height:1.3;margin:0 0 14px;min-height:1.5em}
 .q b{color:var(--good)}
-.hilo{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:14px}
-.hilo div{min-width:92px;padding:6px 14px;text-align:center;font:800 3.2rem/1.1 "Archivo",sans-serif;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);font-variant-numeric:tabular-nums}
-.hilo div.next{color:var(--gold);border-color:var(--gold)}
-.hilo span{font:800 1.6rem "Archivo",sans-serif;color:#8f939e}
+.torch{text-align:center;margin-bottom:14px}
+.torch .x{font:800 4.4rem/1 "Archivo",sans-serif;color:var(--gold);font-variant-numeric:tabular-nums}
+.torch .pts{font-weight:700;margin-top:6px;min-height:1.5em}
+.torch.out .x{color:#ff6b70}
+.torch.full .x{color:var(--good)}
+.big{display:block;width:100%;min-height:72px;border:0;border-radius:16px;background:var(--accent);color:#1b0a02;font:800 1.5rem "Archivo",sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.big:disabled{background:rgba(255,255,255,.1);color:#8f939e;cursor:default}
+.big:not(:disabled):active{transform:scale(.985)}
+.guess{display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:4px}
+.guess input{min-width:0;min-height:60px;padding:8px 14px;border-radius:14px;border:2px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#fff;font:800 1.6rem "Archivo",sans-serif}
+.guess input:focus{outline:0;border-color:var(--accent)}
+.guess .big{width:auto;min-height:60px;padding:0 20px;font-size:1.15rem}
+.answer{text-align:center;font:800 3.2rem/1.1 "Archivo",sans-serif;color:var(--gold);margin-bottom:12px;font-variant-numeric:tabular-nums}
+.opt.row{cursor:default}
 .opts{display:grid;gap:10px}
 .opt{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 14px 10px 10px;border-radius:14px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.14);color:inherit;font:600 1.05rem "Inter",system-ui,sans-serif;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:opacity .3s,border-color .2s,background .2s}
 .opt:disabled{cursor:default}
@@ -112,7 +123,7 @@ ol li span:last-child{font:800 1rem "Archivo",sans-serif;font-variant-numeric:ta
 (function(){
   var API = 'https://dgf-bids.trevor-c2b.workers.dev';
   var $ = function(id){ return document.getElementById(id); };
-  var KEYS = {race: ['1', '2', '3', '4', '5'], trivia: ['A', 'B', 'C', 'D'], hilo: ['▲', '▼']};
+  var KEYS = {trivia: ['A', 'B', 'C', 'D'], mind: ['A', 'B']};
   var guest = null, session = null, ownDevice = false;
   try {
     session = localStorage.getItem('dgfSession') || null;
@@ -153,19 +164,24 @@ ol li span:last-child{font:800 1rem "Archivo",sans-serif;font-variant-numeric:ta
       .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, d: d}; }); });
   }
 
-  var G = null, drawn = '', skew = 0, sending = false, timer = null, problem = '';
+  var G = null, drawn = '', skew = 0, sending = false, timer = null, problem = '', bustSeen = -1, typed = '';
   function serverNow(){ return Date.now() + skew; }
+  function num(n){ return n >= 10000 ? String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : String(n); }
+  /* What the torch is worth at a moment, by the same sum the service scores with. */
+  function torchX(ms){ var t = (ms - G.startsAt) / 1000 - G.lead; return t <= 0 ? 1 : Math.min(G.max, Math.exp(G.rate * t)); }
+  /* The service sends the moment the torch blows out just ahead of time, so it goes out here on the dot. */
+  function busted(){ return Boolean(G && G.game === 'torch' && (G.phase === 'result' || (G.bustAt && serverNow() >= G.bustAt))); }
   function tick(){
     if(!G) return;
-    var left = Math.max(0, G.endsAt - serverNow()), s = Math.ceil(left / 1000), el = $('clock');
-    el.textContent = G.phase === 'pick' ? '0:' + (s < 10 ? '0' : '') + s : G.phase === 'result' ? 'Next in ' + s : '';
-    el.classList.toggle('urgent', G.phase === 'pick' && s <= 5);
-    $('bar').style.transform = 'scaleX(' + (G.phase === 'pick' ? Math.min(1, left / G.pickMs) : 0) + ')';
+    var left = Math.max(0, G.endsAt - serverNow()), s = Math.ceil(left / 1000), el = $('clock'), timed = G.phase === 'pick' && G.game !== 'torch';
+    el.textContent = timed ? '0:' + (s < 10 ? '0' : '') + s : G.phase === 'result' ? 'Next in ' + s : '';
+    el.classList.toggle('urgent', timed && s <= 5);
+    $('bar').style.transform = 'scaleX(' + (timed ? Math.min(1, left / G.pickMs) : 0) + ')';
   }
   setInterval(tick, 200);
 
   function pick(i){
-    if(!G || G.phase !== 'pick' || sending || (G.me && G.me.pick !== null)) return;
+    if(!G || G.phase !== 'pick' || busted() || sending || (G.me && G.me.pick !== null)) return;
     sending = true; problem = '';
     if(!tapped){ tapped = true; track('tap'); }
     ask('/games/pick', {g: guest, round: G.round, pick: i}).then(function(res){
@@ -175,58 +191,108 @@ ol li span:last-child{font:800 1rem "Archivo",sans-serif;font-variant-numeric:ta
     }).catch(function(){ sending = false; problem = 'That did not go through. Check your connection and tap again.'; paint(G, true); });
   }
 
+  function row(keyText, label, right, cls){
+    var o = document.createElement('div'), key = document.createElement('span'), name = document.createElement('span'), n = document.createElement('span');
+    o.className = 'opt row' + (cls || ''); key.className = 'key'; key.textContent = keyText; name.textContent = label; n.className = 'n'; n.textContent = right;
+    o.appendChild(key); o.appendChild(name); o.appendChild(n);
+    return o;
+  }
+  /* The torch's number, redrawn every frame while it climbs. */
+  function flame(){
+    if(!G || G.game !== 'torch') return;
+    var el = $('body').querySelector('.torch');
+    if(!el) return;
+    var out = busted(), now = serverNow(), x = out ? (G.bustX || torchX(G.bustAt)) : torchX(now);
+    el.classList.toggle('out', out && !G.full); el.classList.toggle('full', out && Boolean(G.full));
+    el.querySelector('.x').textContent = x.toFixed(2) + 'x';
+    el.querySelector('.pts').textContent = out ? (G.full ? 'It burned all the way!' : 'Blown out!') : now < G.startsAt + G.lead * 1000 ? 'Get ready...' : 'Worth ' + Math.round(G.base * x) + ' points right now';
+    if(out && bustSeen !== G.round){ bustSeen = G.round; draw(); return; }
+    if(!out) requestAnimationFrame(flame);
+  }
+
   function draw(){
-    var body = $('body'), keys = KEYS[G.game], res = G.phase === 'result', mine = G.me ? G.me.pick : null;
+    var body = $('body'), res = G.phase === 'result', over = res || busted(), mine = G.me ? G.me.pick : null, q = $('q'), b = document.createElement('b');
+    var open = G.phase === 'pick' && !over && mine === null;
+    var field = body.querySelector('.guess input');
+    if(field) typed = field.value;
     $('name').textContent = G.title;
-    $('phase').textContent = G.phase === 'pick' ? (mine === null ? 'Pick now' : 'You are in') : res ? 'Result' : G.game === 'race' ? 'Racing' : 'Picks are in';
-    var q = $('q'); q.textContent = '';
-    if(res){
-      var b = document.createElement('b');
-      b.textContent = G.game === 'race' ? G.options[G.answer] + ' wins!' : G.game === 'trivia' ? G.options[G.answer] : G.to + ', ' + G.options[G.answer].toLowerCase() + '!';
-      if(G.game === 'trivia') q.appendChild(document.createTextNode(G.prompt + ' '));
-      q.appendChild(b);
-    } else q.textContent = G.phase === 'show' && G.game === 'race' ? 'They are off! Watch the race on the stream.' : G.phase === 'show' && G.game === 'hilo' ? 'And the next number is...' : G.prompt;
-    body.textContent = '';
-    if(G.game === 'hilo'){
-      var h = document.createElement('div'), a = document.createElement('div'), to = document.createElement('span'), n = document.createElement('div');
-      h.className = 'hilo'; a.textContent = G.from; to.textContent = res ? (G.to > G.from ? '▲' : '▼') : '→'; n.className = 'next'; n.textContent = res ? G.to : '?';
-      h.appendChild(a); h.appendChild(to); h.appendChild(n); body.appendChild(h);
-    }
-    var total = G.counts.reduce(function(x, y){ return x + y; }, 0), place = null;
-    if(G.game === 'race' && res){
-      place = [];
-      G.race.finish.map(function(f, i){ return [f, i]; }).sort(function(x, y){ return x[0] - y[0]; }).forEach(function(x, k){ place[x[1]] = k; });
-    }
+    $('phase').textContent = busted() ? (G.full ? 'Made it' : 'Blown out') : res ? 'Result' : G.phase === 'show' ? 'Picks are in' : mine !== null ? 'You are in' : {torch: 'Bank it in time', trivia: 'Pick now', guess: 'Guess now', mind: 'Vote with the majority'}[G.game];
+    q.textContent = ''; body.textContent = '';
     var list = document.createElement('div'); list.className = 'opts';
-    G.options.forEach(function(label, i){
-      var o = document.createElement('button'), key = document.createElement('span'), name = document.createElement('span'), cnt = document.createElement('span');
-      o.type = 'button'; o.className = 'opt' + (mine === i ? ' mine' : '') + (res ? (i === G.answer ? ' right' : ' dim') : mine !== null && mine !== i ? ' dim' : '');
-      o.disabled = G.phase !== 'pick' || mine !== null;
-      key.className = 'key'; key.textContent = keys[i]; name.textContent = label; cnt.className = 'n';
-      if(G.game === 'hilo' && !res){ var pays = document.createElement('small'); pays.textContent = '+' + G.pays[i]; name.appendChild(pays); }
-      cnt.textContent = (place ? ['1st', '2nd', '3rd', '4th', '5th'][place[i]] : '') + (mine !== null || G.phase !== 'pick' ? (place ? ' · ' : '') + G.counts[i] + (total ? '' : '') : '');
-      o.appendChild(key); o.appendChild(name); o.appendChild(cnt);
-      o.addEventListener('click', function(){ pick(i); });
-      list.appendChild(o);
-    });
-    body.appendChild(list);
+    if(G.game === 'torch'){
+      q.textContent = 'The torch climbs from 1x to ' + G.max + 'x and blows out at a moment nobody knows. Bank before it does and you keep the points.';
+      var t = document.createElement('div'), x = document.createElement('div'), pts = document.createElement('div'), bank = document.createElement('button');
+      t.className = 'torch'; x.className = 'x'; pts.className = 'pts'; t.appendChild(x); t.appendChild(pts); body.appendChild(t);
+      bank.type = 'button'; bank.className = 'big'; bank.disabled = !open;
+      bank.textContent = mine !== null ? 'Banked at ' + (Math.floor(torchX(G.me.at) * 100) / 100).toFixed(2) + 'x' : over ? 'Too late' : 'Bank it';
+      bank.addEventListener('click', function(){ pick(0); });
+      body.appendChild(bank);
+      if(res && G.best.length){ list.style.marginTop = '12px'; G.best.forEach(function(r, i){ list.appendChild(row(String(i + 1), r.name, r.x.toFixed(2) + 'x', G.me && r.name === G.me.name ? ' mine' : '')); }); body.appendChild(list); }
+    } else if(G.game === 'guess'){
+      if(res){
+        q.textContent = G.prompt;
+        var a = document.createElement('div'); a.className = 'answer'; a.textContent = num(G.answer); body.appendChild(a);
+        G.best.forEach(function(r, i){ list.appendChild(row(String(i + 1), r.name, num(r.pick), G.me && r.name === G.me.name ? ' mine' : '')); });
+        body.appendChild(list);
+      } else {
+        q.textContent = G.phase === 'show' ? 'The guesses are in...' : G.prompt;
+        if(open){
+          var form = document.createElement('form'), input = document.createElement('input'), go = document.createElement('button');
+          form.className = 'guess'; input.type = 'text'; input.inputMode = 'numeric'; input.maxLength = 12; input.placeholder = 'Your guess'; input.setAttribute('aria-label', 'Your guess'); input.autocomplete = 'off'; input.value = typed;
+          go.type = 'submit'; go.className = 'big'; go.textContent = 'Lock it in';
+          form.appendChild(input); form.appendChild(go);
+          form.addEventListener('submit', function(e){
+            e.preventDefault();
+            var v = input.value.replace(/[,\s]/g, '');
+            if(!/^\d{1,10}$/.test(v)){ problem = 'Type a whole number, like 150.'; draw(); return; }
+            pick(Number(v));
+          });
+          body.appendChild(form);
+        } else if(mine !== null){ var m = document.createElement('div'); m.className = 'answer'; m.textContent = num(mine); body.appendChild(m); }
+      }
+    } else {
+      var hide = G.game === 'mind' && !res;
+      if(res){
+        b.textContent = G.game === 'trivia' ? G.options[G.answer] : G.answer < 0 ? 'A dead tie. Everybody scores.' : 'The hive says ' + G.options[G.answer] + '.';
+        q.appendChild(document.createTextNode(G.prompt + ' ')); q.appendChild(b);
+      } else q.textContent = G.prompt;
+      G.options.forEach(function(label, i){
+        var o = document.createElement('button'), key = document.createElement('span'), name = document.createElement('span'), cnt = document.createElement('span');
+        o.type = 'button'; o.className = 'opt' + (mine === i ? ' mine' : '') + (res ? (G.answer < 0 ? '' : i === G.answer ? ' right' : ' dim') : mine !== null && mine !== i ? ' dim' : '');
+        o.disabled = !open;
+        key.className = 'key'; key.textContent = KEYS[G.game][i]; name.textContent = label; cnt.className = 'n';
+        cnt.textContent = !hide && (mine !== null || G.phase !== 'pick') ? G.counts[i] : '';
+        o.appendChild(key); o.appendChild(name); o.appendChild(cnt);
+        o.addEventListener('click', function(){ pick(i); });
+        list.appendChild(o);
+      });
+      body.appendChild(list);
+    }
     var said = $('said'); said.className = 'said';
     if(problem){ said.textContent = problem; said.classList.add('err'); }
     else if(res && mine !== null){
-      said.textContent = G.me.won ? '+' + G.me.won + ' points' + (G.me.streak > 1 ? '. That is ' + G.me.streak + ' in a row.' : '.') : 'Not this time. The next round is seconds away.';
+      said.textContent = G.me.won ? '+' + G.me.won + ' points' + (G.me.streak > 1 ? '. That is ' + G.me.streak + ' in a row.' : '.') : 'No points this time. The next round is seconds away.';
       if(G.me.won) said.classList.add('win');
     }
-    else if(res) said.textContent = 'You sat this one out. Jump in on the next round.';
-    else if(mine !== null) said.textContent = 'Locked in: ' + G.options[mine] + '. ' + (G.phase === 'pick' ? 'Waiting for the others.' : 'Here it comes.');
-    else said.textContent = G.phase === 'pick' ? 'Tap your pick before the clock runs out.' : 'Picking is over for this round.';
+    else if(over) said.textContent = G.game === 'torch' ? (G.full ? 'It went all the way and you never banked. Bank next time.' : 'You held on too long. Bank sooner next time.') : 'You sat this one out. Jump in on the next round.';
+    else if(mine !== null){
+      said.textContent = G.game === 'torch' ? 'Banked: ' + Math.round(G.base * torchX(G.me.at)) + ' points. Now watch how far it goes.' : G.game === 'guess' ? 'Locked in. ' + (G.phase === 'pick' ? 'Waiting for the others.' : 'Here it comes.') : 'Locked in: ' + G.options[mine] + '. ' + (G.phase === 'pick' ? 'Waiting for the others.' : 'Here it comes.');
+      if(G.game === 'torch') said.classList.add('win');
+    }
+    else said.textContent = G.phase !== 'pick' ? 'Picking is over for this round.' : {torch: 'Wait as long as you dare, then tap Bank it.', trivia: 'Tap your pick before the clock runs out. Faster scores more.', guess: 'Type your best guess. The closest guesses score.', mind: 'Pick what you think most people will pick.'}[G.game];
+    flame();
   }
 
   function paint(g, force){
     var on = Boolean(g && g.on);
     $('game').hidden = !on; $('off').hidden = on;
     if(!on){ G = null; drawn = ''; $('meCard').hidden = true; $('topCard').hidden = true; return; }
-    skew = g.now - Date.now(); G = g;
-    var key = g.round + ':' + g.phase + ':' + (g.me ? g.me.pick : '') + ':' + g.counts.join(',');
+    skew = g.now - Date.now();
+    if(!G || G.round !== g.round){ typed = ''; problem = ''; }
+    if(!G && g.game === 'torch' && (g.phase === 'result' || g.bustAt && g.now >= g.bustAt)) bustSeen = g.round;
+    G = g;
+    var counts = g.options && !(g.game === 'mind' && g.phase !== 'result') ? g.counts.join(',') : '';
+    var key = g.round + ':' + g.phase + ':' + (g.me ? g.me.pick : '') + ':' + counts;
     if(force || key !== drawn){ drawn = key; draw(); }
     tick();
     if(g.me){
@@ -247,12 +313,12 @@ ol li span:last-child{font:800 1rem "Archivo",sans-serif;font-variant-numeric:ta
     });
   }
 
-  /* Asked every 2.5 seconds while a game is on, and again the moment the next part of the round starts; every 15 seconds while nothing is on. */
+  /* Asked every 2.5 seconds while a game is on (twice a second while the torch is lit), and again the moment the next part of the round starts; every 15 seconds while nothing is on. */
   function look(){
     clearTimeout(timer);
     if(document.hidden) return;
     ask('/games?g=' + guest).then(function(res){ if(res.ok && !sending) paint(res.d); }).catch(function(){}).then(function(){
-      timer = setTimeout(look, G ? Math.max(400, Math.min(2500, G.endsAt - serverNow() + 250)) : 15000);
+      timer = setTimeout(look, G ? Math.max(400, Math.min(G.game === 'torch' && G.phase === 'pick' ? 500 : 2500, G.endsAt - serverNow() + 250)) : 15000);
     });
   }
   look();

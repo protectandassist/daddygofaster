@@ -24,7 +24,7 @@
     add &demo to see it moving with pretend bids over a stand-in picture
 
   Stream games: when the games are switched on from the owner page, a game card appears by
-  itself (a bee race, trivia, higher or lower) and goes when they are switched off. Viewers
+  itself (hold the torch, trivia, closest guess, hive mind) and goes when they are switched off. Viewers
   play at torchhive.com/play. Twitch viewers can also type their pick in chat: the channel is
   the one saved under Going live, or add &twitch=yourchannel
 
@@ -180,19 +180,19 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
 .opt.is-right .opt__key{background:var(--good)}
 .opt.is-right .opt__n{color:var(--good)}
 .opt.is-wrong{opacity:.45}
-/* the race: a lane for each bee, flying left to right to the line */
-.game--race .opt{grid-template-columns:auto 8.6vh 1fr auto;padding-top:.45vh;padding-bottom:.45vh}
-.track{position:relative;height:3.3vh;border-right:.35vh solid var(--gold);background:repeating-linear-gradient(90deg,rgba(255,255,255,.14) 0 1vh,transparent 1vh 2.2vh) 0 50%/100% .16vh no-repeat}
-.bee{position:absolute;left:0;top:50%;width:4.2vh;height:3.2vh;margin-top:-1.6vh}
-.bee svg{display:block;width:100%;height:100%;overflow:visible}
-.bee.is-flying svg{animation:bob .32s ease-in-out infinite alternate}
-.bee .wing{transform-origin:21px 9px;animation:flap .09s linear infinite alternate}
-/* higher or lower: the number, and what comes next */
-.hilo{display:flex;align-items:center;justify-content:center;gap:2vh;margin-bottom:1vh}
-.hilo__n{min-width:9.5vh;padding:.6vh 1.4vh;text-align:center;font:800 6vh "Archivo",sans-serif;line-height:1.1;border-radius:1.2vh;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);font-variant-numeric:tabular-nums}
-.hilo__n.is-next{color:var(--gold);border-color:var(--gold)}
-.hilo__n.is-in{animation:drop .5s cubic-bezier(.2,1.3,.4,1)}
-.hilo__to{font:800 3vh "Archivo",sans-serif;color:#8f939e}
+/* hold the torch: the flame, and what it is worth right now */
+.torch{display:flex;align-items:center;gap:2.4vh;min-height:13.5vh;margin-bottom:1vh;padding:0 1vh}
+.torch__flame{flex:0 0 9vh;height:9vh;display:grid;place-items:end center;transform-origin:50% 100%}
+.torch__flame svg{display:block;width:7vh;height:9vh;transform-origin:50% 100%;animation:flicker .35s ease-in-out infinite}
+.torch__x{font:800 7.4vh "Archivo",sans-serif;line-height:1;color:var(--gold);font-variant-numeric:tabular-nums}
+.torch__pts{margin-top:.7vh;font-size:1.9vh;font-weight:700;color:#fff}
+.torch.is-out .torch__x{color:#ff6b70}
+.torch.is-out .torch__flame svg{animation:none;filter:grayscale(1) brightness(.45);opacity:.55}
+.torch.is-full .torch__x{color:var(--good)}
+/* closest guess: the number everyone is after */
+.guess{display:flex;justify-content:center;margin-bottom:1vh}
+.guess__n{min-width:14vh;padding:.6vh 2vh;text-align:center;font:800 6vh "Archivo",sans-serif;line-height:1.1;border-radius:1.2vh;background:rgba(255,255,255,.07);border:1px solid var(--gold);color:var(--gold);font-variant-numeric:tabular-nums}
+.guess__n.is-in{animation:drop .5s cubic-bezier(.2,1.3,.4,1)}
 .game__foot{margin-top:1vh;font-size:1.5vh;font-weight:600;line-height:1.5;color:#C9CBD3;max-height:4.6vh;overflow:hidden}
 .game__foot span{white-space:nowrap;margin-right:1.6vh}
 .game__foot i{font-style:normal;color:#fff;font-weight:700}
@@ -433,40 +433,20 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
      The bid service says which round is on and which part of it (picking, the suspense, the
      result); this draws it. People play at torchhive.com/play. Twitch chat is read here as well,
      with no sign-in: a pick typed there is counted and scored on this overlay only. */
-  var G = null, gDrawn = '', skew = 0, tw = {round: -1, picks: {}, score: {}, scored: -1, on: false, sock: null};
-  var KEYS = {race: ['1', '2', '3', '4', '5'], trivia: ['A', 'B', 'C', 'D'], hilo: ['H', 'L']};
-  var BEE_COLORS = ['#ff5a3c', '#ff9f1c', '#ffd23f', '#aab3c2', '#3dd68c'];
+  var G = null, gDrawn = '', skew = 0, bustSeen = -1, tw = {round: -1, picks: {}, score: {}, scored: -1, on: false, sock: null};
+  var KEYS = {trivia: ['A', 'B', 'C', 'D'], mind: ['A', 'B']};
+  var FLAME = '<svg viewBox="0 0 40 52"><path d="M20 2c4 12 16 18 16 32a16 16 0 0 1-32 0c0-10 8-14 10-24 2 4 4 5 6-8z" fill="#EF9502"/><path d="M20 26c3 5 8 8 8 14a8 8 0 0 1-16 0c0-5 5-8 8-14z" fill="#FFD76A"/></svg>';
   function serverNow(){ return Date.now() + skew; }
-  function beeSvg(c){
-    return '<svg viewBox="0 0 42 32"><ellipse class="wing" cx="17" cy="8" rx="6" ry="8" fill="rgba(255,255,255,.75)"/><ellipse class="wing" cx="25" cy="8" rx="5" ry="7" fill="rgba(255,255,255,.55)"/>'
-      + '<ellipse cx="20" cy="19" rx="14" ry="9.5" fill="' + c + '"/><path d="M14 10.6v16.8M21 9.6v18.8M27.5 11.4v15.2" stroke="#1b0a02" stroke-width="3.4"/>'
-      + '<circle cx="33" cy="18" r="6.5" fill="#1b0a02"/><circle cx="35.4" cy="16.4" r="1.7" fill="#fff"/><path d="M6 19l-5-2v4z" fill="#1b0a02"/></svg>';
-  }
-  function seeded(seed){
-    var a = seed >>> 0;
-    return function(){ a = (a + 0x6D2B79F5) | 0; var t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  }
-  /* How far along a bee is t seconds into the race. Each one surges and fades in its own way, so
-     the lead changes hands, and each crosses the line at exactly the time the service drew for it. */
-  var paces = null;
-  function beeAt(i, t){
-    var u = Math.min(1, Math.max(0, t / G.race.finish[i])), m = paces[i];
-    return u + m.a * Math.sin(Math.PI * u * m.k + m.p) * Math.sin(Math.PI * u);
-  }
-  function placeBees(){
-    if(!G || G.game !== 'race') return;
-    var t = G.phase === 'pick' ? 0 : G.phase === 'result' ? 99 : (serverNow() - G.startsAt - G.pickMs) / 1000;
-    Array.prototype.forEach.call($('gBody').querySelectorAll('.bee'), function(b, i){
-      var at = G.race ? beeAt(i, t) : 0;
-      b.style.left = 'calc(' + (at * 100).toFixed(2) + '% - ' + (4.2 * at).toFixed(2) + 'vh)';
-      b.classList.toggle('is-flying', G.phase === 'show' && at < 1);
-    });
-    if(G.phase === 'show') requestAnimationFrame(placeBees);
-  }
-  function twCounts(){
-    var n = [];
-    Object.keys(tw.picks).forEach(function(u){ n[tw.picks[u].pick] = (n[tw.picks[u].pick] || 0) + 1; });
-    return n;
+  function num(n){ return n >= 10000 ? String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : String(n); }
+  /* What the torch is worth at a moment, by the same sum the service scores with. */
+  function torchX(ms){ var t = (ms - G.startsAt) / 1000 - G.lead; return t <= 0 ? 1 : Math.min(G.max, Math.exp(G.rate * t)); }
+  /* The service sends the moment the torch blows out just ahead of time, so it goes out here on the dot. */
+  function busted(){ return Boolean(G && G.game === 'torch' && (G.phase === 'result' || (G.bustAt && serverNow() >= G.bustAt))); }
+  function twList(){ return Object.keys(tw.picks).map(function(u){ return {name: u, pick: tw.picks[u].pick, at: tw.picks[u].at}; }); }
+  function mindAnswer(){
+    var c = [G.counts[0] || 0, G.counts[1] || 0];
+    twList().forEach(function(p){ c[p.pick]++; });
+    return c[0] === c[1] ? -1 : c[0] > c[1] ? 0 : 1;
   }
   function topLine(){
     var all = (G.top || []).map(function(p){ return {name: p.name, points: p.points}; });
@@ -474,77 +454,137 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
     all.sort(function(a, b){ return b.points - a.points; });
     return all.slice(0, 3);
   }
-  function drawCounts(){
-    if(!G) return;
-    var extra = twCounts(), counts = G.options.map(function(_, i){ return (G.counts[i] || 0) + (extra[i] || 0); });
-    var total = counts.reduce(function(a, b){ return a + b; }, 0), place = null;
-    if(G.game === 'race' && G.phase === 'result'){
-      place = [];
-      G.race.finish.map(function(f, i){ return [f, i]; }).sort(function(a, b){ return a[0] - b[0]; }).forEach(function(x, n){ place[x[1]] = n; });
+  /* The three best of a torch or closest-guess round, Twitch chat included. */
+  function bestRows(){
+    var rows;
+    if(G.game === 'torch'){
+      rows = (G.best || []).map(function(p){ return {name: p.name, v: p.x}; });
+      twList().forEach(function(p){ if(p.at < G.bustAt) rows.push({name: p.name, v: Math.floor(torchX(p.at) * 100) / 100}); });
+      rows.sort(function(a, b){ return b.v - a.v; });
+      return rows.slice(0, 3).map(function(r){ return {name: r.name, text: r.v.toFixed(2) + 'x · ' + Math.round(G.base * r.v) + ' pts'}; });
     }
-    Array.prototype.forEach.call($('gBody').querySelectorAll('.opt'), function(o, i){
-      var n = counts[i];
-      o.querySelector('.opt__n').textContent = (place ? ['1st', '2nd', '3rd', '4th', '5th'][place[i]] + ' · ' : '') + (n ? n + (n === 1 ? ' pick' : ' picks') : place ? '0' : '');
-      o.querySelector('.opt__fill').style.width = total && G.game !== 'race' ? Math.round(100 * n / total) + '%' : '0';
-    });
-    var said = $('gQ'); said.textContent = '';
-    if(G.phase === 'result'){
-      var b = document.createElement('b'), got = counts[G.answer];
-      b.textContent = G.game === 'race' ? G.options[G.answer] + ' wins!' : G.game === 'trivia' ? G.options[G.answer] : G.to + ', ' + G.options[G.answer].toLowerCase() + '!';
-      if(G.game === 'trivia') said.appendChild(document.createTextNode(G.prompt + ' '));
-      said.appendChild(b);
-      said.appendChild(document.createTextNode(total ? ' ' + (got ? got + ' of ' + total + ' got it.' : 'Nobody got it.') : ''));
-    } else said.textContent = G.phase === 'show' && G.game === 'race' ? 'They are off!' : G.phase === 'show' && G.game === 'hilo' ? 'And the next number is...' : G.prompt;
+    rows = (G.best || []).map(function(p){ return {name: p.name, v: p.pick}; });
+    twList().forEach(function(p){ rows.push({name: p.name, v: p.pick}); });
+    rows.sort(function(a, b){ return Math.abs(a.v - G.answer) - Math.abs(b.v - G.answer); });
+    return rows.slice(0, 3).map(function(r){ return {name: r.name, text: num(r.v)}; });
+  }
+  function row(keyText, label, cls){
+    var o = document.createElement('div'), fill = document.createElement('span'), key = document.createElement('span'), name = document.createElement('span'), n = document.createElement('span');
+    o.className = 'opt' + (cls || ''); fill.className = 'opt__fill'; key.className = 'opt__key'; key.textContent = keyText; name.className = 'opt__label'; name.textContent = label; n.className = 'opt__n';
+    o.appendChild(fill); o.appendChild(key); o.appendChild(name); o.appendChild(n);
+    return o;
+  }
+  /* Everything that changes inside one part of a round: the counts, the line of text, the foot. */
+  function drawLive(){
+    if(!G) return;
+    var res = G.phase === 'result', said = $('gQ'), list = $('gBody').querySelector('.opts'), b = document.createElement('b');
+    var inNow = (G.in || 0) + Object.keys(tw.picks).length;
+    said.textContent = '';
+    if(G.options){
+      var extra = [], hide = G.game === 'mind' && !res, ans = G.game === 'mind' ? (res ? mindAnswer() : -1) : G.answer;
+      twList().forEach(function(p){ extra[p.pick] = (extra[p.pick] || 0) + 1; });
+      var counts = G.options.map(function(_, i){ return (G.counts[i] || 0) + (extra[i] || 0); });
+      var total = counts.reduce(function(x, y){ return x + y; }, 0);
+      Array.prototype.forEach.call(list.children, function(o, i){
+        var n = counts[i];
+        o.className = 'opt' + (res && ans >= 0 ? (i === ans ? ' is-right' : ' is-wrong') : '');
+        o.querySelector('.opt__n').textContent = hide || !n ? '' : n + (G.game === 'mind' ? (n === 1 ? ' vote' : ' votes') : (n === 1 ? ' pick' : ' picks'));
+        o.querySelector('.opt__fill').style.width = !hide && total ? Math.round(100 * n / total) + '%' : '0';
+      });
+      if(!res) said.textContent = G.prompt + (hide && inNow ? ' (' + inNow + (inNow === 1 ? ' vote' : ' votes') + ' in)' : '');
+      else if(G.game === 'trivia'){
+        b.textContent = G.options[ans];
+        said.appendChild(document.createTextNode(G.prompt + ' ')); said.appendChild(b);
+        said.appendChild(document.createTextNode(total ? ' ' + (counts[ans] ? counts[ans] + ' of ' + total + ' got it.' : 'Nobody got it.') : ''));
+      } else {
+        b.textContent = ans < 0 ? (total ? 'A dead tie. Everybody scores.' : 'Nobody voted.') : 'The hive says ' + G.options[ans] + '.';
+        said.appendChild(document.createTextNode(G.prompt + ' ')); said.appendChild(b);
+      }
+    } else {
+      list.textContent = '';
+      if(res || busted()) bestRows().forEach(function(r, i){ var o = row(String(i + 1), r.name, i ? '' : ' is-right'); o.querySelector('.opt__n').textContent = r.text; list.appendChild(o); });
+      if(G.game === 'guess'){
+        $('gBody').querySelector('.guess__n').textContent = res ? num(G.answer) : '?';
+        if(res){ b.textContent = num(G.answer) + '.'; said.appendChild(document.createTextNode(G.prompt + ' ')); said.appendChild(b); said.appendChild(document.createTextNode(inNow ? ' Closest:' : ' Nobody guessed.')); }
+        else said.textContent = G.phase === 'show' ? 'The guesses are in...' : G.prompt + (inNow ? ' (' + inNow + (inNow === 1 ? ' guess' : ' guesses') + ' in)' : '');
+      } else if(busted()){
+        b.textContent = G.full ? 'It burned all the way to ' + G.max + 'x!' : 'Blown out at ' + (G.bustX || torchX(G.bustAt)).toFixed(2) + 'x.';
+        said.appendChild(b); said.appendChild(document.createTextNode(inNow ? ' ' + inNow + ' banked in time.' : ' Nobody banked.'));
+      } else said.textContent = 'Bank it before it blows out. Nobody knows when.' + (inNow ? ' ' + inNow + ' banked.' : '');
+    }
     var foot = $('gFoot'), top = topLine(); foot.textContent = '';
-    if(G.phase !== 'pick' && top.length){
+    if(res && top.length){
       var lead = document.createElement('span'); lead.textContent = 'Top tonight'; foot.appendChild(lead); foot.appendChild(document.createTextNode(' '));
       top.forEach(function(p, i){ var one = document.createElement('span'), n = document.createElement('b'), pts = document.createElement('i'); n.textContent = p.name; pts.textContent = p.points + ' pts'; one.appendChild(document.createTextNode((i + 1) + '. ')); one.appendChild(n); one.appendChild(document.createTextNode(' ')); one.appendChild(pts); foot.appendChild(one); foot.appendChild(document.createTextNode(' ')); });
     } else {
       foot.appendChild(document.createTextNode('Play free at '));
       var site = document.createElement('b'); site.textContent = 'torchhive.com/play'; foot.appendChild(site);
-      if(tw.on) foot.appendChild(document.createTextNode(' or type ' + (G.game === 'race' ? '1 to 5' : G.game === 'trivia' ? 'A, B, C or D' : 'H or L') + ' in Twitch chat'));
+      if(tw.on) foot.appendChild(document.createTextNode(' or type ' + {torch: 'BANK', trivia: 'A, B, C or D', guess: 'your number', mind: 'A or B'}[G.game] + ' in Twitch chat'));
     }
   }
+  /* The torch, redrawn every frame while it climbs. */
+  function flame(){
+    if(!G || G.game !== 'torch') return;
+    var el = $('gBody').querySelector('.torch');
+    if(!el) return;
+    var out = busted(), now = serverNow(), x = out ? (G.bustX || torchX(G.bustAt)) : torchX(now);
+    el.classList.toggle('is-out', out && !G.full); el.classList.toggle('is-full', out && Boolean(G.full));
+    el.querySelector('.torch__x').textContent = x.toFixed(2) + 'x';
+    el.querySelector('.torch__pts').textContent = out ? (G.full ? 'It made it!' : 'Blown out!') : now < G.startsAt + G.lead * 1000 ? 'Get ready...' : 'Bank now for ' + Math.round(G.base * x) + ' points';
+    el.querySelector('.torch__flame').style.transform = 'scale(' + (.5 + .095 * x).toFixed(3) + ')';
+    if(out && bustSeen !== G.round){
+      bustSeen = G.round; $('gPhase').textContent = G.full ? 'Made it' : 'Blown out'; drawLive();
+      if(soundOn) try {
+        audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+        if(G.full){ note(783.99, 0, .14, .1, 'triangle'); note(987.77, .12, .14, .1, 'triangle'); note(1318.5, .24, .5, .1, 'triangle'); }
+        else { note(196, 0, .35, .13, 'sawtooth'); note(98, .06, .7, .13, 'sawtooth'); }
+      } catch (e) {}
+    }
+    if(!out) requestAnimationFrame(flame);
+  }
   function drawGame(){
-    var body = $('gBody'), keys = KEYS[G.game], res = G.phase === 'result';
+    var body = $('gBody'), res = G.phase === 'result';
     $('gName').textContent = G.title;
-    $('gPhase').textContent = G.phase === 'pick' ? 'Pick now' : res ? 'Result' : G.game === 'race' ? 'Racing' : 'Picks are in';
+    $('gPhase').textContent = busted() ? (G.full ? 'Made it' : 'Blown out') : res ? 'Result' : G.phase === 'show' ? 'Picks are in' : {torch: 'Bank it in time', trivia: 'Pick now', guess: 'Guess now', mind: 'Vote with the majority'}[G.game];
     body.textContent = ''; body.className = 'game--' + G.game;
-    if(G.game === 'hilo'){
-      var h = document.createElement('div'), a = document.createElement('div'), to = document.createElement('div'), b = document.createElement('div');
-      h.className = 'hilo'; a.className = 'hilo__n'; a.textContent = G.from; to.className = 'hilo__to'; to.textContent = res ? (G.to > G.from ? '▲' : '▼') : '→';
-      b.className = 'hilo__n is-next' + (res ? ' is-in' : ''); b.textContent = res ? G.to : '?';
-      h.appendChild(a); h.appendChild(to); h.appendChild(b); body.appendChild(h);
+    if(G.game === 'torch'){
+      var t = document.createElement('div'), f = document.createElement('div'), side = document.createElement('div'), x = document.createElement('div'), pts = document.createElement('div');
+      t.className = 'torch'; f.className = 'torch__flame'; f.innerHTML = FLAME; x.className = 'torch__x'; pts.className = 'torch__pts';
+      side.appendChild(x); side.appendChild(pts); t.appendChild(f); t.appendChild(side); body.appendChild(t);
+    }
+    if(G.game === 'guess'){
+      var g = document.createElement('div'), n = document.createElement('div');
+      g.className = 'guess'; n.className = 'guess__n' + (res ? ' is-in' : ''); g.appendChild(n); body.appendChild(g);
     }
     var list = document.createElement('div'); list.className = 'opts';
-    G.options.forEach(function(label, i){
-      var o = document.createElement('div'), fill = document.createElement('span'), key = document.createElement('span'), name = document.createElement('span'), n = document.createElement('span');
-      o.className = 'opt' + (res ? (i === G.answer ? ' is-right' : ' is-wrong') : '');
-      fill.className = 'opt__fill'; key.className = 'opt__key'; key.textContent = keys[i]; name.className = 'opt__label'; name.textContent = label; n.className = 'opt__n';
-      if(G.game === 'hilo' && !res){ var pays = document.createElement('small'); pays.textContent = '+' + G.pays[i]; name.appendChild(pays); }
-      o.appendChild(fill); o.appendChild(key); o.appendChild(name);
-      if(G.game === 'race'){
-        key.style.background = BEE_COLORS[i];
-        var track = document.createElement('span'), bee = document.createElement('span');
-        track.className = 'track'; bee.className = 'bee'; bee.innerHTML = beeSvg(BEE_COLORS[i]); track.appendChild(bee); o.appendChild(track);
-      }
-      o.appendChild(n); list.appendChild(o);
-    });
+    if(G.options) G.options.forEach(function(label, i){ list.appendChild(row(KEYS[G.game][i], label)); });
     body.appendChild(list);
-    if(G.game === 'race' && G.race){
-      var r = seeded(G.race.seed);
-      paces = G.options.map(function(){ return {a: .03 + r() * .04, k: 2 + Math.floor(r() * 2), p: r() * Math.PI}; });
-    }
-    drawCounts(); placeBees();
+    drawLive(); flame();
   }
   function gameTick(){
     if(!G) return;
-    var left = Math.max(0, G.endsAt - serverNow()), s = Math.ceil(left / 1000), el = $('gClock');
-    el.textContent = G.phase === 'pick' ? '0:' + (s < 10 ? '0' : '') + s : G.phase === 'result' ? 'Next in ' + s : '';
-    el.classList.toggle('is-urgent', G.phase === 'pick' && s <= 5);
-    $('gBar').style.transform = 'scaleX(' + (G.phase === 'pick' ? Math.min(1, left / G.pickMs) : 0) + ')';
+    var left = Math.max(0, G.endsAt - serverNow()), s = Math.ceil(left / 1000), el = $('gClock'), timed = G.phase === 'pick' && G.game !== 'torch';
+    el.textContent = timed ? '0:' + (s < 10 ? '0' : '') + s : G.phase === 'result' ? 'Next in ' + s : '';
+    el.classList.toggle('is-urgent', timed && s <= 5);
+    $('gBar').style.transform = 'scaleX(' + (timed ? Math.min(1, left / G.pickMs) : 0) + ')';
   }
   setInterval(gameTick, 200);
+  /* The result is in: score what Twitch chat picked, by the same rules the service uses. */
+  function scoreTwitch(){
+    var list = twList(), ans = G.game === 'mind' ? mindAnswer() : -1, dists = (G.dists || []).slice();
+    if(G.game === 'guess'){
+      list.forEach(function(p){ var d = Math.abs(p.pick - G.answer); if(dists.indexOf(d) < 0) dists.push(d); });
+      dists.sort(function(a, b){ return a - b; });
+    }
+    list.forEach(function(p){
+      var won = 0, d;
+      if(G.game === 'torch') won = p.at < G.bustAt ? Math.round(G.base * torchX(p.at)) : 0;
+      else if(G.game === 'guess'){ d = Math.abs(p.pick - G.answer); won = ([150, 100, 60][dists.indexOf(d)] || 0) + (d === 0 ? 100 : 0); }
+      else if(G.game === 'mind') won = ans < 0 ? 50 : p.pick === ans ? 100 : 0;
+      else { won = G.points[p.pick] || 0; if(won) won += Math.round(G.quick * (1 - Math.min(1, Math.max(0, (p.at - G.startsAt) / G.pickMs)))); }
+      tw.score[p.name] = (tw.score[p.name] || 0) + won;
+    });
+  }
   function paintGame(g){
     var on = Boolean(g && g.on);
     $('game').hidden = !on; root.classList.toggle('gaming', on);
@@ -552,35 +592,30 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
     skew = g.now - Date.now();
     if(g.round !== tw.round){ tw.round = g.round; tw.picks = {}; }
     var before = G; G = g;
-    /* the result is in: score what Twitch chat picked, once */
-    if(g.phase === 'result' && tw.scored !== g.round){
-      tw.scored = g.round;
-      Object.keys(tw.picks).forEach(function(u){
-        var k = tw.picks[u], won = g.points[k.pick] || 0;
-        if(won && g.quick) won += Math.round(g.quick * (1 - Math.min(1, Math.max(0, (k.at - g.startsAt) / g.pickMs))));
-        tw.score[u] = (tw.score[u] || 0) + won;
-      });
-    }
+    if(!before && busted()) bustSeen = g.round;   /* the overlay opened on a torch already out: no bang */
+    if(g.phase === 'result' && tw.scored !== g.round){ tw.scored = g.round; scoreTwitch(); }
     var key = g.round + ':' + g.phase;
     if(key !== gDrawn){
       gDrawn = key; drawGame();
-      if(before && soundOn){
+      if(before && soundOn && g.phase === 'result' && g.game !== 'torch'){
         try {
           audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-          if(g.phase === 'show' && g.game === 'race'){ note(659.25, 0, .12, .1); note(659.25, .18, .12, .1); note(987.77, .36, .35, .12); }
-          else if(g.phase === 'result'){ note(783.99, 0, .14, .09, 'triangle'); note(1174.66, .12, .4, .09, 'triangle'); }
+          note(783.99, 0, .14, .09, 'triangle'); note(1174.66, .12, .4, .09, 'triangle');
         } catch (e) {}
       }
-    } else drawCounts();
+    } else drawLive();
     gameTick();
   }
-  /* Twitch chat, read without signing in. A pick is the option's number or letter (or the bee's name). */
+  /* Twitch chat, read without signing in. A pick is the answer's letter or number, a number for
+     closest guess, or the word BANK for the torch. */
   function twitchPick(text){
     if(!G || G.phase !== 'pick') return -1;
-    var t = text.trim().toLowerCase().replace(/^!/, ''), i = KEYS[G.game].indexOf(t.toUpperCase());
+    var t = text.trim().toLowerCase().replace(/^!/, ''), i;
+    if(G.game === 'torch') return /^(bank|b|out|cash ?out)$/.test(t) ? 0 : -1;
+    if(G.game === 'guess'){ t = t.replace(/,/g, ''); return /^\d{1,10}$/.test(t) ? Number(t) : -1; }
+    i = KEYS[G.game].indexOf(t.toUpperCase());
     if(i >= 0) return i;
-    if(G.game === 'trivia' && /^[1-4]$/.test(t)) return Number(t) - 1;
-    if(G.game === 'hilo') return /^(higher|high|up)$/.test(t) ? 0 : /^(lower|low|down)$/.test(t) ? 1 : -1;
+    if(/^[1-4]$/.test(t) && Number(t) <= G.options.length) return Number(t) - 1;
     for(i = 0; i < G.options.length; i++) if(G.options[i].toLowerCase() === t) return i;
     return -1;
   }
@@ -594,7 +629,7 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
         var m = /^:(\w+)!\S+ PRIVMSG #\w+ :(.*)$/.exec(l);
         if(!m || tw.picks[m[1]]) return;
         var pick = twitchPick(m[2]);
-        if(pick < 0) return;
+        if(pick < 0 || busted()) return;
         tw.picks[m[1]] = {pick: pick, at: serverNow()};
         drawCounts();
       });
@@ -648,8 +683,8 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
       first = false;
       paintGame(d.games);
       if(G && d.live && d.live.twitch) twitchJoin(d.live.twitch);
-      /* a game is on: look again the moment its next part starts, so the race starts on time */
-    }).catch(function(){}).then(function(){ setTimeout(poll, G ? Math.max(400, Math.min(4000, G.endsAt - serverNow() + 250)) : busy() ? 4000 : 10000); });
+      /* a game is on: look again the moment its next part starts, so it starts on time */
+    }).catch(function(){}).then(function(){ setTimeout(poll, G ? Math.max(400, Math.min(G.game === 'torch' && G.phase === 'pick' ? 500 : 4000, G.endsAt - serverNow() + 250)) : busy() ? 4000 : 10000); });
   }
   poll();
 })();
