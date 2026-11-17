@@ -84,7 +84,7 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
 <div class="hud card" id="clock" hidden><span id="clockK">Round 1</span><b id="clockT">0:00</b></div>
 <div class="hud card" id="board"><h2 id="boardH">Biggest bees</h2><ol id="top"></ol></div>
 <div class="hud" id="feed"></div>
-<div class="hud card" id="banner"><div>The real game: <b>bid on what I do tomorrow</b> at <b>torchhive.com</b></div><span id="hint">Steer with the mouse. Hold the button or Space to dash and leave fire. Right-click or F shoots a fireball.</span></div>
+<div class="hud card" id="banner"><div>The real game: <b>bid on what I do tomorrow</b> at <b>torchhive.com</b></div><span id="hint">Steer with the mouse. Hold the button or Space to dash and leave fire. Double-click, right-click or F shoots a fireball.</span></div>
 <div class="hud card" id="center"><h1 id="cTitle">Hive Arena</h1><p id="cText">Joining the arena...</p></div>
 <div class="hud card" id="rest" hidden>
   <h1 id="restTitle"></h1>
@@ -105,8 +105,8 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
   addEventListener('resize', size); size();
 
   var COLORS = ['#ff5a3c', '#ff9f1c', '#ffd23f', '#3dd68c', '#4cc9f0', '#b388ff', '#ff7ab6', '#aab3c2', '#7bd389', '#f4a261'];
-  var ICON = {fireball: '🔥', smoke: '💨', honey: '🍯', jelly: '⭐'};
-  var PICKED = {fireball: 'fireballs', smoke: 'smoke', honey: 'a honey trail', jelly: 'royal jelly'};
+  var ICON = {fireball: '🔥', smoke: '💨', honey: '🍯', jelly: '⭐', queen: '👸'};
+  var PICKED = {fireball: 'fireballs', smoke: 'smoke: nobody sees you until you are right on them', honey: 'a honey trail', jelly: 'royal jelly', queen: 'the queen: smaller bees are dragged to you for 15 seconds'};
   function radius(m){ return Math.sqrt(m) * 4.2; }
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
   function mmss(ms){ var s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + (s % 60 < 10 ? '0' : '') + s % 60; }
@@ -267,45 +267,89 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
   }
   function fire(){ took(); send({t: 'i', f: 1}); }
   canvas.addEventListener('mousemove', function(e){ mouse.x = e.clientX; mouse.y = e.clientY; if(!auto) lastInput = performance.now(); });
-  canvas.addEventListener('mousedown', function(e){ mouse.x = e.clientX; mouse.y = e.clientY; if(e.button === 2){ fire(); return; } var was = auto || !myId; took(); if(!was) mouse.down = true; });
+  canvas.addEventListener('mousedown', function(e){ mouse.x = e.clientX; mouse.y = e.clientY; if(e.button === 2){ fire(); return; } var was = auto || !myId; took(); if(!was){ mouse.down = true; mouse.at = performance.now(); } });
   canvas.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  canvas.addEventListener('dblclick', function(e){ fire(); e.preventDefault(); });
   addEventListener('mouseup', function(){ mouse.down = false; });
-  canvas.addEventListener('touchstart', function(e){ var t = e.touches[0]; mouse.x = t.clientX; mouse.y = t.clientY; took(); e.preventDefault(); }, {passive: false});
+  var tapAt = 0;   /* two taps within a third of a second shoot a fireball */
+  canvas.addEventListener('touchstart', function(e){ var t = e.touches[0], now = performance.now(); mouse.x = t.clientX; mouse.y = t.clientY; if(e.touches.length === 1 && now - tapAt < 330){ tapAt = 0; fire(); } else { tapAt = now; took(); } e.preventDefault(); }, {passive: false});
   canvas.addEventListener('touchmove', function(e){ var t = e.touches[0]; mouse.x = t.clientX; mouse.y = t.clientY; lastInput = performance.now(); e.preventDefault(); }, {passive: false});
-  $('padDash').addEventListener('touchstart', function(e){ padDash = true; took(); e.preventDefault(); }, {passive: false});
+  $('padDash').addEventListener('touchstart', function(e){ padDash = true; took(); steer(); e.preventDefault(); }, {passive: false});
   $('padDash').addEventListener('touchend', function(){ padDash = false; });
   $('padFire').addEventListener('touchstart', function(e){ fire(); e.preventDefault(); }, {passive: false});
   addEventListener('keydown', function(e){
     if(e.repeat) return;
     keys[e.code] = true;
-    if(e.code === 'Space' || e.code === 'Enter'){ took(); e.preventDefault(); }
+    if(e.code === 'Space' || e.code === 'Enter'){ took(); steer(); e.preventDefault(); }
     else if(e.code === 'KeyF' || e.code === 'KeyE') fire();
     else if(/^(Arrow|Key[WASD])/.test(e.code)) took();
   });
   addEventListener('keyup', function(e){ keys[e.code] = false; });
-  /* ten times a second: where the bee should head, and whether it is dashing */
+  /* fifteen times a second: where the bee should head, and whether it is dashing (a dash is also sent the moment it is pressed) */
   setInterval(function(){
     if(!live || auto) return;
     if(performance.now() - lastInput > 25000){ auto = true; send({t: 'i', auto: true}); card(); return; }   /* nobody at the controls: the service takes the stick back */
-    var me = pos(myId);
-    if(!me) return;
+    steer();
+  }, 66);
+  function steer(){
+    var me = pred || pos(myId);
+    if(!live || auto || !me) return;
+    var t = target(me);
+    send({t: 'i', x: Math.round(t.x), y: Math.round(t.y), d: dashing() ? 1 : 0});
+  }
+
+
+  /* Your own bee is flown here, on this screen, the moment you move, by the same rules the service
+     uses, and eased toward where the service says it is. Waiting for the service to answer before
+     moving made steering feel slow. Everything that matters (swallowing, fire) is still decided there. */
+  var pred = null, predDash = 0, predCd = 0;
+  function target(me){
     var kx = (keys.ArrowRight || keys.KeyD ? 1 : 0) - (keys.ArrowLeft || keys.KeyA ? 1 : 0), ky = (keys.ArrowDown || keys.KeyS ? 1 : 0) - (keys.ArrowUp || keys.KeyW ? 1 : 0);
-    var x = kx || ky ? me.x + kx * 400 : cam.x + (mouse.x - W / 2) / cam.z, y = kx || ky ? me.y + ky * 400 : cam.y + (mouse.y - H / 2) / cam.z;
-    send({t: 'i', x: Math.round(x), y: Math.round(y), d: mouse.down || keys.Space || padDash ? 1 : 0});
-  }, 100);
+    return kx || ky ? {x: me.x + kx * 400, y: me.y + ky * 400} : {x: cam.x + (mouse.x - W / 2) / cam.z, y: cam.y + (mouse.y - H / 2) / cam.z};
+  }
+  function dashing(){ return (mouse.down && performance.now() - mouse.at > 130) || keys.Space || padDash; }   /* a held button, not a click: a double-click shoots */
+  function predict(dt){
+    var b = bees[myId];
+    if(!b || !b.c || auto || phase !== 'play'){ pred = null; return null; }
+    var s = b.c, r = radius(s.m);
+    if(!pred || Math.hypot(pred.x - s.x, pred.y - s.y) > 240) pred = {x: s.x, y: s.y, a: s.a};
+    if(predCd > 0) predCd -= dt;
+    if(predDash > 0) predDash -= dt;
+    if(dashing() && predCd <= 0 && s.m > 24){ predDash = .45; predCd = .9; }
+    var t = target(pred), dx = t.x - pred.x, dy = t.y - pred.y, d = Math.hypot(dx, dy), vx = 0, vy = 0;
+    var speed = 300 / (1 + r / 70) * (predDash > 0 || b.flags & 1 ? 2.3 : 1) * Math.min(1, d / 30);
+    if(d > 1){
+      var turn = ((Math.atan2(dy, dx) - pred.a + 9.42478) % 6.28318) - 3.14159;
+      pred.a += Math.max(-8 * dt, Math.min(8 * dt, turn));
+      vx = Math.cos(pred.a) * speed; vy = Math.sin(pred.a) * speed;
+      pred.x += vx * dt; pred.y += vy * dt;
+    }
+    /* the service's report is a moment old: compare with where this bee was then, and close the gap gently */
+    var k = Math.min(1, dt * 5);
+    pred.x += (s.x + vx * .12 - pred.x) * k; pred.y += (s.y + vy * .12 - pred.y) * k;
+    var out = Math.hypot(pred.x - R, pred.y - R);
+    if(out > R - r){ pred.x = R + (pred.x - R) * (R - r) / out; pred.y = R + (pred.y - R) * (R - r) / out; }
+    return {x: pred.x, y: pred.y, a: pred.a, m: s.m, flags: b.flags, fb: b.fb};
+  }
 
   /* ---------- drawing ---------- */
-  /* Where a bee is right now: a tenth of a second behind the service, eased between the last two reports. */
+  /* Where another bee is right now: a little behind the service, eased between its last two reports. */
   function pos(id){
     var b = bees[id]; if(!b || !b.c) return null;
-    var t = simNow() - 110, f = b.c.n === b.p.n ? 1 : Math.max(0, Math.min(1.2, (t - b.p.n) / (b.c.n - b.p.n)));
+    var t = simNow() - 85, f = b.c.n === b.p.n ? 1 : Math.max(0, Math.min(1.2, (t - b.p.n) / (b.c.n - b.p.n)));
     var da = ((b.c.a - b.p.a + 9.42478) % 6.28318) - 3.14159;
     return {x: b.p.x + (b.c.x - b.p.x) * f, y: b.p.y + (b.c.y - b.p.y) * f, m: b.p.m + (b.c.m - b.p.m) * Math.min(1, f), a: b.p.a + da * Math.min(1, f), flags: b.flags, fb: b.fb};
   }
   function drawBee(id, p, now){
     var info = roster[id] || {name: '', kind: 'b'}, r = radius(p.m), mine = id === myId, wasp = info.kind === 'w', flap = Math.sin(now / 38 + id) * .35;
+    /* in smoke: nobody else sees this bee at all until it is within two of its own body widths of them */
+    if(p.flags & 2 && !mine && !(meNow && Math.hypot(meNow.x - p.x, meNow.y - p.y) - radius(meNow.m) < r * 4)) return;
+    if(p.flags & 32){   /* the queen's pull, as far as it reaches */
+      ctx.save(); ctx.globalAlpha = .1 + .05 * Math.sin(now / 160); ctx.fillStyle = '#c77dff'; ctx.beginPath(); ctx.arc(p.x, p.y, 520, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = .7; ctx.lineWidth = 4; ctx.strokeStyle = '#e0aaff'; ctx.setLineDash([18, 14]); ctx.lineDashOffset = -now / 30; ctx.stroke(); ctx.restore();
+    }
     ctx.save();
-    if(p.flags & 2) ctx.globalAlpha = mine ? .5 : .16;   /* in smoke */
+    if(p.flags & 2) ctx.globalAlpha = .55;   /* in smoke */
     ctx.translate(p.x, p.y); ctx.rotate(p.a);
     ctx.fillStyle = 'rgba(255,255,255,.55)';
     ctx.beginPath(); ctx.ellipse(-r * .15, -r * .95, r * .5, r * (.55 + flap * .25), -.5, 0, 6.2832); ctx.fill();
@@ -319,20 +363,20 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
     ctx.fillStyle = wasp ? '#ff3b3b' : '#fff'; ctx.beginPath(); ctx.arc(r * .78, -r * .16, r * .09, 0, 6.2832); ctx.arc(r * .78, r * .16, r * .09, 0, 6.2832); ctx.fill();
     ctx.lineWidth = Math.max(2, r * .07); ctx.strokeStyle = p.flags & 16 ? '#ff5a3c' : mine ? '#fff' : info.owner ? '#FFD76A' : 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.2832); ctx.stroke();
     ctx.restore();
-    if(p.flags & 2 && !mine) return;
-    var fs = Math.max(13 / cam.z, Math.min(r * .42, 34)), label = (p.flags & 4 ? '👑 ' : '') + (mine ? 'You' : info.name) + (info.owner && !mine ? ' ★' : '');
+    var fs = Math.max(13 / cam.z, Math.min(r * .42, 34)), label = (p.flags & 4 ? '👑 ' : '') + (p.flags & 32 ? '👸 ' : '') + (mine ? 'You' : info.name) + (info.owner && !mine ? ' ★' : '');
     ctx.font = '700 ' + fs + 'px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.lineWidth = fs * .22; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.fillStyle = wasp ? '#ff8a8a' : mine ? '#FFE9B0' : info.kind === 'p' ? '#fff' : '#C9CBD3';
     ctx.strokeText(label, p.x, p.y - r - fs * .9); ctx.fillText(label, p.x, p.y - r - fs * .9);
   }
 
-  var last = performance.now(), hudAt = 0;
+  var last = performance.now(), hudAt = 0, meNow = null;
   function frame(now){
     var dt = Math.min(.05, (now - last) / 1000); last = now;
-    var sim = simNow(), all = [], me = null, biggest = null;
-    Object.keys(bees).forEach(function(id){ var p = pos(id); if(!p) return; id = Number(id); all.push([id, p]); if(id === myId) me = p; if(!biggest || p.m > biggest.m) biggest = p; });
+    var sim = simNow(), all = [], me = null, biggest = null, mine = predict(dt);
+    Object.keys(bees).forEach(function(id){ id = Number(id); var p = id === myId && mine ? mine : pos(id); if(!p) return; all.push([id, p]); if(id === myId) me = p; if(!biggest || p.m > biggest.m) biggest = p; });
+    meNow = me;
     var f = me || biggest;
-    if(f){ var z = Math.max(.42, Math.min(1.15, 1.25 / (1 + radius(f.m) / 110))) * Math.min(1.4, Math.max(.6, Math.min(W, H) / 800)); cam.x += (f.x - cam.x) * Math.min(1, dt * 6); cam.y += (f.y - cam.y) * Math.min(1, dt * 6); cam.z += (z - cam.z) * Math.min(1, dt * 2); }
+    if(f){ var z = Math.max(.42, Math.min(1.15, 1.25 / (1 + radius(f.m) / 110))) * Math.min(1.4, Math.max(.6, Math.min(W, H) / 800)); cam.x += (f.x - cam.x) * Math.min(1, dt * 10); cam.y += (f.y - cam.y) * Math.min(1, dt * 10); cam.z += (z - cam.z) * Math.min(1, dt * 2); }
     shake = Math.max(0, shake - dt * 30);
 
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -381,7 +425,7 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
       var left = phaseEnds - sim, closing = Math.min(60, roundLen * .4) * 1000, people = 0;
       $('mass').textContent = me ? Math.round(me.m) : 0;
       $('sub').textContent = auto ? 'Click to fly your bee' : myName + (wins ? ' · ' + wins + (wins === 1 ? ' round won' : ' rounds won') : '');
-      var fb = me ? me.fb : 0; $('ammo').hidden = !fb; $('ammo').textContent = fb ? '🔥 x' + fb + '  (right-click or F)' : ''; $('padFire').hidden = !fb;
+      var fb = me ? me.fb : 0; $('ammo').hidden = !fb; $('ammo').textContent = fb ? '🔥 x' + fb + (matchMedia('(pointer:coarse)').matches ? '  (double-tap)' : '  (double-click or F)') : ''; $('padFire').hidden = !fb;
       $('clock').hidden = false; $('clock').classList.toggle('closing', phase === 'play' && left < closing);
       $('clockK').textContent = phase === 'rest' ? 'Next round in' : left < closing ? 'The fire is closing in' : 'Round ' + roundNo;
       $('clockT').textContent = mmss(left);

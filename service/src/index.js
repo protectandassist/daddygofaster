@@ -1062,7 +1062,7 @@ const SOCIAL = {
     const body = await request.json().catch(() => null), user = await sessionUser(request, env, now);
     const board = await getBoard(env, s, now).catch(() => null);
     const bidders = [...new Set(((board && board.bids) || []).map((b) => b.name).filter(Boolean))].slice(0, 12);
-    return arenaJoin(env, player(user, body?.g), Boolean(user && user.email && isAdminEmail(env, user.email)), bidders);
+    return arenaJoin(env, player(user, body?.g), Boolean(user && user.email && isAdminEmail(env, user.email)), bidders, request.headers.get('CF-Connecting-IP') || '');
   },
   'POST /games/pick': async (request, env, s, now) => {
     const body = await request.json().catch(() => null);

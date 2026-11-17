@@ -6,7 +6,8 @@
 //     the biggest bee left when the round ends wins it, and then there is a break (the page
 //     shows the day's bids during it) before the next round starts with everyone small again;
 //   - pickups: fireballs to shoot, smoke (the other bees lose sight of you), honey (your trail
-//     slows instead of burns), royal jelly (instant growth);
+//     slows instead of burns), royal jelly (instant growth), the queen (for 15 seconds every
+//     smaller bee nearby is drawn toward you, and only a dash gets it clear);
 //   - the biggest bee wears the crown: a wasp comes for it every so often, and burning it down pays extra;
 //   - bees flown by the service fill the arena, named after the day's bidders where there are any;
 //   - the owner's page passes on Twitch chat: !join drops in a bee, !fire and !honey drop
@@ -23,7 +24,8 @@ const DEFAULTS = { round: 180, rest: 30 };
 const R = 1500;                 // the arena is a circle this wide from its middle, which is at (R, R)
 const RING_MIN = 320;           // how small the ring of fire gets
 const START = 20, EAT = 1.2, POLLEN = 520, BEES = 18, MIN_BOTS = 6, MAX_CHAT = 25, MAX_PATCHES = 500;
-const KINDS = ['fireball', 'smoke', 'honey', 'jelly'];
+const KINDS = ['fireball', 'smoke', 'honey', 'jelly', 'queen'];
+export const QUEEN = { secs: 15, reach: 520, pull: 0.9 };   // the pull is nine tenths of a bee's own flying speed: flying away only holds it off, and a dash gets it clear
 const ADJ = ['Lucky', 'Swift', 'Golden', 'Smoky', 'Bold', 'Sly', 'Sunny', 'Mighty', 'Quiet', 'Wild', 'Amber', 'Brave', 'Fuzzy', 'Nimble', 'Rusty', 'Jolly'];
 const NOUN = ['Drone', 'Ember', 'Spark', 'Comet', 'Badger', 'Falcon', 'Otter', 'Hornet', 'Lantern', 'Rocket', 'Maple', 'Bandit', 'Pepper', 'Tiger', 'Walrus', 'Moose'];
 export const rad = (m) => Math.sqrt(m) * 4.2;
@@ -62,7 +64,7 @@ export class World {
   scatter(x, y, n, m = 2) { for (let i = 0; i < n; i++) this.grain(x + this.rnd(-45, 45), y + this.rnd(-45, 45), m); }
 
   spawn(name, kind, more = {}) {
-    const b = { id: this.id++, name, kind, x: R, y: R, a: this.rnd(0, 6.28), m: START, tx: R, ty: R, think: 0, dashT: 0, dashCd: 0, trail: 0, fb: 0, shotCd: 0, smoke: 0, honey: 0, slow: 0, burn: 0, streak: 0, hitCd: 0, dash: false, fire: false, key: null, ...more };
+    const b = { id: this.id++, name, kind, x: R, y: R, a: this.rnd(0, 6.28), m: START, tx: R, ty: R, think: 0, dashT: 0, dashCd: 0, trail: 0, fb: 0, shotCd: 0, smoke: 0, honey: 0, queen: 0, slow: 0, burn: 0, streak: 0, hitCd: 0, dash: false, fire: false, key: null, ...more };
     // never drop a new bee on top of a bigger one
     for (let tries = 0; tries < 14; tries++) {
       [b.x, b.y] = this.spot(Math.max(RING_MIN, this.ring) * 0.9);
@@ -154,10 +156,10 @@ export class World {
       if (o === b || o.smoke > 0) continue;
       const d = Math.hypot(o.x - b.x, o.y - b.y) - rad(o.m);
       if (d > 420 + r * 2) continue;
-      if ((o.kind === 'w' ? b.id === this.crown : o.m > b.m * EAT) && d < fd) { fd = d; flee = o; }
+      if ((o.kind === 'w' ? b.id === this.crown : o.m > b.m * EAT || (o.queen > 0 && o.m > b.m)) && d < fd) { fd = d; flee = o; }
       else if (o.kind !== 'w' && b.m > o.m * EAT && d < pd) { pd = d; prey = o; }
     }
-    if (flee && fd < 300 + r) { b.tx = b.x + (b.x - flee.x) * 4; b.ty = b.y + (b.y - flee.y) * 4; b.dash = fd < 110 && this.rand() < 0.6; return; }
+    if (flee && fd < (flee.queen > 0 ? QUEEN.reach + 60 : 300 + r)) { b.tx = b.x + (b.x - flee.x) * 4; b.ty = b.y + (b.y - flee.y) * 4; b.dash = flee.queen > 0 || (fd < 110 && this.rand() < 0.6); return; }
     if (prey && pd < 380) { b.tx = prey.x; b.ty = prey.y; b.dash = pd < 120 && b.m > 40 && this.rand() < 0.4; if (b.fb > 0 && pd < 320 && this.rand() < 0.25) b.fire = true; return; }
     let best = null, bd = 1e9;
     for (const k of this.pickups.values()) { const d = Math.hypot(k.x - b.x, k.y - b.y); if (d < 380 && d < bd) { bd = d; best = k; } }
@@ -214,7 +216,7 @@ export class World {
       const p = b.key && this.players.get(b.key), flown = b.kind !== 'p' || (p && p.auto);
       if (flown) { b.think -= dt; if (b.think <= 0) { b.think = this.rnd(0.18, 0.4); this.think(b); } }
       const r = rad(b.m);
-      for (const k of ['dashT', 'dashCd', 'shotCd', 'smoke', 'honey', 'hitCd']) if (b[k] > 0) b[k] -= dt;
+      for (const k of ['dashT', 'dashCd', 'shotCd', 'smoke', 'honey', 'queen', 'hitCd']) if (b[k] > 0) b[k] -= dt;
       // dashing: a burst of speed that costs a little size and leaves a trail (fire, or honey after that pickup)
       if (b.dash && b.dashCd <= 0 && b.m > 24 && b.kind !== 'w') { b.dashT = 0.45; b.dashCd = 0.9; b.m *= 0.95; }
       if (b.dashT > 0) { b.trail -= dt; if (b.trail <= 0) { b.trail = 0.06; this.patch(b.x - Math.cos(b.a) * r, b.y - Math.sin(b.a) * r, 18 + r * 0.3, b.honey > 0 ? 5000 : 3500, b.id, b.honey > 0 ? 'h' : 'f'); } }
@@ -243,7 +245,7 @@ export class World {
       for (const k of this.pickups.values()) {
         if (Math.hypot(k.x - b.x, k.y - b.y) > r + 18) continue;
         this.pickups.delete(k.id);
-        if (k.kind === 'fireball') b.fb = Math.min(5, b.fb + 3); else if (k.kind === 'smoke') b.smoke = 8; else if (k.kind === 'honey') b.honey = 8; else b.m += Math.max(25, b.m * 0.3);
+        if (k.kind === 'fireball') b.fb = Math.min(5, b.fb + 3); else if (k.kind === 'smoke') b.smoke = 8; else if (k.kind === 'honey') b.honey = 8; else if (k.kind === 'queen') b.queen = QUEEN.secs; else b.m += Math.max(25, b.m * 0.3);
         this.say('pick', { a: b.name, ai: b.id, what: k.kind });
       }
       // fire: someone else's trail (or chat's) burns size away, honey slows; outside the ring everything burns
@@ -254,6 +256,18 @@ export class World {
       }
       if (out > this.ring) { b.m -= Math.max(2, b.m * 0.25) * dt; b.burn = -2; }
       if (b.m < 9) this.kill(b, b.burn > 0 ? this.bees.get(b.burn) : null, b.burn === -2 ? 'ring' : 'burn');
+    }
+
+    // the queen: every smaller bee within reach is drawn toward her
+    for (const q of this.bees.values()) {
+      if (!(q.queen > 0)) continue;
+      for (const o of this.bees.values()) {
+        if (o === q || o.kind === 'w' || o.m >= q.m) continue;
+        const d = Math.hypot(q.x - o.x, q.y - o.y);
+        if (d < 1 || d > QUEEN.reach) continue;
+        const pull = QUEEN.pull * 300 / (1 + rad(o.m) / 70);
+        o.x += (q.x - o.x) / d * pull * dt; o.y += (q.y - o.y) / d * pull * dt;
+      }
     }
 
     this.shots = this.shots.filter((s) => {
@@ -302,7 +316,7 @@ export class World {
   roster() { return [...this.bees.values()].map((b) => [b.id, b.name, b.kind, b.owner ? 1 : 0, b.bidder ? 1 : 0]); }
   beesNow() {
     return [...this.bees.values()].map((b) => [b.id, Math.round(b.x), Math.round(b.y), Math.round(b.m * 10) / 10, Math.round(b.a * 100) / 100,
-      (b.dashT > 0 ? 1 : 0) | (b.smoke > 0 ? 2 : 0) | (b.id === this.crown ? 4 : 0) | (b.honey > 0 ? 8 : 0) | (b.burn ? 16 : 0), b.fb]);
+      (b.dashT > 0 ? 1 : 0) | (b.smoke > 0 ? 2 : 0) | (b.id === this.crown ? 4 : 0) | (b.honey > 0 ? 8 : 0) | (b.burn ? 16 : 0) | (b.queen > 0 ? 32 : 0), b.fb]);
   }
   head(t) { return { t, n: Math.round(this.t), round: this.round, ph: this.phase, left: Math.max(0, Math.round(this.phaseEnds - this.t)), ring: Math.round(this.ring), win: this.winner, b: this.beesNow(), sh: this.shots.map((s) => [Math.round(s.x), Math.round(s.y)]), pk: [...this.pickups.values()].map((k) => [k.id, Math.round(k.x), Math.round(k.y), k.kind]) }; }
   // Everything, for a page that has just arrived or a round that has just begun.
@@ -335,10 +349,10 @@ export async function setArena(env, body, now) {
   return [200, cfg];
 }
 // POST /arena/join: who is asking (worked out by the caller), and a one-use ticket to open the game's socket with.
-export async function arenaJoin(env, who, owner, bidders) {
+export async function arenaJoin(env, who, owner, bidders, ip) {
   if (!who) return [400, { message: 'Open torchhive.com/arena to play.' }];
   if (!env.ARENA) return [503, { message: 'The arena is not switched on.' }];
-  const r = await stub(env).fetch('https://arena/mint', { method: 'POST', body: JSON.stringify({ who, owner, bidders, cfg: await arenaSetting(env) }) });
+  const r = await stub(env).fetch('https://arena/mint', { method: 'POST', body: JSON.stringify({ who, owner, bidders, ip, cfg: await arenaSetting(env) }) });
   return [r.status, await r.json()];
 }
 // GET /arena/ws?t=<ticket>, as a WebSocket.
@@ -350,11 +364,14 @@ export function arenaSocket(env, request) {
 // ---- the Durable Object ---------------------------------------------------------------
 
 const MAX_PAGES = 80;
+// Against someone filling the arena with scripted pages: one internet address may have this many
+// pages in the game at once and ask for this many tickets a minute. The owner is not limited.
+const PAGES_PER_ADDRESS = 4, TICKETS_PER_MINUTE = 12;
 
 export class Arena {
   constructor(state, env) {
     this.env = env; this.conns = new Map(); this.tickets = new Map(); this.world = null; this.timer = null;
-    this.cfg = { ...DEFAULTS }; this.bidders = []; this.n = 0; this.last = 0;
+    this.cfg = { ...DEFAULTS }; this.bidders = []; this.n = 0; this.last = 0; this.asked = new Map();
   }
 
   async fetch(request) {
@@ -368,12 +385,21 @@ export class Arena {
       const body = await request.json().catch(() => null);
       if (!body || !body.who || !body.who.player) return Response.json({ message: 'Open torchhive.com/arena to play.' }, { status: 400 });
       if (this.conns.size >= MAX_PAGES && !this.conns.has(body.who.player)) return Response.json({ message: 'The arena is full right now. Try again in a minute.' }, { status: 429 });
+      const ip = String(body.ip || '').slice(0, 60);
+      if (ip && !body.owner) {
+        if (this.asked.size > 2000) this.asked.clear();
+        const a = this.asked.get(ip) || { since: now, n: 0 };
+        if (now - a.since > 60000) { a.since = now; a.n = 0; }
+        a.n++; this.asked.set(ip, a);
+        const here = [...this.conns.entries()].filter(([key, c]) => c.ip === ip && key !== body.who.player).length;
+        if (a.n > TICKETS_PER_MINUTE || here >= PAGES_PER_ADDRESS) return Response.json({ message: 'Too many pages are open from this connection. Close one and try again in a minute.' }, { status: 429 });
+      }
       this.cfg = cleanCfg(body.cfg);
       this.bidders = Array.isArray(body.bidders) ? body.bidders.filter((n) => typeof n === 'string' && n.length <= 30).slice(0, 12) : [];
       if (this.world) { this.world.cfg = this.cfg; this.world.bidders = this.bidders; }
       for (const [t, v] of this.tickets) if (v.exp < now) this.tickets.delete(t);
       const ticket = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('');
-      this.tickets.set(ticket, { player: body.who.player, name: String(body.who.name).slice(0, 30), owner: Boolean(body.owner), exp: now + 30000 });
+      this.tickets.set(ticket, { player: body.who.player, name: String(body.who.name).slice(0, 30), owner: Boolean(body.owner), ip, exp: now + 30000 });
       return Response.json({ ticket, name: body.who.name });
     }
     if (url.pathname === '/arena/ws') {
@@ -394,7 +420,7 @@ export class Arena {
     if (opened) { this.world = new World(this.cfg, this.bidders); this.last = Date.now(); }
     const key = who.player, old = this.conns.get(key);
     if (old) try { old.ws.close(4000, 'Opened somewhere else.'); } catch {}
-    const conn = { ws, owner: who.owner, count: 0, since: Date.now() };
+    const conn = { ws, owner: who.owner, ip: who.ip || '', count: 0, since: Date.now() };
     this.conns.set(key, conn);
     this.world.addPlayer(key, who.name, who.owner);
     this.world.outbox = this.world.outbox.filter((m) => m[0] !== key);
@@ -416,12 +442,12 @@ export class Arena {
       else if (m.t === 'chat' && conn.owner) this.world.chat(m.k, m.name);
     });
     ws.addEventListener('close', bye); ws.addEventListener('error', bye);
-    if (!this.timer) this.timer = setInterval(() => this.tick(), 50);
+    if (!this.timer) this.timer = setInterval(() => this.tick(), 33);
   }
 
   send(conn, data) { try { conn.ws.send(typeof data === 'string' ? data : JSON.stringify(data)); } catch { try { conn.ws.close(1011, 'Lost.'); } catch {} } }
 
-  // Twenty steps a second; the pages are sent what changed ten times a second.
+  // Thirty steps a second; the pages are sent what changed fifteen times a second.
   tick() {
     const w = this.world;
     if (!w) return;
