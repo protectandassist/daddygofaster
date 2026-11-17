@@ -165,11 +165,12 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
 
   function money(c){ return '$' + (c / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
   function keyOf(b){ return b.open ? 'o:' + b.id : 's:' + b.name; }
-  function line(kind, who, text){
+  function line(kind, who, text, test){
     if(!showFeed) return;
     var p = document.createElement('div'), b = document.createElement('b');
     p.className = 'line' + (kind ? ' line--' + kind : '');
     b.textContent = who; p.appendChild(b); p.appendChild(document.createTextNode(text));
+    if(test) p.setAttribute('data-test', '1');   /* a line about the overlay test goes when the test does */
     var feed = $('feed');
     feed.appendChild(p);
     while(feed.children.length > 4) feed.removeChild(feed.firstChild);
@@ -292,11 +293,11 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
     if(seen){
       Object.keys(now_).forEach(function(k){
         var b = now_[k], old = seen.rows[k];
-        if(!old) line('bid', b.name, 'is in at ' + money(b.amountCents));
+        if(!old) line('bid', b.name, 'is in at ' + money(b.amountCents), b.pretend);
         else if(b.amountCents > old){ changed[k] = true; line('bid', b.name, (b.open ? 'is up to ' : 'raised to ') + money(b.amountCents)); }
       });
       var lead = top ? keyOf(top) : null;
-      if(lead && lead !== seen.lead && !seen.pretendLed){ flash('New leader', top.name + ' · ' + money(top.amountCents)); line('lead', top.name, 'takes the lead at ' + money(top.amountCents)); }
+      if(lead && lead !== seen.lead && !seen.pretendLed){ flash('New leader', top.name + ' · ' + money(top.amountCents)); line('lead', top.name, 'takes the lead at ' + money(top.amountCents), top.pretend); }
     }
     paintBoard(d, bids, changed);
     var rows = {};
@@ -344,7 +345,10 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
       var t = d.test || null, sig = JSON.stringify((d.board && d.board.bids || []).map(function(x){ return [x.name, x.amountCents]; }));
       if(lastSig !== null && sig !== lastSig) lastChange = Date.now();
       lastSig = sig;
-      if((t && t.id) !== (pretend && pretend.id)) pretend = t;
+      if((t && t.id) !== (pretend && pretend.id)){
+        pretend = t;
+        if(!t) Array.prototype.slice.call($('feed').querySelectorAll('[data-test]')).forEach(function(n){ n.remove(); });   /* the test is over: its lines leave the feed with it */
+      }
       if(d.board) paint(d.board);
       liveOn = Boolean(d.live && d.live.on);
       if(showChat) (d.live && d.live.chat || []).forEach(function(c){
