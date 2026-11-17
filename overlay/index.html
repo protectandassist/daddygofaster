@@ -18,7 +18,9 @@
                                       stream that YouTube also shows upright: its upright copy is
                                       the middle of the wide picture, so the corners are cut off
     add &chat=0 to leave the chat out, &feed=0 to leave the event lines out,
-        &board=0 to leave the ranked list out, &left to put the list on the left
+        &board=0 to leave the ranked list out, &left to put the list on the left,
+        &sound=0 for no sounds (a chime when a bid lands, a fanfare for a new leader;
+        in OBS tick "Control audio via OBS" on the browser source so the stream hears them)
     add &demo to see it moving with pretend bids over a stand-in picture
 
   It only reads what the public site shows: names, amounts and open jobs.
@@ -203,6 +205,29 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
     while(feed.children.length > 4) feed.removeChild(feed.firstChild);
     for(var i = 0; i < feed.children.length; i++) feed.children[i].classList.toggle('is-old', i < feed.children.length - 2);
   }
+  /* A chime when a bid lands and a fanfare when the lead changes. Made here, so there is no sound
+     file to load. OBS lets a browser source play without a click; an ordinary browser tab stays
+     silent until it has been clicked, which is fine. */
+  var soundOn = !/[?&]sound=0\b/.test(q), audio = null;
+  function note(hz, at, len, vol, type){
+    var o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + at;
+    o.type = type || 'sine'; o.frequency.value = hz;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + len + 0.03);
+  }
+  function sound(kind){
+    if(!soundOn) return;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if(audio.state === 'suspended') audio.resume();
+      if(kind === 'lead'){   /* four rising notes and a held chord on top */
+        [523.25, 659.25, 783.99, 1046.5].forEach(function(hz, i){ note(hz, i * 0.11, 0.3, 0.2, 'triangle'); });
+        [1046.5, 1318.5, 1568].forEach(function(hz){ note(hz, 0.46, 0.9, 0.1); });
+      } else {               /* two quick notes, like a coin */
+        note(987.77, 0, 0.12, 0.16); note(1318.5, 0.09, 0.4, 0.16);
+      }
+    } catch (e) {}
+  }
   var flashTimer = null;
   function flash(k, t){
     $('flashK').textContent = k; $('flashT').textContent = t;
@@ -318,13 +343,15 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
     var now_ = {}, changed = seen ? {} : null;
     bids.forEach(function(b){ now_[keyOf(b)] = b; });
     if(seen){
+      var heard = null;
       Object.keys(now_).forEach(function(k){
         var b = now_[k], old = seen.rows[k];
-        if(!old) line('bid', b.name, 'is in at ' + money(b.amountCents), b.pretend);
-        else if(b.amountCents > old){ changed[k] = true; line('bid', b.name, (b.open ? 'is up to ' : 'raised to ') + money(b.amountCents)); }
+        if(!old){ heard = 'bid'; line('bid', b.name, 'is in at ' + money(b.amountCents), b.pretend); }
+        else if(b.amountCents > old){ heard = 'bid'; changed[k] = true; line('bid', b.name, (b.open ? 'is up to ' : 'raised to ') + money(b.amountCents)); }
       });
       var lead = top ? keyOf(top) : null;
-      if(lead && lead !== seen.lead && !seen.pretendLed){ flash('New leader', top.name + ' · ' + money(top.amountCents)); line('lead', top.name, 'takes the lead at ' + money(top.amountCents), top.pretend); }
+      if(lead && lead !== seen.lead && !seen.pretendLed){ heard = 'lead'; flash('New leader', top.name + ' · ' + money(top.amountCents)); line('lead', top.name, 'takes the lead at ' + money(top.amountCents), top.pretend); }
+      if(heard) sound(heard);   /* one sound a look, the bigger one when both happened */
     }
     paintBoard(d, bids, changed);
     var rows = {};
