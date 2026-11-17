@@ -38,6 +38,7 @@ import {
   signInOn, emailLinksOn, sessionUser, namedUser, isAdminEmail, listMembers, getActivity, postSeen, deleteAccount, authGoogle, postMe, authStart, authFinish, authEnd, getMe, postVote, getComments, postComment, reportComment, recentComments, removeComment, restoreComment, blockCommenter,
 } from './social.js';
 import { record, report, tidy, liveNow } from './stats.js';
+import { gamesState, gamesSetting, setGames, postPick, player } from './games.js';
 import ADMIN_HTML from './admin.html';
 import REPORTS_HTML from './reports.html';
 
@@ -835,6 +836,7 @@ async function adminState(env, s, now, showJobs) {
     bids: bids.map((b) => adminBid(b, s, showJobs, cardsOn ? cards : null)),
     comments: auction ? await recentComments(env, auction.day) : [],
     live: await liveState(env),
+    games: await gamesSetting(env, now),
     chat: await recentChat(env),
     members: await listMembers(env),
     checks: await recentChecks(env),
@@ -960,6 +962,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
   if (request.method === 'POST' && (m = /^\/admin\/api\/creators\/(\d+)\/(approve|pause)$/.exec(path))) return decideCreator(env, s, Number(m[1]), m[2], now);
   if (request.method === 'POST' && path === '/admin/api/overlay/test') return sendOverlayTest(env, s, now);
   if (request.method === 'POST' && path === '/admin/api/schedule') return adminSchedule(request, env, s, now);
+  if (request.method === 'POST' && path === '/admin/api/games') return setGames(env, await request.json().catch(() => null), now);
   if (request.method === 'POST' && path === '/admin/api/live') {
     const body = await request.json().catch(() => null);
     const [status, out] = await setLive(env, body, now);
@@ -1028,7 +1031,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
 
 // ---- entry ------------------------------------------------------------------------
 
-const PUBLIC = new Set(['/overlay/test', '/overlay/state', '/board', '/live', '/chat', '/check', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/auth/google', '/me', '/me/activity', '/me/seen', '/me/delete', '/push/sub', '/push/unsub', '/push/next', '/votes', '/comments', '/comments/report', '/a']);
+const PUBLIC = new Set(['/overlay/test', '/overlay/state', '/board', '/live', '/chat', '/check', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/auth/google', '/me', '/me/activity', '/me/seen', '/me/delete', '/push/sub', '/push/unsub', '/push/next', '/votes', '/comments', '/comments/report', '/a', '/games', '/games/pick']);
 // Signing in, votes and comments: [method, path] to handler. Each answers [status, body].
 const SOCIAL = {
   'POST /auth/start': (request, env, s, now) => authStart(request, env, s, now),
@@ -1048,6 +1051,12 @@ const SOCIAL = {
   'POST /push/next': async (request, env) => pushNext(env, await request.json().catch(() => null)),
   'POST /votes': (request, env, s, now) => (s.open ? postVote(request, env, now) : [403, { message: 'Bidding is not open yet.' }]),
   'GET /live': (request, env) => getLive(env, new URL(request.url)),
+  // The free games on the stream: the round on now, and a pick for it. No account is needed.
+  'GET /games': async (request, env, s, now) => [200, await gamesState(env, now, player(await sessionUser(request, env, now), new URL(request.url).searchParams.get('g')))],
+  'POST /games/pick': async (request, env, s, now) => {
+    const body = await request.json().catch(() => null);
+    return postPick(env, player(await sessionUser(request, env, now), body?.g), body, now);
+  },
   'POST /chat': async (request, env, s, now) => {
     const body = await request.json().catch(() => null);
     const who = await namedUser(request, env, body?.name, now);
@@ -1070,7 +1079,7 @@ async function publicRoute(request, env, ctx, s, url, path, now, cors) {
     // Everything the stream overlay shows, in one answer: it asks once every few seconds, not three times.
     if (path === '/overlay/state' && request.method === 'GET') {
       const [, live] = await getLive(env, url);
-      return json({ board: await getBoard(env, s, now), test: await overlayTest(env, now), live }, 200, cors);
+      return json({ board: await getBoard(env, s, now), test: await overlayTest(env, now), live, games: await gamesState(env, now, null) }, 200, cors);
     }
     // Creator pages: the list, one page, following it, and a person's own page.
     let cm, dm;

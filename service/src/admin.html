@@ -117,6 +117,18 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
         <p class="muted small" style="flex:1 0 100%;margin-bottom:0">Stream overlay for OBS: torchhive.com/overlay/ (add ?tall for TikTok). Check it is working on your stream:</p>
         <button id="overlayTest" type="button">Simulate a bid on the overlay</button>
       </div>
+      <h3 style="margin:18px 0 4px">Stream games</h3>
+      <p class="muted small" id="gamesNote" style="margin:0 0 8px"></p>
+      <div class="row">
+        <select id="gamesMode" style="flex:0 1 240px">
+          <option value="mix">A mix of all three</option>
+          <option value="race">Bee race only</option>
+          <option value="trivia">Trivia only</option>
+          <option value="hilo">Higher or lower only</option>
+        </select>
+        <button id="gamesOn" type="button">Start the games</button>
+        <button id="gamesOff" type="button" class="bad" hidden>Stop the games</button>
+      </div>
       <div id="chatList"></div>
     </section>
 
@@ -295,6 +307,13 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       $('liveNote').textContent += live.fixedClose ? ' The close is fixed: late bids add no time.' : ' Late bids still add time to the clock.';
     }
     $('liveOn').textContent = live.on ? 'Change the links' : 'Save';
+    var games = d.games || {on: false};
+    $('gamesNote').textContent = games.on
+      ? 'The games are running on the overlay now, one round after another. Viewers play free at torchhive.com/play, and Twitch viewers can type their pick in chat. Changing the game keeps everyone\'s points. They stop by themselves after six hours.'
+      : 'Free games that run by themselves on the overlay while you are live: a bee race, trivia, and higher or lower. Viewers play from their phone at torchhive.com/play with no account, for points and a place on the board. Nobody pays and there are no prizes.';
+    $('gamesOff').hidden = !games.on;
+    $('gamesOn').textContent = games.on ? 'Change the game' : 'Start the games';
+    if(games.on && document.activeElement !== $('gamesMode')) $('gamesMode').value = games.mode;
     if(!live.on) $('liveFixed').checked = Boolean(live.fixedClose);
     $('chatList').textContent = '';
     (live.on ? d.chat || [] : []).forEach(function(c){
@@ -451,6 +470,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     }).catch(function(e){ $('schedMsg').textContent = e.message; $('schedMsg').hidden = false; });
   });
   $('liveOff').addEventListener('click', function(){ act('/admin/api/live', {on: false}); });
+  $('gamesOn').addEventListener('click', function(){ act('/admin/api/games', {on: true, mode: $('gamesMode').value}); });
+  $('gamesOff').addEventListener('click', function(){ act('/admin/api/games', {on: false}); });
   /* "8:15 PM" on this device's clock: today if that is still ahead, otherwise tomorrow */
   function closeAtFromClock(value){
     var m = /^(\d{1,2}):(\d{2})$/.exec(value || '');

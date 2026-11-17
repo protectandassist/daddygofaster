@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Play along — TorchHive</title>
+<meta name="description" content="Free games that run during the TorchHive live stream: a bee race, trivia, and higher or lower. No account, no cost, no prizes. Just a place on the board.">
+<meta name="theme-color" content="#0C0D10">
+<link rel="icon" href="/assets/favicon.png" type="image/png" sizes="64x64">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<!--
+  The games that run on the live stream, played from a phone. The bid service says which round
+  is on; this page shows it, sends one pick a round, and shows the score. A guest is known by a
+  random code kept in this browser, and plays under a name the service makes for that code.
+  Someone signed in on torchhive.com plays under their username.
+-->
+<style>
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:#0C0D10;color:#F5F5F6;font:500 16px/1.45 "Inter",system-ui,sans-serif;--accent:#EF9502;--hot:#FFB938;--gold:#FFC857;--good:#3dd68c;--line:rgba(255,255,255,.12)}
+a{color:var(--hot)}
+.wrap{max-width:520px;margin:0 auto;padding:16px 16px 40px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+header img{height:44px;width:auto}
+header b{display:block;font:800 1.25rem "Archivo",sans-serif;line-height:1.1}
+header span{font-size:.82rem;color:#B9BCC6}
+.card{background:#15171c;border:1px solid rgba(239,149,2,.45);border-radius:16px;padding:16px;margin-bottom:14px}
+.card.plain{border-color:var(--line)}
+.head{display:flex;align-items:baseline;gap:10px;font-size:.78rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--hot)}
+.head .phase{color:#C9CBD3;letter-spacing:.06em}
+.head .clock{margin-left:auto;font:800 1.5rem "Archivo",sans-serif;color:#fff;letter-spacing:0;font-variant-numeric:tabular-nums;line-height:1}
+.head .clock.urgent{color:#ff6b70}
+.bar{height:6px;border-radius:99px;background:rgba(255,255,255,.1);margin:10px 0 14px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);transform-origin:left center}
+.q{font-weight:700;font-size:1.15rem;line-height:1.3;margin:0 0 14px;min-height:1.5em}
+.q b{color:var(--good)}
+.hilo{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:14px}
+.hilo div{min-width:92px;padding:6px 14px;text-align:center;font:800 3.2rem/1.1 "Archivo",sans-serif;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);font-variant-numeric:tabular-nums}
+.hilo div.next{color:var(--gold);border-color:var(--gold)}
+.hilo span{font:800 1.6rem "Archivo",sans-serif;color:#8f939e}
+.opts{display:grid;gap:10px}
+.opt{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 14px 10px 10px;border-radius:14px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.14);color:inherit;font:600 1.05rem "Inter",system-ui,sans-serif;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:opacity .3s,border-color .2s,background .2s}
+.opt:disabled{cursor:default}
+.opt .key{width:34px;height:38px;display:grid;place-items:center;font:800 1rem "Archivo",sans-serif;color:#1b0a02;background:var(--hot);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.opt .n{font:800 .95rem "Archivo",sans-serif;color:#C9CBD3;white-space:nowrap}
+.opt small{font-weight:700;color:var(--hot);margin-left:8px}
+.opt.mine{border-color:var(--accent);background:rgba(239,149,2,.16)}
+.opt.right{border-color:var(--good);background:rgba(61,214,140,.14)}
+.opt.right .key{background:var(--good)}
+.opt.dim{opacity:.5}
+.opt:not(:disabled):active{transform:scale(.985)}
+.said{margin:14px 0 0;font-weight:700;min-height:1.5em}
+.said.win{color:var(--good)}
+.said.err{color:#ff8f93}
+.me{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.me b{font:800 1.6rem "Archivo",sans-serif;font-variant-numeric:tabular-nums}
+.muted{color:#B9BCC6}
+.small{font-size:.86rem}
+h2{font:800 1rem "Archivo",sans-serif;letter-spacing:.04em;margin:0 0 8px}
+ol{list-style:none;margin:0;padding:0}
+ol li{display:grid;grid-template-columns:2em 1fr auto;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);font-weight:600}
+ol li:last-child{border-bottom:0}
+ol li.you{color:var(--hot)}
+ol li span:last-child{font:800 1rem "Archivo",sans-serif;font-variant-numeric:tabular-nums}
+.cta{display:block;text-align:center;text-decoration:none;font-weight:700;color:#1b0a02;background:var(--accent);border-radius:99px;padding:13px 18px;margin-top:12px}
+[hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="/assets/torchhive-mark.png" alt="">
+    <div><b>TorchHive games</b><span>Free to play. No prizes, just a place on the board.</span></div>
+  </header>
+
+  <section class="card" id="game" hidden>
+    <div class="head"><span id="name"></span><span class="phase" id="phase"></span><span class="clock" id="clock"></span></div>
+    <div class="bar"><i id="bar"></i></div>
+    <p class="q" id="q"></p>
+    <div id="body"></div>
+    <p class="said" id="said" role="status"></p>
+  </section>
+
+  <section class="card plain" id="off" hidden>
+    <h2>No game is running right now</h2>
+    <p class="muted" style="margin:0">The games run while the stream is live. Leave this page open and the next round will show up here by itself.</p>
+    <a class="cta" href="/#live">Watch the stream</a>
+  </section>
+
+  <section class="card plain" id="meCard" hidden>
+    <div class="me"><span class="muted small">You are</span> <strong id="meName"></strong></div>
+    <div class="me" style="margin-top:4px"><b id="mePoints">0</b> <span class="muted" id="meRank">points</span></div>
+    <p class="muted small" id="meNote" style="margin:8px 0 0"></p>
+  </section>
+
+  <section class="card plain" id="topCard" hidden>
+    <h2>Tonight's board</h2>
+    <ol id="top"></ol>
+  </section>
+
+  <section class="card plain">
+    <h2>The real game is the bidding</h2>
+    <p class="muted" style="margin:0">Each day the highest bid sets a job for me to do the next day, on camera. Bidding is free, the reserve is 50 cents, and only the winner pays.</p>
+    <a class="cta" href="/">See today's bids</a>
+  </section>
+</div>
+<script>
+(function(){
+  var API = 'https://dgf-bids.trevor-c2b.workers.dev';
+  var $ = function(id){ return document.getElementById(id); };
+  var KEYS = {race: ['1', '2', '3', '4', '5'], trivia: ['A', 'B', 'C', 'D'], hilo: ['▲', '▼']};
+  var guest = null, session = null, ownDevice = false;
+  try {
+    session = localStorage.getItem('dgfSession') || null;
+    ownDevice = localStorage.getItem('thOwner') === '1';
+    guest = localStorage.getItem('thPlayer');
+    if(!/^[a-f0-9]{32}$/.test(guest || '')){
+      var bytes = new Uint8Array(16); crypto.getRandomValues(bytes);
+      guest = Array.prototype.map.call(bytes, function(b){ return (b < 16 ? '0' : '') + b.toString(16); }).join('');
+      localStorage.setItem('thPlayer', guest);
+    }
+  } catch (e) {}
+  if(!guest){   /* a browser that keeps nothing: a code for this visit only */
+    guest = ''; for(var i = 0; i < 32; i++) guest += Math.floor(Math.random() * 16).toString(16);
+  }
+
+  /* counted like any other visit to the site: no cookies, and the owner's own devices are left out */
+  function track(kind, seconds){
+    if(ownDevice) return;
+    try {
+      var tag = /[?&]utm_source=([\w .-]{1,40})/.exec(location.search);
+      var body = JSON.stringify({e: kind, r: kind === 'view' ? document.referrer : '', l: kind === 'tap' ? 'Played a stream game' : undefined, s: seconds, u: kind === 'view' && tag ? tag[1] : undefined});
+      if(navigator.sendBeacon) navigator.sendBeacon(API + '/a', body);
+      else fetch(API + '/a', {method: 'POST', body: body, keepalive: true, mode: 'no-cors'});
+    } catch (e) {}
+  }
+  var shownAt = document.hidden ? null : Date.now(), lookedMs = 0, tapped = false;
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden){ if(shownAt){ lookedMs += Date.now() - shownAt; shownAt = null; } track('hide', Math.round(lookedMs / 1000)); }
+    else { shownAt = Date.now(); look(); }
+  });
+  track('view');
+
+  function ask(path, body){
+    var headers = {};
+    if(session) headers['Authorization'] = 'Bearer ' + session;
+    if(body) headers['Content-Type'] = 'application/json';
+    return fetch(API + path, {method: body ? 'POST' : 'GET', headers: headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store'})
+      .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, d: d}; }); });
+  }
+
+  var G = null, drawn = '', skew = 0, sending = false, timer = null, problem = '';
+  function serverNow(){ return Date.now() + skew; }
+  function tick(){
+    if(!G) return;
+    var left = Math.max(0, G.endsAt - serverNow()), s = Math.ceil(left / 1000), el = $('clock');
+    el.textContent = G.phase === 'pick' ? '0:' + (s < 10 ? '0' : '') + s : G.phase === 'result' ? 'Next in ' + s : '';
+    el.classList.toggle('urgent', G.phase === 'pick' && s <= 5);
+    $('bar').style.transform = 'scaleX(' + (G.phase === 'pick' ? Math.min(1, left / G.pickMs) : 0) + ')';
+  }
+  setInterval(tick, 200);
+
+  function pick(i){
+    if(!G || G.phase !== 'pick' || sending || (G.me && G.me.pick !== null)) return;
+    sending = true; problem = '';
+    if(!tapped){ tapped = true; track('tap'); }
+    ask('/games/pick', {g: guest, round: G.round, pick: i}).then(function(res){
+      sending = false;
+      if(!res.ok) problem = res.d.message || 'That did not go through. Try again.';
+      paint(res.ok ? res.d : res.d.state || G, true);
+    }).catch(function(){ sending = false; problem = 'That did not go through. Check your connection and tap again.'; paint(G, true); });
+  }
+
+  function draw(){
+    var body = $('body'), keys = KEYS[G.game], res = G.phase === 'result', mine = G.me ? G.me.pick : null;
+    $('name').textContent = G.title;
+    $('phase').textContent = G.phase === 'pick' ? (mine === null ? 'Pick now' : 'You are in') : res ? 'Result' : G.game === 'race' ? 'Racing' : 'Picks are in';
+    var q = $('q'); q.textContent = '';
+    if(res){
+      var b = document.createElement('b');
+      b.textContent = G.game === 'race' ? G.options[G.answer] + ' wins!' : G.game === 'trivia' ? G.options[G.answer] : G.to + ', ' + G.options[G.answer].toLowerCase() + '!';
+      if(G.game === 'trivia') q.appendChild(document.createTextNode(G.prompt + ' '));
+      q.appendChild(b);
+    } else q.textContent = G.phase === 'show' && G.game === 'race' ? 'They are off! Watch the race on the stream.' : G.phase === 'show' && G.game === 'hilo' ? 'And the next number is...' : G.prompt;
+    body.textContent = '';
+    if(G.game === 'hilo'){
+      var h = document.createElement('div'), a = document.createElement('div'), to = document.createElement('span'), n = document.createElement('div');
+      h.className = 'hilo'; a.textContent = G.from; to.textContent = res ? (G.to > G.from ? '▲' : '▼') : '→'; n.className = 'next'; n.textContent = res ? G.to : '?';
+      h.appendChild(a); h.appendChild(to); h.appendChild(n); body.appendChild(h);
+    }
+    var total = G.counts.reduce(function(x, y){ return x + y; }, 0), place = null;
+    if(G.game === 'race' && res){
+      place = [];
+      G.race.finish.map(function(f, i){ return [f, i]; }).sort(function(x, y){ return x[0] - y[0]; }).forEach(function(x, k){ place[x[1]] = k; });
+    }
+    var list = document.createElement('div'); list.className = 'opts';
+    G.options.forEach(function(label, i){
+      var o = document.createElement('button'), key = document.createElement('span'), name = document.createElement('span'), cnt = document.createElement('span');
+      o.type = 'button'; o.className = 'opt' + (mine === i ? ' mine' : '') + (res ? (i === G.answer ? ' right' : ' dim') : mine !== null && mine !== i ? ' dim' : '');
+      o.disabled = G.phase !== 'pick' || mine !== null;
+      key.className = 'key'; key.textContent = keys[i]; name.textContent = label; cnt.className = 'n';
+      if(G.game === 'hilo' && !res){ var pays = document.createElement('small'); pays.textContent = '+' + G.pays[i]; name.appendChild(pays); }
+      cnt.textContent = (place ? ['1st', '2nd', '3rd', '4th', '5th'][place[i]] : '') + (mine !== null || G.phase !== 'pick' ? (place ? ' · ' : '') + G.counts[i] + (total ? '' : '') : '');
+      o.appendChild(key); o.appendChild(name); o.appendChild(cnt);
+      o.addEventListener('click', function(){ pick(i); });
+      list.appendChild(o);
+    });
+    body.appendChild(list);
+    var said = $('said'); said.className = 'said';
+    if(problem){ said.textContent = problem; said.classList.add('err'); }
+    else if(res && mine !== null){
+      said.textContent = G.me.won ? '+' + G.me.won + ' points' + (G.me.streak > 1 ? '. That is ' + G.me.streak + ' in a row.' : '.') : 'Not this time. The next round is seconds away.';
+      if(G.me.won) said.classList.add('win');
+    }
+    else if(res) said.textContent = 'You sat this one out. Jump in on the next round.';
+    else if(mine !== null) said.textContent = 'Locked in: ' + G.options[mine] + '. ' + (G.phase === 'pick' ? 'Waiting for the others.' : 'Here it comes.');
+    else said.textContent = G.phase === 'pick' ? 'Tap your pick before the clock runs out.' : 'Picking is over for this round.';
+  }
+
+  function paint(g, force){
+    var on = Boolean(g && g.on);
+    $('game').hidden = !on; $('off').hidden = on;
+    if(!on){ G = null; drawn = ''; $('meCard').hidden = true; $('topCard').hidden = true; return; }
+    skew = g.now - Date.now(); G = g;
+    var key = g.round + ':' + g.phase + ':' + (g.me ? g.me.pick : '') + ':' + g.counts.join(',');
+    if(force || key !== drawn){ drawn = key; draw(); }
+    tick();
+    if(g.me){
+      $('meCard').hidden = false;
+      $('meName').textContent = g.me.name;
+      $('mePoints').textContent = g.me.points;
+      $('meRank').textContent = 'points' + (g.me.rank ? ' · place ' + g.me.rank + ' of ' + Math.max(g.me.rank, g.top.length) + (g.top.length >= 8 ? '+' : '') : '');
+      $('meNote').textContent = session ? '' : 'A guest name made for this phone. Sign in at torchhive.com and you play under your own username.';
+      $('meNote').hidden = Boolean(session);
+    }
+    var top = $('top'); top.textContent = '';
+    $('topCard').hidden = !g.top.length;
+    g.top.forEach(function(p, i){
+      var li = document.createElement('li'), a = document.createElement('span'), b = document.createElement('span'), c = document.createElement('span');
+      if(g.me && p.name === g.me.name) li.className = 'you';
+      a.textContent = (i + 1) + '.'; b.textContent = p.name + (p.streak > 2 ? ' · ' + p.streak + ' in a row' : ''); c.textContent = p.points;
+      li.appendChild(a); li.appendChild(b); li.appendChild(c); top.appendChild(li);
+    });
+  }
+
+  /* Asked every 2.5 seconds while a game is on, and again the moment the next part of the round starts; every 15 seconds while nothing is on. */
+  function look(){
+    clearTimeout(timer);
+    if(document.hidden) return;
+    ask('/games?g=' + guest).then(function(res){ if(res.ok && !sending) paint(res.d); }).catch(function(){}).then(function(){
+      timer = setTimeout(look, G ? Math.max(400, Math.min(2500, G.endsAt - serverNow() + 250)) : 15000);
+    });
+  }
+  look();
+})();
+</script>
+</body>
+</html>
