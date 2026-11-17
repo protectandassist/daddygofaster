@@ -26,6 +26,7 @@ import { getSetting, setSetting } from './store.js';
 export const ROUNDS = [60, 120, 180, 300, 600];   // seconds a round may last
 export const RESTS = [15, 30, 45, 60, 90];        // seconds between rounds
 const DEFAULTS = { round: 180, rest: 30 };
+const VERSION = 8;   // sent to each page as it joins, so it can be seen which build a running arena is on
 const R = 1500;                 // the arena is a circle this wide from its middle, which is at (R, R)
 const RING_MIN = 320;           // how small the ring of fire gets
 const START = 20, EAT = 1.2, POLLEN = 520, BEES = 18, MIN_BOTS = 6, MAX_CHAT = 25, MAX_PATCHES = 500;
@@ -355,7 +356,7 @@ export class World {
   head(t) { return { t, n: Math.round(this.t), round: this.round, ph: this.phase, left: Math.max(0, Math.round(this.phaseEnds - this.t)), ring: Math.round(this.ring), win: this.winner, b: this.beesNow(), sh: this.shots.map((s) => [Math.round(s.x), Math.round(s.y)]), pk: [...this.pickups.values()].map((k) => [k.id, Math.round(k.x), Math.round(k.y), k.kind]) }; }
   // Everything, for a page that has just arrived or a round that has just begun.
   full() {
-    return { ...this.head('f'), R, cfg: this.cfg, ro: this.roster(), p: [...this.pollen.values()].map((g) => [g.id, Math.round(g.x), Math.round(g.y), g.m, g.until ? 1 : 0]),
+    return { ...this.head('f'), v: VERSION, R, cfg: this.cfg, ro: this.roster(), p: [...this.pollen.values()].map((g) => [g.id, Math.round(g.x), Math.round(g.y), g.m, g.until ? 1 : 0]),
       f: [...this.patches.values()].map((f) => [f.id, Math.round(f.x), Math.round(f.y), Math.round(f.r), Math.round(f.until - this.t), f.kind]) };
   }
   // What changed since the last one.
