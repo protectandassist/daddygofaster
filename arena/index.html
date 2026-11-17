@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Hive Arena — TorchHive</title>
+<meta name="description" content="Hive Arena: steer your bee, gather pollen, grow, and swallow the smaller bees before a bigger one swallows you. Free, in your browser.">
+<meta name="theme-color" content="#0C0D10">
+<link rel="icon" href="/assets/favicon.png" type="image/png" sizes="64x64">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<!--
+  Hive Arena: a one-player arena game to play on stream when things are quiet. You are a bee.
+  Pollen makes you bigger; a bee swallows any bee a fifth smaller than itself. Everything runs in
+  this page: the other bees are driven by the page, there is no server and nothing is stored but
+  your best score (in this browser).
+
+  When nobody is steering, the page plays your bee by itself, so the stream never shows a dead
+  screen. Twitch chat can drop in: anyone who types !join gets a bee with their name, flown by
+  the page. The channel comes from the Going-live setting, or add ?twitch=name to the address.
+  Add ?sound=0 for silence.
+-->
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#0C0D10;color:#F5F5F6;font:600 15px/1.4 "Inter",system-ui,sans-serif;--accent:#EF9502;--hot:#FFB938;--good:#3dd68c;user-select:none;-webkit-user-select:none;touch-action:none}
+canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
+.hud{position:fixed;pointer-events:none}
+.card{background:rgba(21,23,28,.86);border:1px solid rgba(239,149,2,.45);border-radius:14px;padding:10px 14px}
+#brand{left:16px;top:14px;display:flex;align-items:center;gap:10px}
+#brand img{height:38px;width:auto}
+#brand b{display:block;font:800 1.15rem "Archivo",sans-serif;line-height:1.1}
+#brand span{font-size:.8rem;color:#B9BCC6}
+#score{left:16px;top:78px;min-width:170px}
+#score b{font:800 2rem "Archivo",sans-serif;line-height:1;font-variant-numeric:tabular-nums;color:var(--hot)}
+#score span{display:block;font-size:.78rem;color:#B9BCC6}
+#board{right:16px;top:14px;width:230px}
+#board h2{margin:0 0 6px;font:800 .8rem "Archivo",sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--hot)}
+#board ol{list-style:none;margin:0;padding:0}
+#board li{display:grid;grid-template-columns:1.6em 1fr auto;gap:6px;padding:2px 0;font-size:.88rem;white-space:nowrap}
+#board li span:nth-child(2){overflow:hidden;text-overflow:ellipsis}
+#board li.you{color:var(--hot)}
+#board li.chat span:nth-child(2)::after{content:" · chat";color:#8f939e;font-weight:500}
+#feed{left:16px;bottom:74px;display:grid;gap:4px;font-size:.86rem;color:#D9DBE1}
+#feed div{background:rgba(21,23,28,.8);border-radius:8px;padding:3px 10px;width:max-content;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#feed b{color:var(--hot)}
+#banner{left:50%;bottom:14px;transform:translateX(-50%);text-align:center;white-space:nowrap;font-size:.95rem}
+#banner b{color:var(--hot)}
+#banner span{display:block;font-size:.8rem;color:#B9BCC6;font-weight:500}
+#center{left:50%;top:42%;transform:translate(-50%,-50%);text-align:center;padding:18px 28px;max-width:min(520px,92vw)}
+#center h1{margin:0 0 6px;font:800 1.9rem "Archivo",sans-serif}
+#center p{margin:0;color:#C9CBD3;font-weight:500}
+#center p b{color:var(--hot)}
+[hidden]{display:none!important}
+@media(max-width:700px){#board{width:170px}#board li:nth-child(n+6){display:none}#banner{font-size:.8rem;white-space:normal;width:92vw}#feed{display:none}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud" id="brand"><img src="/assets/torchhive-mark.png" alt=""><div><b>Hive Arena</b><span>torchhive.com/arena</span></div></div>
+<div class="hud card" id="score"><b id="mass">0</b><span id="best">Best 0</span></div>
+<div class="hud card" id="board"><h2>Biggest bees</h2><ol id="top"></ol></div>
+<div class="hud" id="feed"></div>
+<div class="hud card" id="banner"><div>The real game: <b>bid on what I do tomorrow</b> at <b>torchhive.com</b></div><span id="hint">Move the mouse to steer. Hold the button or Space to dash.</span></div>
+<div class="hud card" id="center"><h1 id="cTitle">Hive Arena</h1><p id="cText">Gather pollen, grow, and swallow the smaller bees.<br><b>Click to play.</b></p></div>
+<script>
+(function(){
+  var API = 'https://dgf-bids.trevor-c2b.workers.dev';
+  var $ = function(id){ return document.getElementById(id); };
+  var q = location.search, soundOn = !/[?&]sound=0\b/.test(q);
+  var canvas = $('c'), ctx = canvas.getContext('2d'), W = 0, H = 0, DPR = 1;
+  function size(){ DPR = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight; canvas.width = W * DPR; canvas.height = H * DPR; }
+  addEventListener('resize', size); size();
+
+  var WORLD = 3000, POLLEN = 760, BOTS = 26, START = 20, EAT = 1.2;
+  var COLORS = ['#ff5a3c', '#ff9f1c', '#ffd23f', '#3dd68c', '#4cc9f0', '#b388ff', '#ff7ab6', '#aab3c2', '#7bd389', '#f4a261'];
+  var ADJ = ['Lucky', 'Swift', 'Golden', 'Smoky', 'Bold', 'Sly', 'Sunny', 'Mighty', 'Quiet', 'Wild', 'Amber', 'Brave', 'Fuzzy', 'Nimble', 'Rusty', 'Jolly'];
+  var NOUN = ['Drone', 'Ember', 'Spark', 'Comet', 'Badger', 'Falcon', 'Otter', 'Hornet', 'Lantern', 'Rocket', 'Maple', 'Bandit', 'Pepper', 'Tiger', 'Walrus', 'Moose'];
+  function rnd(a, b){ return a + Math.random() * (b - a); }
+  function pickOf(list){ return list[Math.floor(Math.random() * list.length)]; }
+  function radius(m){ return Math.sqrt(m) * 4.2; }
+
+  var bees = [], pollen = [], me = null, auto = true, lastInput = 0, best = 0, mouse = {x: 0, y: 0, down: false}, keys = {}, cam = {x: WORLD / 2, y: WORLD / 2, z: 1}, deadFor = 0, killer = '';
+  try { best = Number(localStorage.getItem('thArenaBest')) || 0; } catch (e) {}
+
+  function grain(x, y, m){ return {x: x === undefined ? rnd(30, WORLD - 30) : x, y: y === undefined ? rnd(30, WORLD - 30) : y, m: m || 1, c: Math.random() < .12 ? '#fff3c4' : '#FFC857'}; }
+  function bee(name, opts){
+    var b = {name: name, x: rnd(200, WORLD - 200), y: rnd(200, WORLD - 200), m: START * rnd(.8, 1.6), a: rnd(0, 6.28), tx: 0, ty: 0, think: 0, dash: 0, color: pickOf(COLORS), bot: true, chat: false, born: performance.now()};
+    for(var k in (opts || {})) b[k] = opts[k];
+    /* never drop a new bee on top of a bigger one */
+    for(var tries = 0; tries < 12; tries++){
+      var ok = bees.every(function(o){ return Math.hypot(o.x - b.x, o.y - b.y) > radius(o.m) + 260; });
+      if(ok) break;
+      b.x = rnd(200, WORLD - 200); b.y = rnd(200, WORLD - 200);
+    }
+    bees.push(b);
+    return b;
+  }
+  function botName(){ for(var i = 0; i < 20; i++){ var n = pickOf(ADJ) + ' ' + pickOf(NOUN); if(!bees.some(function(b){ return b.name === n; })) return n; } return 'Bee ' + Math.floor(rnd(10, 99)); }
+  function spawnMe(){ me = bee('You', {bot: false, m: START, color: '#EF9502'}); deadFor = 0; }
+  for(var i = 0; i < POLLEN; i++) pollen.push(grain());
+  for(i = 0; i < BOTS; i++) bee(botName());
+  spawnMe();
+
+  /* ---------- sound: small, and only after the first click (browsers require it) ---------- */
+  var audio = null;
+  function blip(hz, len, vol, type){
+    if(!soundOn || !audio) return;
+    try {
+      var o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime;
+      o.type = type || 'sine'; o.frequency.setValueAtTime(hz, t); o.frequency.exponentialRampToValueAtTime(hz * 1.6, t + len);
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + len + .02);
+    } catch (e) {}
+  }
+
+  /* ---------- the feed of who swallowed whom ---------- */
+  function say(html){
+    var f = $('feed'), d = document.createElement('div');
+    d.innerHTML = html; f.appendChild(d);
+    while(f.children.length > 4) f.removeChild(f.firstChild);
+    setTimeout(function(){ if(d.parentNode) d.parentNode.removeChild(d); }, 7000);
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
+
+  /* ---------- input ---------- */
+  function took(){ lastInput = performance.now(); if(auto){ auto = false; $('center').hidden = true; } }
+  canvas.addEventListener('mousemove', function(e){ mouse.x = e.clientX; mouse.y = e.clientY; if(!auto) lastInput = performance.now(); });
+  canvas.addEventListener('mousedown', function(e){
+    mouse.x = e.clientX; mouse.y = e.clientY;
+    if(!audio && soundOn) try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (err) {}
+    if(auto || !me){ if(!me) spawnMe(); took(); return; }
+    mouse.down = true; took();
+  });
+  addEventListener('mouseup', function(){ mouse.down = false; });
+  canvas.addEventListener('touchstart', function(e){ var t = e.touches[0]; mouse.x = t.clientX; mouse.y = t.clientY; if(!me) spawnMe(); took(); mouse.down = e.touches.length > 1; e.preventDefault(); }, {passive: false});
+  canvas.addEventListener('touchmove', function(e){ var t = e.touches[0]; mouse.x = t.clientX; mouse.y = t.clientY; lastInput = performance.now(); e.preventDefault(); }, {passive: false});
+  canvas.addEventListener('touchend', function(e){ mouse.down = e.touches.length > 1; });
+  addEventListener('keydown', function(e){
+    keys[e.code] = true;
+    if(e.code === 'Space' || e.code === 'Enter'){ if(!me) spawnMe(); took(); e.preventDefault(); }
+    if(/^(Arrow|Key[WASD])/.test(e.code)) took();
+  });
+  addEventListener('keyup', function(e){ keys[e.code] = false; });
+
+  /* ---------- the bees the page flies ---------- */
+  function think(b){
+    var r = radius(b.m), flee = null, fd = 1e9, prey = null, pd = 1e9, see = 420 + r * 2, j, o, d;
+    for(j = 0; j < bees.length; j++){
+      o = bees[j]; if(o === b) continue;
+      d = Math.hypot(o.x - b.x, o.y - b.y) - radius(o.m);
+      if(d > see) continue;
+      if(o.m > b.m * EAT && d < fd){ fd = d; flee = o; }
+      else if(b.m > o.m * EAT && d < pd){ pd = d; prey = o; }
+    }
+    if(flee && fd < 300 + r){ b.tx = b.x + (b.x - flee.x) * 4; b.ty = b.y + (b.y - flee.y) * 4; b.dash = fd < 90 && b.m > 34 && Math.random() < .5 ? .5 : b.dash; return; }
+    if(prey && pd < 380){ b.tx = prey.x; b.ty = prey.y; if(pd < 110 && b.m > 40 && Math.random() < .35) b.dash = .45; return; }
+    /* otherwise the nearest pollen, looking at a sample so it stays cheap */
+    var bestP = null, bd = 1e9;
+    for(j = 0; j < 40; j++){ o = pollen[Math.floor(Math.random() * pollen.length)]; d = (o.x - b.x) * (o.x - b.x) + (o.y - b.y) * (o.y - b.y); if(d < bd){ bd = d; bestP = o; } }
+    if(bestP){ b.tx = bestP.x; b.ty = bestP.y; }
+  }
+
+  function swallow(a, b){
+    a.m += b.m * .8;
+    bees.splice(bees.indexOf(b), 1);
+    for(var k = 0; k < Math.min(14, Math.floor(b.m / 6)); k++) pollen.push(grain(b.x + rnd(-40, 40), b.y + rnd(-40, 40), 2));
+    if(a === me || b === me || a.chat || b.chat || b.m > 120) say('<b>' + esc(a === me ? 'You' : a.name) + '</b> swallowed ' + esc(b === me ? 'you' : b.name));
+    if(a === me) blip(520, .16, .12, 'triangle');
+    if(b === me){ killer = a.name; me = null; deadFor = 0; blip(180, .5, .14, 'sawtooth'); if(!auto){ $('cTitle').textContent = 'Swallowed by ' + killer; $('cText').innerHTML = 'You got to <b>' + Math.round(b.m) + '</b>. <b>Click or press Space</b> to go again.'; $('center').hidden = false; } }
+    else if(!b.chat) setTimeout(function(){ if(bees.filter(function(x){ return x.bot && !x.chat; }).length < BOTS) bee(botName()); }, 1500);
+  }
+
+  var last = performance.now();
+  function step(now){
+    var dt = Math.min(.05, (now - last) / 1000); last = now;
+    /* nobody at the controls for a while: the page takes the stick back */
+    if(!auto && now - lastInput > 25000){ auto = true; $('cTitle').textContent = 'Hive Arena'; $('cText').innerHTML = 'The page is flying this bee.<br><b>Click to take over.</b>'; $('center').hidden = false; }
+    if(!me){ deadFor += dt; if(auto && deadFor > 2.5) spawnMe(); }
+    var i, b, r, sp, dx, dy, d, j, p;
+    for(i = 0; i < bees.length; i++){
+      b = bees[i]; r = radius(b.m);
+      if(b === me && !auto){
+        var kx = (keys.ArrowRight || keys.KeyD ? 1 : 0) - (keys.ArrowLeft || keys.KeyA ? 1 : 0), ky = (keys.ArrowDown || keys.KeyS ? 1 : 0) - (keys.ArrowUp || keys.KeyW ? 1 : 0);
+        if(kx || ky){ b.tx = b.x + kx * 400; b.ty = b.y + ky * 400; }
+        else { b.tx = cam.x + (mouse.x - W / 2) / cam.z; b.ty = cam.y + (mouse.y - H / 2) / cam.z; }
+        if((mouse.down || keys.Space) && b.dash <= 0 && b.m > 26){ b.dash = .45; b.m *= .94; pollen.push(grain(b.x - Math.cos(b.a) * r, b.y - Math.sin(b.a) * r, 1)); blip(700, .08, .05); }
+      } else { b.think -= dt; if(b.think <= 0){ b.think = rnd(.18, .4); think(b); } }
+      dx = b.tx - b.x; dy = b.ty - b.y; d = Math.hypot(dx, dy);
+      sp = 300 / (1 + r / 70) * (b.dash > 0 ? 2.3 : 1) * Math.min(1, d / 30);
+      if(b.dash > 0) b.dash -= dt;
+      if(d > 1){
+        var want = Math.atan2(dy, dx), turn = ((want - b.a + 9.4248) % 6.2832) - 3.1416;
+        b.a += Math.max(-8 * dt, Math.min(8 * dt, turn));
+        b.x += Math.cos(b.a) * sp * dt; b.y += Math.sin(b.a) * sp * dt;
+      }
+      b.x = Math.max(r, Math.min(WORLD - r, b.x)); b.y = Math.max(r, Math.min(WORLD - r, b.y));
+      if(b.m > 150) b.m -= b.m * .004 * dt;   /* the big ones slowly shrink, so nobody stays on top for free */
+      for(j = pollen.length - 1; j >= 0; j--){
+        p = pollen[j];
+        if(Math.abs(p.x - b.x) < r && Math.abs(p.y - b.y) < r && Math.hypot(p.x - b.x, p.y - b.y) < r){ b.m += p.m; pollen[j] = pollen[pollen.length - 1]; pollen.pop(); }
+      }
+    }
+    while(pollen.length < POLLEN) pollen.push(grain());
+    /* swallowing: the bigger bee must be a fifth bigger and cover most of the smaller one */
+    for(i = 0; i < bees.length; i++) for(j = 0; j < bees.length; j++){
+      var a = bees[i]; b = bees[j];
+      if(!a || !b || a === b || a.m < b.m * EAT) continue;
+      if(Math.hypot(a.x - b.x, a.y - b.y) < radius(a.m) - radius(b.m) * .35){ swallow(a, b); i = -1; break; }
+    }
+    if(me && Math.round(me.m) > best && !auto){ best = Math.round(me.m); try { localStorage.setItem('thArenaBest', best); } catch (e) {} }
+    /* the camera follows your bee, or the biggest one while you are out */
+    var f = me || bees.slice().sort(function(x, y){ return y.m - x.m; })[0];
+    if(f){ var z = Math.max(.42, Math.min(1.15, 1.25 / (1 + radius(f.m) / 110))) * Math.min(1.4, Math.max(.6, Math.min(W, H) / 800)); cam.x += (f.x - cam.x) * Math.min(1, dt * 5); cam.y += (f.y - cam.y) * Math.min(1, dt * 5); cam.z += (z - cam.z) * Math.min(1, dt * 2); }
+    draw(now);
+    requestAnimationFrame(step);
+  }
+
+  function drawBee(b, now){
+    var r = radius(b.m), flap = Math.sin(now / 38 + b.born) * .35;
+    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.a);
+    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    ctx.beginPath(); ctx.ellipse(-r * .15, -r * .95, r * .5, r * (.55 + flap * .25), -.5, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(-r * .15, r * .95, r * .5, r * (.55 - flap * .25), .5, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.2832); ctx.fillStyle = b.color; ctx.fill();
+    ctx.save(); ctx.clip(); ctx.fillStyle = 'rgba(20,10,2,.8)';
+    ctx.fillRect(-r * .62, -r, r * .28, r * 2); ctx.fillRect(-r * .1, -r, r * .28, r * 2);
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(r * .62, 0, r * .42, 0, 6.2832); ctx.fillStyle = '#1b0a02'; ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(r * .78, -r * .16, r * .09, 0, 6.2832); ctx.arc(r * .78, r * .16, r * .09, 0, 6.2832); ctx.fill();
+    ctx.lineWidth = Math.max(2, r * .07); ctx.strokeStyle = b === me ? '#fff' : 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.2832); ctx.stroke();
+    ctx.restore();
+    var fs = Math.max(13 / cam.z, Math.min(r * .42, 34));
+    ctx.font = '700 ' + fs + 'px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = fs * .22; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.fillStyle = b === me ? '#FFE9B0' : '#fff';
+    ctx.strokeText(b.name, b.x, b.y - r - fs * .9); ctx.fillText(b.name, b.x, b.y - r - fs * .9);
+  }
+
+  var boardAt = 0;
+  function draw(now){
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.fillStyle = '#0C0D10'; ctx.fillRect(0, 0, W, H);
+    ctx.translate(W / 2, H / 2); ctx.scale(cam.z, cam.z); ctx.translate(-cam.x, -cam.y);
+    var vw = W / cam.z / 2 + 80, vh = H / cam.z / 2 + 80, x0 = cam.x - vw, x1 = cam.x + vw, y0 = cam.y - vh, y1 = cam.y + vh, g = 90, x, y, i;
+    ctx.fillStyle = '#121419'; ctx.fillRect(0, 0, WORLD, WORLD);
+    /* a honeycomb of dots, cheap to draw and enough to show movement */
+    ctx.fillStyle = 'rgba(239,149,2,.16)';
+    for(y = Math.max(0, Math.floor(y0 / g) * g); y <= Math.min(WORLD, y1); y += g){
+      var off = (Math.round(y / g) % 2) * g / 2;
+      for(x = Math.max(0, Math.floor(x0 / g) * g) + off; x <= Math.min(WORLD, x1); x += g){ ctx.beginPath(); ctx.arc(x, y, 3, 0, 6.2832); ctx.fill(); }
+    }
+    ctx.lineWidth = 10; ctx.strokeStyle = 'rgba(239,149,2,.6)'; ctx.strokeRect(0, 0, WORLD, WORLD);
+    for(i = 0; i < pollen.length; i++){
+      var p = pollen[i]; if(p.x < x0 || p.x > x1 || p.y < y0 || p.y > y1) continue;
+      ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, 5 + p.m * 1.5, 0, 6.2832); ctx.fill();
+    }
+    var order = bees.slice().sort(function(a, b){ return a.m - b.m; });
+    for(i = 0; i < order.length; i++){ var b = order[i], r = radius(b.m) * 2 + 60; if(b.x < x0 - r || b.x > x1 + r || b.y < y0 - r || b.y > y1 + r) continue; drawBee(b, now); }
+    if(now - boardAt > 400){
+      boardAt = now;
+      $('mass').textContent = me ? Math.round(me.m) : 0;
+      $('best').textContent = auto ? 'The page is flying. Click to play.' : 'Best ' + best;
+      var top = $('top'); top.textContent = '';
+      order.reverse().slice(0, 8).forEach(function(b, n){
+        var li = document.createElement('li'), a = document.createElement('span'), c = document.createElement('span'), d = document.createElement('span');
+        li.className = (b === me ? 'you' : '') + (b.chat ? ' chat' : '');
+        a.textContent = (n + 1) + '.'; c.textContent = b.name; d.textContent = Math.round(b.m);
+        li.appendChild(a); li.appendChild(c); li.appendChild(d); top.appendChild(li);
+      });
+    }
+  }
+  requestAnimationFrame(step);
+
+  /* ---------- Twitch chat drops in: !join gets a bee with your name, flown by the page ---------- */
+  var sock = null, joined = false;
+  function twitchJoin(channel){
+    if(sock || !channel || !window.WebSocket) return;
+    sock = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+    sock.onopen = function(){ sock.send('NICK justinfan' + Math.floor(10000 + Math.random() * 80000)); sock.send('JOIN #' + channel); joined = true; $('hint').innerHTML = 'Watching on Twitch? Type <b>!join</b> in chat to drop your own bee into the arena.'; };
+    sock.onmessage = function(e){
+      String(e.data).split('\r\n').forEach(function(l){
+        if(l.indexOf('PING') === 0){ sock.send('PONG :tmi.twitch.tv'); return; }
+        var m = /^:(\w+)!\S+ PRIVMSG #\w+ :\s*!join\b/i.exec(l);
+        if(!m || bees.some(function(b){ return b.chat && b.name === m[1]; }) || bees.filter(function(b){ return b.chat; }).length >= 30) return;
+        bee(m[1], {chat: true, m: START * 1.5});
+        say('<b>' + esc(m[1]) + '</b> flew in from chat');
+      });
+    };
+    sock.onclose = function(){ sock = null; setTimeout(function(){ twitchJoin(channel); }, 10000); };
+  }
+  var asked = (/[?&]twitch=([A-Za-z0-9_]{3,25})\b/.exec(q) || [])[1];
+  if(asked) twitchJoin(asked.toLowerCase());
+  else fetch(API + '/overlay/state', {cache: 'no-store'}).then(function(r){ return r.json(); }).then(function(d){
+    var t = d.live && d.live.twitch ? String(d.live.twitch).replace(/^.*twitch\.tv\//i, '').replace(/[^A-Za-z0-9_].*$/, '') : '';
+    if(t) twitchJoin(t.toLowerCase());
+  }).catch(function(){});
+})();
+</script>
+</body>
+</html>
