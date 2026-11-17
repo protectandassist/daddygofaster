@@ -14,6 +14,9 @@
 
     torchhive.com/overlay/            1920x1080, for YouTube and Twitch
     torchhive.com/overlay/?tall       1080x1920, for TikTok
+    torchhive.com/overlay/?both       1920x1080 with everything in the middle column, for a wide
+                                      stream that YouTube also shows upright: its upright copy is
+                                      the middle of the wide picture, so the corners are cut off
     add &chat=0 to leave the chat out, &feed=0 to leave the event lines out,
         &board=0 to leave the ranked list out, &left to put the list on the left
     add &demo to see it moving with pretend bids over a stand-in picture
@@ -118,6 +121,30 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
 .tall .flash{left:50%;top:38vh}
 .tall .flash span{font-size:2.8vh}
 
+/* Wide stream that is also shown upright (YouTube cuts the upright copy from the middle of the wide
+   picture): everything sits inside that middle column, clear of the phone app's own top and bottom. */
+.both{--w:56.25vh;--l:calc(50vw - 28.125vh)}
+.both .board{right:auto;left:calc(var(--l) + 2vh);top:10vh;width:calc(var(--w) - 4vh);padding:1.2vh 1.2vh 1vh}
+.both .row{padding:.7vh 1.1vh .7vh .8vh}
+.both .row__name{font-size:1.8vh}
+.both .row__job{font-size:1.3vh}
+.both .row__amt{font-size:2.2vh}
+.both .row--lead .row__amt{font-size:2.6vh}
+.both .feed{right:auto;left:calc(var(--l) + 2vh);width:calc(var(--w) - 4vh);bottom:41vh;max-height:10.5vh}
+.both .score{left:calc(var(--l) + 2vh);right:calc(var(--l) + 2vh);bottom:26vh;max-width:none;justify-content:center;padding:1.3vh 1.6vh 1.3vh 1.3vh;gap:1.4vh}
+.both .score img{height:7.2vh}
+.both .score__amt{font-size:5.6vh}
+.both .score__k{font-size:1.3vh}
+.both .score__who{font-size:1.7vh;max-width:24vh}
+.both .score__who small{font-size:1.45vh}
+.both .score__side{padding-left:1.5vh}
+.both .score__clock{font-size:3vh}
+.both .score__cta{font-size:1.45vh}
+.both .line{font-size:1.6vh;padding:.8vh 1.2vh}
+.both .flash{left:50%;top:38vh}
+.both .flash span{font-size:3.4vh}
+.both.demo body::before{left:50%}
+
 @keyframes flicker{50%{transform:scale(1.05) rotate(-1.5deg);filter:brightness(1.2)}}
 @keyframes bump{0%{transform:scale(1)}30%{transform:scale(1.16);color:var(--hot)}100%{transform:scale(1)}}
 @keyframes slide{from{transform:translateX(30%);opacity:0}to{transform:none;opacity:1}}
@@ -154,11 +181,11 @@ body{font-family:"Inter",system-ui,sans-serif;color:#F5F5F6;--accent:#EF9502;--h
 <script>
 (function(){
   var API = 'https://dgf-bids.trevor-c2b.workers.dev';
-  var q = location.search, demo = /[?&]demo\b/.test(q), tall = /[?&]tall\b/.test(q);
+  var q = location.search, demo = /[?&]demo\b/.test(q), tall = /[?&]tall\b/.test(q), both = !tall && /[?&]both\b/.test(q);
   var root = document.documentElement;
-  root.className = (tall ? 'tall ' : '') + (demo ? 'demo ' : '') + (/[?&]left\b/.test(q) ? 'left' : '');
+  root.className = (tall ? 'tall ' : '') + (both ? 'both ' : '') + (demo ? 'demo ' : '') + (!both && /[?&]left\b/.test(q) ? 'left' : '');
   var showChat = !/[?&]chat=0\b/.test(q), showFeed = !/[?&]feed=0\b/.test(q), showBoard = !/[?&]board=0\b/.test(q);
-  var MAX_ROWS = tall ? 3 : 5;
+  var MAX_ROWS = tall || both ? 3 : 5;
   var $ = function(id){ return document.getElementById(id); };
   if(!showFeed) $('feed').style.display = 'none';
   if(!showBoard) $('board').style.display = 'none';
