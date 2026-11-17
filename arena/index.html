@@ -4,22 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>Hive Arena — TorchHive</title>
-<meta name="description" content="Hive Arena: steer your bee, gather pollen, grow, and swallow the smaller bees before a bigger one swallows you. Free, in your browser.">
+<meta name="description" content="Hive Arena: fly your bee against everyone else who is on. Gather pollen, leave trails of fire, and be the biggest when the ring of fire closes. Free, in your browser, on a phone or a computer.">
 <meta name="theme-color" content="#0C0D10">
 <link rel="icon" href="/assets/favicon.png" type="image/png" sizes="64x64">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
 <!--
-  Hive Arena: a one-player arena game to play on stream when things are quiet. You are a bee.
-  Pollen makes you bigger; a bee swallows any bee a fifth smaller than itself. Everything runs in
-  this page: the other bees are driven by the page, there is no server and nothing is stored but
-  your best score (in this browser).
+  Hive Arena: one shared arena. Everyone who opens this page flies a bee in the same game, which
+  the bid service runs (service/src/arena.js); this page draws it and sends where you are steering.
 
-  When nobody is steering, the page plays your bee by itself, so the stream never shows a dead
-  screen. Twitch chat can drop in: anyone who types !join gets a bee with their name, flown by
-  the page. The channel comes from the Going-live setting, or add ?twitch=name to the address.
-  Add ?sound=0 for silence.
+  The game plays in rounds. Near the end of a round a ring of fire closes in; the biggest bee when
+  it ends wins, and the break before the next round shows the day's bids.
+
+  When nobody is steering, the service flies your bee, so a stream never shows a dead screen.
+  On the owner's page (signed in as the owner) Twitch chat is passed on to the game: !join drops
+  in a bee, !fire and !honey drop trouble or food by the owner's bee. The channel comes from the
+  Going-live setting, or add ?twitch=name to the address. Add ?sound=0 for silence.
 -->
 <style>
 *{box-sizing:border-box}
@@ -31,38 +32,69 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
 #brand img{height:38px;width:auto}
 #brand b{display:block;font:800 1.15rem "Archivo",sans-serif;line-height:1.1}
 #brand span{font-size:.8rem;color:#B9BCC6}
-#score{left:16px;top:78px;min-width:170px}
+#score{left:16px;top:78px;min-width:176px}
 #score b{font:800 2rem "Archivo",sans-serif;line-height:1;font-variant-numeric:tabular-nums;color:var(--hot)}
 #score span{display:block;font-size:.78rem;color:#B9BCC6}
-#board{right:16px;top:14px;width:230px}
-#board h2{margin:0 0 6px;font:800 .8rem "Archivo",sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--hot)}
-#board ol{list-style:none;margin:0;padding:0}
+#score i{font-style:normal;display:block;margin-top:4px;font-size:.9rem;color:#fff}
+#clock{left:50%;top:14px;transform:translateX(-50%);text-align:center;white-space:nowrap;padding:8px 18px}
+#clock b{font:800 1.5rem "Archivo",sans-serif;font-variant-numeric:tabular-nums;line-height:1.1;display:block}
+#clock span{font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--hot)}
+#clock.closing{border-color:#ff6b70}
+#clock.closing span,#clock.closing b{color:#ff8a70}
+#board{right:16px;top:14px;width:236px}
+#board h2,#rest h2{margin:0 0 6px;font:800 .8rem "Archivo",sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--hot)}
+#board ol,#rest ol{list-style:none;margin:0;padding:0}
 #board li{display:grid;grid-template-columns:1.6em 1fr auto;gap:6px;padding:2px 0;font-size:.88rem;white-space:nowrap}
 #board li span:nth-child(2){overflow:hidden;text-overflow:ellipsis}
 #board li.you{color:var(--hot)}
-#board li.chat span:nth-child(2)::after{content:" · chat";color:#8f939e;font-weight:500}
+#board li.person span:nth-child(2)::before{content:"● ";color:var(--good);font-size:.7em;vertical-align:middle}
 #feed{left:16px;bottom:74px;display:grid;gap:4px;font-size:.86rem;color:#D9DBE1}
 #feed div{background:rgba(21,23,28,.8);border-radius:8px;padding:3px 10px;width:max-content;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #feed b{color:var(--hot)}
 #banner{left:50%;bottom:14px;transform:translateX(-50%);text-align:center;white-space:nowrap;font-size:.95rem}
 #banner b{color:var(--hot)}
 #banner span{display:block;font-size:.8rem;color:#B9BCC6;font-weight:500}
-#center{left:50%;top:42%;transform:translate(-50%,-50%);text-align:center;padding:18px 28px;max-width:min(520px,92vw)}
-#center h1{margin:0 0 6px;font:800 1.9rem "Archivo",sans-serif}
+#center{left:50%;top:40%;transform:translate(-50%,-50%);text-align:center;padding:18px 28px;max-width:min(520px,92vw)}
+#center h1,#rest h1{margin:0 0 6px;font:800 1.9rem "Archivo",sans-serif}
 #center p{margin:0;color:#C9CBD3;font-weight:500}
 #center p b{color:var(--hot)}
+#rest{left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,94vw);padding:20px 24px;text-align:center}
+#rest h1 b{color:var(--hot)}
+#rest .sub{color:#C9CBD3;font-weight:500;margin:0 0 14px}
+#rest ol{text-align:left;margin:0 0 12px}
+#rest li{display:grid;grid-template-columns:1fr auto;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+#rest li:last-child{border-bottom:0}
+#rest li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#rest li small{display:block;font-weight:500;color:#B9BCC6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#rest li b{font:800 1.15rem "Archivo",sans-serif;color:var(--hot)}
+#rest .cta{display:inline-block;background:var(--accent);color:#1b0a02;font-weight:700;border-radius:99px;padding:9px 18px}
+#rest .next{margin-top:12px;font:800 1.2rem "Archivo",sans-serif;font-variant-numeric:tabular-nums}
+#pad{right:14px;bottom:76px;display:none;gap:10px;pointer-events:auto}
+#pad button{width:76px;height:76px;border-radius:50%;border:2px solid rgba(239,149,2,.7);background:rgba(21,23,28,.8);color:#fff;font:800 .9rem "Archivo",sans-serif;-webkit-tap-highlight-color:transparent}
+#pad button:active{background:var(--accent);color:#1b0a02}
+@media(pointer:coarse){#pad{display:flex}}
 [hidden]{display:none!important}
-@media(max-width:700px){#board{width:170px}#board li:nth-child(n+6){display:none}#banner{font-size:.8rem;white-space:normal;width:92vw}#feed{display:none}}
+@media(max-width:700px){#board{width:156px;padding:8px 10px}#board li:nth-child(n+6){display:none}#banner{font-size:.78rem;white-space:normal;width:92vw}#banner span{display:none}#feed{display:none}#brand span{display:none}#clock{top:64px;left:auto;right:16px;transform:none}#score{top:64px}}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div class="hud" id="brand"><img src="/assets/torchhive-mark.png" alt=""><div><b>Hive Arena</b><span>torchhive.com/arena</span></div></div>
-<div class="hud card" id="score"><b id="mass">0</b><span id="best">Best 0</span></div>
-<div class="hud card" id="board"><h2>Biggest bees</h2><ol id="top"></ol></div>
+<div class="hud card" id="score"><b id="mass">0</b><span id="sub">Connecting...</span><i id="ammo" hidden></i></div>
+<div class="hud card" id="clock" hidden><span id="clockK">Round 1</span><b id="clockT">0:00</b></div>
+<div class="hud card" id="board"><h2 id="boardH">Biggest bees</h2><ol id="top"></ol></div>
 <div class="hud" id="feed"></div>
-<div class="hud card" id="banner"><div>The real game: <b>bid on what I do tomorrow</b> at <b>torchhive.com</b></div><span id="hint">Move the mouse to steer. Hold the button or Space to dash.</span></div>
-<div class="hud card" id="center"><h1 id="cTitle">Hive Arena</h1><p id="cText">Gather pollen, grow, and swallow the smaller bees.<br><b>Click to play.</b></p></div>
+<div class="hud card" id="banner"><div>The real game: <b>bid on what I do tomorrow</b> at <b>torchhive.com</b></div><span id="hint">Steer with the mouse. Hold the button or Space to dash and leave fire. Right-click or F shoots a fireball.</span></div>
+<div class="hud card" id="center"><h1 id="cTitle">Hive Arena</h1><p id="cText">Joining the arena...</p></div>
+<div class="hud card" id="rest" hidden>
+  <h1 id="restTitle"></h1>
+  <p class="sub" id="restSub"></p>
+  <h2>Today's bids</h2>
+  <ol id="bids"></ol>
+  <div class="cta">Bid on what I do tomorrow at torchhive.com</div>
+  <div class="next" id="restNext"></div>
+</div>
+<div class="hud" id="pad"><button id="padFire" type="button" hidden>FIRE</button><button id="padDash" type="button">DASH</button></div>
 <script>
 (function(){
   var API = 'https://dgf-bids.trevor-c2b.workers.dev';
@@ -72,39 +104,108 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
   function size(){ DPR = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight; canvas.width = W * DPR; canvas.height = H * DPR; }
   addEventListener('resize', size); size();
 
-  var WORLD = 3000, POLLEN = 760, BOTS = 26, START = 20, EAT = 1.2;
   var COLORS = ['#ff5a3c', '#ff9f1c', '#ffd23f', '#3dd68c', '#4cc9f0', '#b388ff', '#ff7ab6', '#aab3c2', '#7bd389', '#f4a261'];
-  var ADJ = ['Lucky', 'Swift', 'Golden', 'Smoky', 'Bold', 'Sly', 'Sunny', 'Mighty', 'Quiet', 'Wild', 'Amber', 'Brave', 'Fuzzy', 'Nimble', 'Rusty', 'Jolly'];
-  var NOUN = ['Drone', 'Ember', 'Spark', 'Comet', 'Badger', 'Falcon', 'Otter', 'Hornet', 'Lantern', 'Rocket', 'Maple', 'Bandit', 'Pepper', 'Tiger', 'Walrus', 'Moose'];
-  function rnd(a, b){ return a + Math.random() * (b - a); }
-  function pickOf(list){ return list[Math.floor(Math.random() * list.length)]; }
+  var ICON = {fireball: '🔥', smoke: '💨', honey: '🍯', jelly: '⭐'};
+  var PICKED = {fireball: 'fireballs', smoke: 'smoke', honey: 'a honey trail', jelly: 'royal jelly'};
   function radius(m){ return Math.sqrt(m) * 4.2; }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
+  function mmss(ms){ var s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + (s % 60 < 10 ? '0' : '') + s % 60; }
 
-  var bees = [], pollen = [], me = null, auto = true, lastInput = 0, best = 0, mouse = {x: 0, y: 0, down: false}, keys = {}, cam = {x: WORLD / 2, y: WORLD / 2, z: 1}, deadFor = 0, killer = '';
-  try { best = Number(localStorage.getItem('thArenaBest')) || 0; } catch (e) {}
-
-  function grain(x, y, m){ return {x: x === undefined ? rnd(30, WORLD - 30) : x, y: y === undefined ? rnd(30, WORLD - 30) : y, m: m || 1, c: Math.random() < .12 ? '#fff3c4' : '#FFC857'}; }
-  function bee(name, opts){
-    var b = {name: name, x: rnd(200, WORLD - 200), y: rnd(200, WORLD - 200), m: START * rnd(.8, 1.6), a: rnd(0, 6.28), tx: 0, ty: 0, think: 0, dash: 0, color: pickOf(COLORS), bot: true, chat: false, born: performance.now()};
-    for(var k in (opts || {})) b[k] = opts[k];
-    /* never drop a new bee on top of a bigger one */
-    for(var tries = 0; tries < 12; tries++){
-      var ok = bees.every(function(o){ return Math.hypot(o.x - b.x, o.y - b.y) > radius(o.m) + 260; });
-      if(ok) break;
-      b.x = rnd(200, WORLD - 200); b.y = rnd(200, WORLD - 200);
+  var guest = null, session = null;
+  try {
+    session = localStorage.getItem('dgfSession') || null;
+    guest = localStorage.getItem('thPlayer');
+    if(!/^[a-f0-9]{32}$/.test(guest || '')){
+      var bytes = new Uint8Array(16); crypto.getRandomValues(bytes);
+      guest = Array.prototype.map.call(bytes, function(b){ return (b < 16 ? '0' : '') + b.toString(16); }).join('');
+      localStorage.setItem('thPlayer', guest);
     }
-    bees.push(b);
-    return b;
-  }
-  function botName(){ for(var i = 0; i < 20; i++){ var n = pickOf(ADJ) + ' ' + pickOf(NOUN); if(!bees.some(function(b){ return b.name === n; })) return n; } return 'Bee ' + Math.floor(rnd(10, 99)); }
-  function spawnMe(){ me = bee('You', {bot: false, m: START, color: '#EF9502'}); deadFor = 0; }
-  for(var i = 0; i < POLLEN; i++) pollen.push(grain());
-  for(i = 0; i < BOTS; i++) bee(botName());
-  spawnMe();
+  } catch (e) {}
+  if(!guest){ guest = ''; for(var i = 0; i < 32; i++) guest += Math.floor(Math.random() * 16).toString(16); }
 
-  /* ---------- sound: small, and only after the first click (browsers require it) ---------- */
+  /* ---------- what the service has told us ---------- */
+  var R = 1500, ws = null, live = false, myId = null, myName = '', owner = false, killer = null, wins = 0;
+  var roster = {}, bees = {}, pollen = {}, patches = {}, shots = [], pickups = [], ring = 1500, phase = 'play', phaseEnds = 0, roundNo = 1, winner = null, roundLen = 180;
+  var offset = null, lastN = 0, auto = true, lastInput = 0, cam = {x: 1500, y: 1500, z: 1}, shake = 0, sparks = [];
+  var mouse = {x: innerWidth / 2, y: innerHeight / 2, down: false}, keys = {}, padDash = false;
+  function simNow(){ return offset === null ? 0 : performance.now() + offset; }
+
+  function take(m){
+    var now = performance.now(), est = m.n - now;
+    /* the service's clock, as seen from here: the freshest packet sets it, and it drifts back slowly */
+    offset = offset === null || est > offset ? est : offset + (est - offset) * .02;
+    lastN = m.n; ring = m.ring; phase = m.ph; phaseEnds = m.n + m.left; roundNo = m.round; winner = m.win;
+    var seen = {};
+    m.b.forEach(function(v){
+      var b = bees[v[0]] || (bees[v[0]] = {});
+      b.p = b.c || {n: m.n - 100, x: v[1], y: v[2], m: v[3], a: v[4]};
+      b.c = {n: m.n, x: v[1], y: v[2], m: v[3], a: v[4]}; b.flags = v[5]; b.fb = v[6];
+      seen[v[0]] = 1;
+    });
+    Object.keys(bees).forEach(function(id){ if(!seen[id]) delete bees[id]; });
+    shots = m.sh; pickups = m.pk;
+    if(m.ro){ roster = {}; m.ro.forEach(function(r){ roster[r[0]] = {name: r[1], kind: r[2], owner: r[3], bidder: r[4]}; }); }
+  }
+  function onFull(m){
+    R = m.R || R; pollen = {}; patches = {}; bees = {}; sparks = [];
+    roundLen = m.cfg ? m.cfg.round : roundLen;
+    m.p.forEach(function(g){ pollen[g[0]] = g; });
+    m.f.forEach(function(f){ patches[f[0]] = {x: f[1], y: f[2], r: f[3], until: m.n + f[4], kind: f[5]}; });
+    take(m);
+    if(m.you) onYou(m.you);
+    if(m.name !== undefined){ myName = m.name; owner = Boolean(m.owner); if(owner) chatRelay(); }
+    live = true;
+    if(phase === 'rest') showRest(); else $('rest').hidden = true;
+    card();
+  }
+  function onSnap(m){
+    m.pa.forEach(function(g){ pollen[g[0]] = g; });
+    m.pd.forEach(function(id){ delete pollen[id]; });
+    m.fa.forEach(function(f){ patches[f[0]] = {x: f[1], y: f[2], r: f[3], until: m.n + f[4], kind: f[5]}; });
+    var was = phase;
+    take(m);
+    m.ev.forEach(event);
+    if(phase === 'rest' && was !== 'rest') showRest();
+  }
+  function onYou(m){
+    var had = myId; myId = m.id; killer = m.killer; wins = m.wins || 0;
+    if(had && !myId && phase === 'play'){ boom(180, .5, .14, 'sawtooth'); shake = 14; }
+    card();
+  }
+
+  /* ---------- the card in the middle: joining, on autopilot, swallowed ---------- */
+  function card(){
+    var c = $('center'), show = true;
+    if(!live){ $('cTitle').textContent = 'Hive Arena'; $('cText').textContent = 'Joining the arena...'; }
+    else if(phase === 'rest') show = false;
+    else if(auto){ $('cTitle').textContent = 'Hive Arena'; $('cText').innerHTML = 'Everyone here is in the same arena. Grow, leave fire, and be the biggest when the ring closes.<br><b>Click or tap to fly your bee.</b>'; }
+    else if(!myId){ $('cTitle').textContent = killer ? 'Burned by ' + killer : 'Out'; if(killer && !/fire/.test(killer)) $('cTitle').textContent = 'Swallowed by ' + killer; $('cText').innerHTML = '<b>Click, tap or press Space</b> to fly again.'; }
+    else show = false;
+    c.hidden = !show;
+  }
+
+  /* ---------- the break between rounds: who won, and the day's bids ---------- */
+  function showRest(){
+    $('restTitle').innerHTML = winner ? '<b>' + esc(winner.name) + '</b> wins round ' + roundNo : 'Round ' + roundNo + ' is over';
+    $('restSub').textContent = winner ? (winner.name === myName ? 'That is you. ' : '') + 'Biggest bee when the fire closed, at ' + winner.m + '.' : '';
+    $('rest').hidden = false; card();
+    var list = $('bids');
+    fetch(API + '/board', {cache: 'no-store'}).then(function(r){ return r.json(); }).then(function(d){
+      var bids = (d.bids || []).slice(0, 5); list.textContent = '';
+      if(!bids.length){ var li = document.createElement('li'), s = document.createElement('span'); s.textContent = d.status === 'open' ? 'No bids yet. The reserve is 50¢, so the first bid leads.' : 'Bidding is closed right now.'; li.appendChild(s); list.appendChild(li); return; }
+      bids.forEach(function(b, n){
+        var li = document.createElement('li'), s = document.createElement('span'), amt = document.createElement('b');
+        s.textContent = (n + 1) + '. ' + b.name;
+        if(b.task){ var t = document.createElement('small'); t.textContent = b.task; s.appendChild(t); }
+        amt.textContent = '$' + (b.amountCents / 100).toFixed(2);
+        li.appendChild(s); li.appendChild(amt); list.appendChild(li);
+      });
+    }).catch(function(){});
+  }
+
+  /* ---------- sound, sparks and the feed ---------- */
   var audio = null;
-  function blip(hz, len, vol, type){
+  function boom(hz, len, vol, type){
     if(!soundOn || !audio) return;
     try {
       var o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime;
@@ -113,187 +214,217 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
       o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + len + .02);
     } catch (e) {}
   }
-
-  /* ---------- the feed of who swallowed whom ---------- */
+  function burst(x, y, color, n){ for(var k = 0; k < n; k++){ var a = Math.random() * 6.28, v = 60 + Math.random() * 260; sparks.push({x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: .6 + Math.random() * .4, c: color}); } if(sparks.length > 300) sparks.splice(0, sparks.length - 300); }
   function say(html){
     var f = $('feed'), d = document.createElement('div');
     d.innerHTML = html; f.appendChild(d);
-    while(f.children.length > 4) f.removeChild(f.firstChild);
+    while(f.children.length > 5) f.removeChild(f.firstChild);
     setTimeout(function(){ if(d.parentNode) d.parentNode.removeChild(d); }, 7000);
   }
-  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
+  function who(name){ return '<b>' + esc(name === myName && myName ? 'You' : name) + '</b>'; }
+  function event(e){
+    var mine = myId && (e.ai === myId || e.bi === myId);
+    if(e.k === 'eat'){ say(who(e.a) + ' swallowed ' + who(e.b)); burst(e.x, e.y, '#FFC857', 14); if(e.ai === myId){ boom(520, .16, .12, 'triangle'); shake = 6; } }
+    else if(e.k === 'burn'){ say(e.a ? who(e.a) + ' burned ' + who(e.b) : who(e.b) + ' burned up'); burst(e.x, e.y, '#ff6b3c', 22); if(e.ai === myId) boom(420, .2, .12, 'triangle'); }
+    else if(e.k === 'ring'){ say(who(e.b) + ' was caught by the ring of fire'); burst(e.x, e.y, '#ff6b3c', 22); }
+    else if(e.k === 'hit'){ if(e.bi === myId){ shake = 10; boom(140, .2, .12, 'sawtooth'); } }
+    else if(e.k === 'pick'){ if(e.ai === myId){ say('You picked up <b>' + PICKED[e.what] + '</b>'); boom(880, .12, .1); } }
+    else if(e.k === 'wasp'){ say('<b>The Wasp</b> is hunting the crown'); boom(110, .6, .1, 'sawtooth'); }
+    else if(e.k === 'sting'){ say('The Wasp stung ' + who(e.b)); if(e.bi === myId) shake = 12; }
+    else if(e.k === 'streak') say(who(e.a) + ' is on a streak of <b>' + e.n + '</b>');
+    else if(e.k === 'crown') say(who(e.a) + ' brought down the crowned bee');
+    else if(e.k === 'chat') say('<b>' + esc(e.a) + '</b> ' + (e.what === 'join' ? 'flew in from chat' : e.what === 'fire' ? 'set a fire in front of ' + who(e.b) : 'dropped honey for ' + who(e.b)));
+    else if(e.k === 'win' && e.a) boom(660, .5, .12, 'triangle');
+  }
+
+  /* ---------- talking to the service ---------- */
+  function send(m){ if(ws && ws.readyState === 1) ws.send(JSON.stringify(m)); }
+  function connect(){
+    var headers = {'Content-Type': 'application/json'};
+    if(session) headers['Authorization'] = 'Bearer ' + session;
+    fetch(API + '/arena/join', {method: 'POST', headers: headers, body: JSON.stringify({g: guest}), cache: 'no-store'})
+      .then(function(r){ return r.json().then(function(d){ if(!r.ok) throw new Error(d.message || 'The arena is not answering.'); return d; }); })
+      .then(function(d){
+        var s = ws = new WebSocket(API.replace(/^http/, 'ws') + '/arena/ws?t=' + d.ticket);
+        s.onmessage = function(e){
+          var m; try { m = JSON.parse(e.data); } catch (err) { return; }
+          if(m.t === 'f'){ onFull(m); if(!auto) send({t: 'i', auto: false}); }
+          else if(m.t === 's'){ if(live) onSnap(m); }
+          else if(m.t === 'y') onYou(m);
+        };
+        s.onclose = function(e){ if(ws !== s) return; ws = null; live = false; offset = null; $('sub').textContent = e.code === 4000 ? 'Opened in another tab.' : 'Reconnecting...'; card(); if(e.code !== 4000) setTimeout(connect, 2000); };
+      })
+      .catch(function(err){ $('cText').textContent = (err && err.message) || 'The arena is not answering. Trying again...'; $('center').hidden = false; setTimeout(connect, 5000); });
+  }
+  connect();
 
   /* ---------- input ---------- */
-  function took(){ lastInput = performance.now(); if(auto){ auto = false; $('center').hidden = true; } }
+  function took(){
+    lastInput = performance.now();
+    if(!audio && soundOn) try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+    if(auto){ auto = false; send({t: 'i', auto: false, go: 1}); card(); }
+    else if(!myId && phase === 'play') send({t: 'i', go: 1});
+  }
+  function fire(){ took(); send({t: 'i', f: 1}); }
   canvas.addEventListener('mousemove', function(e){ mouse.x = e.clientX; mouse.y = e.clientY; if(!auto) lastInput = performance.now(); });
-  canvas.addEventListener('mousedown', function(e){
-    mouse.x = e.clientX; mouse.y = e.clientY;
-    if(!audio && soundOn) try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (err) {}
-    if(auto || !me){ if(!me) spawnMe(); took(); return; }
-    mouse.down = true; took();
-  });
+  canvas.addEventListener('mousedown', function(e){ mouse.x = e.clientX; mouse.y = e.clientY; if(e.button === 2){ fire(); return; } var was = auto || !myId; took(); if(!was) mouse.down = true; });
+  canvas.addEventListener('contextmenu', function(e){ e.preventDefault(); });
   addEventListener('mouseup', function(){ mouse.down = false; });
-  canvas.addEventListener('touchstart', function(e){ var t = e.touches[0]; mouse.x = t.clientX; mouse.y = t.clientY; if(!me) spawnMe(); took(); mouse.down = e.touches.length > 1; e.preventDefault(); }, {passive: false});
+  canvas.addEventListener('touchstart', function(e){ var t = e.touches[0]; mouse.x = t.clientX; mouse.y = t.clientY; took(); e.preventDefault(); }, {passive: false});
   canvas.addEventListener('touchmove', function(e){ var t = e.touches[0]; mouse.x = t.clientX; mouse.y = t.clientY; lastInput = performance.now(); e.preventDefault(); }, {passive: false});
-  canvas.addEventListener('touchend', function(e){ mouse.down = e.touches.length > 1; });
+  $('padDash').addEventListener('touchstart', function(e){ padDash = true; took(); e.preventDefault(); }, {passive: false});
+  $('padDash').addEventListener('touchend', function(){ padDash = false; });
+  $('padFire').addEventListener('touchstart', function(e){ fire(); e.preventDefault(); }, {passive: false});
   addEventListener('keydown', function(e){
+    if(e.repeat) return;
     keys[e.code] = true;
-    if(e.code === 'Space' || e.code === 'Enter'){ if(!me) spawnMe(); took(); e.preventDefault(); }
-    if(/^(Arrow|Key[WASD])/.test(e.code)) took();
+    if(e.code === 'Space' || e.code === 'Enter'){ took(); e.preventDefault(); }
+    else if(e.code === 'KeyF' || e.code === 'KeyE') fire();
+    else if(/^(Arrow|Key[WASD])/.test(e.code)) took();
   });
   addEventListener('keyup', function(e){ keys[e.code] = false; });
+  /* ten times a second: where the bee should head, and whether it is dashing */
+  setInterval(function(){
+    if(!live || auto) return;
+    if(performance.now() - lastInput > 25000){ auto = true; send({t: 'i', auto: true}); card(); return; }   /* nobody at the controls: the service takes the stick back */
+    var me = pos(myId);
+    if(!me) return;
+    var kx = (keys.ArrowRight || keys.KeyD ? 1 : 0) - (keys.ArrowLeft || keys.KeyA ? 1 : 0), ky = (keys.ArrowDown || keys.KeyS ? 1 : 0) - (keys.ArrowUp || keys.KeyW ? 1 : 0);
+    var x = kx || ky ? me.x + kx * 400 : cam.x + (mouse.x - W / 2) / cam.z, y = kx || ky ? me.y + ky * 400 : cam.y + (mouse.y - H / 2) / cam.z;
+    send({t: 'i', x: Math.round(x), y: Math.round(y), d: mouse.down || keys.Space || padDash ? 1 : 0});
+  }, 100);
 
-  /* ---------- the bees the page flies ---------- */
-  function think(b){
-    var r = radius(b.m), flee = null, fd = 1e9, prey = null, pd = 1e9, see = 420 + r * 2, j, o, d;
-    for(j = 0; j < bees.length; j++){
-      o = bees[j]; if(o === b) continue;
-      d = Math.hypot(o.x - b.x, o.y - b.y) - radius(o.m);
-      if(d > see) continue;
-      if(o.m > b.m * EAT && d < fd){ fd = d; flee = o; }
-      else if(b.m > o.m * EAT && d < pd){ pd = d; prey = o; }
-    }
-    if(flee && fd < 300 + r){ b.tx = b.x + (b.x - flee.x) * 4; b.ty = b.y + (b.y - flee.y) * 4; b.dash = fd < 90 && b.m > 34 && Math.random() < .5 ? .5 : b.dash; return; }
-    if(prey && pd < 380){ b.tx = prey.x; b.ty = prey.y; if(pd < 110 && b.m > 40 && Math.random() < .35) b.dash = .45; return; }
-    /* otherwise the nearest pollen, looking at a sample so it stays cheap */
-    var bestP = null, bd = 1e9;
-    for(j = 0; j < 40; j++){ o = pollen[Math.floor(Math.random() * pollen.length)]; d = (o.x - b.x) * (o.x - b.x) + (o.y - b.y) * (o.y - b.y); if(d < bd){ bd = d; bestP = o; } }
-    if(bestP){ b.tx = bestP.x; b.ty = bestP.y; }
+  /* ---------- drawing ---------- */
+  /* Where a bee is right now: a tenth of a second behind the service, eased between the last two reports. */
+  function pos(id){
+    var b = bees[id]; if(!b || !b.c) return null;
+    var t = simNow() - 110, f = b.c.n === b.p.n ? 1 : Math.max(0, Math.min(1.2, (t - b.p.n) / (b.c.n - b.p.n)));
+    var da = ((b.c.a - b.p.a + 9.42478) % 6.28318) - 3.14159;
+    return {x: b.p.x + (b.c.x - b.p.x) * f, y: b.p.y + (b.c.y - b.p.y) * f, m: b.p.m + (b.c.m - b.p.m) * Math.min(1, f), a: b.p.a + da * Math.min(1, f), flags: b.flags, fb: b.fb};
   }
-
-  function swallow(a, b){
-    a.m += b.m * .8;
-    bees.splice(bees.indexOf(b), 1);
-    for(var k = 0; k < Math.min(14, Math.floor(b.m / 6)); k++) pollen.push(grain(b.x + rnd(-40, 40), b.y + rnd(-40, 40), 2));
-    if(a === me || b === me || a.chat || b.chat || b.m > 120) say('<b>' + esc(a === me ? 'You' : a.name) + '</b> swallowed ' + esc(b === me ? 'you' : b.name));
-    if(a === me) blip(520, .16, .12, 'triangle');
-    if(b === me){ killer = a.name; me = null; deadFor = 0; blip(180, .5, .14, 'sawtooth'); if(!auto){ $('cTitle').textContent = 'Swallowed by ' + killer; $('cText').innerHTML = 'You got to <b>' + Math.round(b.m) + '</b>. <b>Click or press Space</b> to go again.'; $('center').hidden = false; } }
-    else if(!b.chat) setTimeout(function(){ if(bees.filter(function(x){ return x.bot && !x.chat; }).length < BOTS) bee(botName()); }, 1500);
-  }
-
-  var last = performance.now();
-  function step(now){
-    var dt = Math.min(.05, (now - last) / 1000); last = now;
-    /* nobody at the controls for a while: the page takes the stick back */
-    if(!auto && now - lastInput > 25000){ auto = true; $('cTitle').textContent = 'Hive Arena'; $('cText').innerHTML = 'The page is flying this bee.<br><b>Click to take over.</b>'; $('center').hidden = false; }
-    if(!me){ deadFor += dt; if(auto && deadFor > 2.5) spawnMe(); }
-    var i, b, r, sp, dx, dy, d, j, p;
-    for(i = 0; i < bees.length; i++){
-      b = bees[i]; r = radius(b.m);
-      if(b === me && !auto){
-        var kx = (keys.ArrowRight || keys.KeyD ? 1 : 0) - (keys.ArrowLeft || keys.KeyA ? 1 : 0), ky = (keys.ArrowDown || keys.KeyS ? 1 : 0) - (keys.ArrowUp || keys.KeyW ? 1 : 0);
-        if(kx || ky){ b.tx = b.x + kx * 400; b.ty = b.y + ky * 400; }
-        else { b.tx = cam.x + (mouse.x - W / 2) / cam.z; b.ty = cam.y + (mouse.y - H / 2) / cam.z; }
-        if((mouse.down || keys.Space) && b.dash <= 0 && b.m > 26){ b.dash = .45; b.m *= .94; pollen.push(grain(b.x - Math.cos(b.a) * r, b.y - Math.sin(b.a) * r, 1)); blip(700, .08, .05); }
-      } else { b.think -= dt; if(b.think <= 0){ b.think = rnd(.18, .4); think(b); } }
-      dx = b.tx - b.x; dy = b.ty - b.y; d = Math.hypot(dx, dy);
-      sp = 300 / (1 + r / 70) * (b.dash > 0 ? 2.3 : 1) * Math.min(1, d / 30);
-      if(b.dash > 0) b.dash -= dt;
-      if(d > 1){
-        var want = Math.atan2(dy, dx), turn = ((want - b.a + 9.4248) % 6.2832) - 3.1416;
-        b.a += Math.max(-8 * dt, Math.min(8 * dt, turn));
-        b.x += Math.cos(b.a) * sp * dt; b.y += Math.sin(b.a) * sp * dt;
-      }
-      b.x = Math.max(r, Math.min(WORLD - r, b.x)); b.y = Math.max(r, Math.min(WORLD - r, b.y));
-      if(b.m > 150) b.m -= b.m * .004 * dt;   /* the big ones slowly shrink, so nobody stays on top for free */
-      for(j = pollen.length - 1; j >= 0; j--){
-        p = pollen[j];
-        if(Math.abs(p.x - b.x) < r && Math.abs(p.y - b.y) < r && Math.hypot(p.x - b.x, p.y - b.y) < r){ b.m += p.m; pollen[j] = pollen[pollen.length - 1]; pollen.pop(); }
-      }
-    }
-    while(pollen.length < POLLEN) pollen.push(grain());
-    /* swallowing: the bigger bee must be a fifth bigger and cover most of the smaller one */
-    for(i = 0; i < bees.length; i++) for(j = 0; j < bees.length; j++){
-      var a = bees[i]; b = bees[j];
-      if(!a || !b || a === b || a.m < b.m * EAT) continue;
-      if(Math.hypot(a.x - b.x, a.y - b.y) < radius(a.m) - radius(b.m) * .35){ swallow(a, b); i = -1; break; }
-    }
-    if(me && Math.round(me.m) > best && !auto){ best = Math.round(me.m); try { localStorage.setItem('thArenaBest', best); } catch (e) {} }
-    /* the camera follows your bee, or the biggest one while you are out */
-    var f = me || bees.slice().sort(function(x, y){ return y.m - x.m; })[0];
-    if(f){ var z = Math.max(.42, Math.min(1.15, 1.25 / (1 + radius(f.m) / 110))) * Math.min(1.4, Math.max(.6, Math.min(W, H) / 800)); cam.x += (f.x - cam.x) * Math.min(1, dt * 5); cam.y += (f.y - cam.y) * Math.min(1, dt * 5); cam.z += (z - cam.z) * Math.min(1, dt * 2); }
-    draw(now);
-    requestAnimationFrame(step);
-  }
-
-  function drawBee(b, now){
-    var r = radius(b.m), flap = Math.sin(now / 38 + b.born) * .35;
-    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.a);
+  function drawBee(id, p, now){
+    var info = roster[id] || {name: '', kind: 'b'}, r = radius(p.m), mine = id === myId, wasp = info.kind === 'w', flap = Math.sin(now / 38 + id) * .35;
+    ctx.save();
+    if(p.flags & 2) ctx.globalAlpha = mine ? .5 : .16;   /* in smoke */
+    ctx.translate(p.x, p.y); ctx.rotate(p.a);
     ctx.fillStyle = 'rgba(255,255,255,.55)';
     ctx.beginPath(); ctx.ellipse(-r * .15, -r * .95, r * .5, r * (.55 + flap * .25), -.5, 0, 6.2832); ctx.fill();
     ctx.beginPath(); ctx.ellipse(-r * .15, r * .95, r * .5, r * (.55 - flap * .25), .5, 0, 6.2832); ctx.fill();
-    ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.2832); ctx.fillStyle = b.color; ctx.fill();
-    ctx.save(); ctx.clip(); ctx.fillStyle = 'rgba(20,10,2,.8)';
+    if(wasp){ ctx.beginPath(); ctx.moveTo(-r * 1.9, 0); ctx.lineTo(-r * .7, -r * .35); ctx.lineTo(-r * .7, r * .35); ctx.closePath(); ctx.fillStyle = '#ff3b3b'; ctx.fill(); }
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.2832); ctx.fillStyle = wasp ? '#2a1010' : mine ? '#EF9502' : COLORS[id % 10]; ctx.fill();
+    ctx.save(); ctx.clip(); ctx.fillStyle = wasp ? '#ffd23f' : 'rgba(20,10,2,.8)';
     ctx.fillRect(-r * .62, -r, r * .28, r * 2); ctx.fillRect(-r * .1, -r, r * .28, r * 2);
     ctx.restore();
     ctx.beginPath(); ctx.arc(r * .62, 0, r * .42, 0, 6.2832); ctx.fillStyle = '#1b0a02'; ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(r * .78, -r * .16, r * .09, 0, 6.2832); ctx.arc(r * .78, r * .16, r * .09, 0, 6.2832); ctx.fill();
-    ctx.lineWidth = Math.max(2, r * .07); ctx.strokeStyle = b === me ? '#fff' : 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.2832); ctx.stroke();
+    ctx.fillStyle = wasp ? '#ff3b3b' : '#fff'; ctx.beginPath(); ctx.arc(r * .78, -r * .16, r * .09, 0, 6.2832); ctx.arc(r * .78, r * .16, r * .09, 0, 6.2832); ctx.fill();
+    ctx.lineWidth = Math.max(2, r * .07); ctx.strokeStyle = p.flags & 16 ? '#ff5a3c' : mine ? '#fff' : info.owner ? '#FFD76A' : 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.2832); ctx.stroke();
     ctx.restore();
-    var fs = Math.max(13 / cam.z, Math.min(r * .42, 34));
+    if(p.flags & 2 && !mine) return;
+    var fs = Math.max(13 / cam.z, Math.min(r * .42, 34)), label = (p.flags & 4 ? '👑 ' : '') + (mine ? 'You' : info.name) + (info.owner && !mine ? ' ★' : '');
     ctx.font = '700 ' + fs + 'px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.lineWidth = fs * .22; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.fillStyle = b === me ? '#FFE9B0' : '#fff';
-    ctx.strokeText(b.name, b.x, b.y - r - fs * .9); ctx.fillText(b.name, b.x, b.y - r - fs * .9);
+    ctx.lineWidth = fs * .22; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.fillStyle = wasp ? '#ff8a8a' : mine ? '#FFE9B0' : info.kind === 'p' ? '#fff' : '#C9CBD3';
+    ctx.strokeText(label, p.x, p.y - r - fs * .9); ctx.fillText(label, p.x, p.y - r - fs * .9);
   }
 
-  var boardAt = 0;
-  function draw(now){
+  var last = performance.now(), hudAt = 0;
+  function frame(now){
+    var dt = Math.min(.05, (now - last) / 1000); last = now;
+    var sim = simNow(), all = [], me = null, biggest = null;
+    Object.keys(bees).forEach(function(id){ var p = pos(id); if(!p) return; id = Number(id); all.push([id, p]); if(id === myId) me = p; if(!biggest || p.m > biggest.m) biggest = p; });
+    var f = me || biggest;
+    if(f){ var z = Math.max(.42, Math.min(1.15, 1.25 / (1 + radius(f.m) / 110))) * Math.min(1.4, Math.max(.6, Math.min(W, H) / 800)); cam.x += (f.x - cam.x) * Math.min(1, dt * 6); cam.y += (f.y - cam.y) * Math.min(1, dt * 6); cam.z += (z - cam.z) * Math.min(1, dt * 2); }
+    shake = Math.max(0, shake - dt * 30);
+
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    ctx.fillStyle = '#0C0D10'; ctx.fillRect(0, 0, W, H);
-    ctx.translate(W / 2, H / 2); ctx.scale(cam.z, cam.z); ctx.translate(-cam.x, -cam.y);
-    var vw = W / cam.z / 2 + 80, vh = H / cam.z / 2 + 80, x0 = cam.x - vw, x1 = cam.x + vw, y0 = cam.y - vh, y1 = cam.y + vh, g = 90, x, y, i;
-    ctx.fillStyle = '#121419'; ctx.fillRect(0, 0, WORLD, WORLD);
+    ctx.fillStyle = '#07080a'; ctx.fillRect(0, 0, W, H);
+    ctx.translate(W / 2 + (Math.random() - .5) * shake, H / 2 + (Math.random() - .5) * shake); ctx.scale(cam.z, cam.z); ctx.translate(-cam.x, -cam.y);
+    var vw = W / cam.z / 2 + 80, vh = H / cam.z / 2 + 80, x0 = cam.x - vw, x1 = cam.x + vw, y0 = cam.y - vh, y1 = cam.y + vh, g = 90, x, y, k;
+    ctx.fillStyle = '#121419'; ctx.beginPath(); ctx.arc(R, R, R, 0, 6.2832); ctx.fill();
     /* a honeycomb of dots, cheap to draw and enough to show movement */
     ctx.fillStyle = 'rgba(239,149,2,.16)';
-    for(y = Math.max(0, Math.floor(y0 / g) * g); y <= Math.min(WORLD, y1); y += g){
+    for(y = Math.max(0, Math.floor(y0 / g) * g); y <= Math.min(2 * R, y1); y += g){
       var off = (Math.round(y / g) % 2) * g / 2;
-      for(x = Math.max(0, Math.floor(x0 / g) * g) + off; x <= Math.min(WORLD, x1); x += g){ ctx.beginPath(); ctx.arc(x, y, 3, 0, 6.2832); ctx.fill(); }
+      for(x = Math.max(0, Math.floor(x0 / g) * g) + off; x <= Math.min(2 * R, x1); x += g){ if((x - R) * (x - R) + (y - R) * (y - R) < R * R){ ctx.beginPath(); ctx.arc(x, y, 3, 0, 6.2832); ctx.fill(); } }
     }
-    ctx.lineWidth = 10; ctx.strokeStyle = 'rgba(239,149,2,.6)'; ctx.strokeRect(0, 0, WORLD, WORLD);
-    for(i = 0; i < pollen.length; i++){
-      var p = pollen[i]; if(p.x < x0 || p.x > x1 || p.y < y0 || p.y > y1) continue;
-      ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, 5 + p.m * 1.5, 0, 6.2832); ctx.fill();
+    /* outside the ring everything burns */
+    if(ring < R - 1){
+      ctx.beginPath(); ctx.arc(R, R, R, 0, 6.2832); ctx.arc(R, R, ring, 0, 6.2832, true);
+      ctx.fillStyle = 'rgba(255,' + Math.round(70 + 30 * Math.sin(now / 130)) + ',20,.34)'; ctx.fill();
+      ctx.lineWidth = 12 + 5 * Math.sin(now / 90); ctx.strokeStyle = '#ff7a1a'; ctx.shadowColor = '#ff4d00'; ctx.shadowBlur = 40; ctx.beginPath(); ctx.arc(R, R, ring, 0, 6.2832); ctx.stroke(); ctx.shadowBlur = 0;
     }
-    var order = bees.slice().sort(function(a, b){ return a.m - b.m; });
-    for(i = 0; i < order.length; i++){ var b = order[i], r = radius(b.m) * 2 + 60; if(b.x < x0 - r || b.x > x1 + r || b.y < y0 - r || b.y > y1 + r) continue; drawBee(b, now); }
-    if(now - boardAt > 400){
-      boardAt = now;
-      $('mass').textContent = me ? Math.round(me.m) : 0;
-      $('best').textContent = auto ? 'The page is flying. Click to play.' : 'Best ' + best;
-      var top = $('top'); top.textContent = '';
-      order.reverse().slice(0, 8).forEach(function(b, n){
-        var li = document.createElement('li'), a = document.createElement('span'), c = document.createElement('span'), d = document.createElement('span');
-        li.className = (b === me ? 'you' : '') + (b.chat ? ' chat' : '');
-        a.textContent = (n + 1) + '.'; c.textContent = b.name; d.textContent = Math.round(b.m);
-        li.appendChild(a); li.appendChild(c); li.appendChild(d); top.appendChild(li);
-      });
-    }
-  }
-  requestAnimationFrame(step);
+    ctx.lineWidth = 10; ctx.strokeStyle = 'rgba(239,149,2,.6)'; ctx.beginPath(); ctx.arc(R, R, R, 0, 6.2832); ctx.stroke();
+    Object.keys(patches).forEach(function(id){
+      var p = patches[id]; if(p.until <= sim){ delete patches[id]; return; }
+      if(p.x < x0 - 60 || p.x > x1 + 60 || p.y < y0 - 60 || p.y > y1 + 60) return;
+      var life = Math.min(1, (p.until - sim) / 900), rr = p.r * (p.kind === 'h' ? 1 : .85 + .2 * Math.sin(now / 70 + id));
+      ctx.globalAlpha = life * (p.kind === 'h' ? .5 : .75);
+      ctx.fillStyle = p.kind === 'h' ? '#c98a12' : '#ff6a1a'; ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, 6.2832); ctx.fill();
+      if(p.kind !== 'h'){ ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(p.x, p.y, rr * .5, 0, 6.2832); ctx.fill(); }
+      ctx.globalAlpha = 1;
+    });
+    Object.keys(pollen).forEach(function(id){
+      var p = pollen[id]; if(p[1] < x0 || p[1] > x1 || p[2] < y0 || p[2] > y1) return;
+      ctx.fillStyle = id % 8 ? '#FFC857' : '#fff3c4'; ctx.beginPath(); ctx.arc(p[1], p[2], 5 + p[3] * 1.5, 0, 6.2832); ctx.fill();
+    });
+    pickups.forEach(function(p){
+      ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.strokeStyle = '#FFD76A'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(p[1], p[2], 22 + 3 * Math.sin(now / 200 + p[0]), 0, 6.2832); ctx.fill(); ctx.stroke();
+      ctx.font = '26px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.fillText(ICON[p[3]] || '?', p[1], p[2] + 1);
+    });
+    all.sort(function(a, b){ return a[1].m - b[1].m; });
+    for(k = 0; k < all.length; k++){ var p = all[k][1], rr = radius(p.m) * 2 + 60; if(p.x < x0 - rr || p.x > x1 + rr || p.y < y0 - rr || p.y > y1 + rr) continue; drawBee(all[k][0], p, now); }
+    shots.forEach(function(s){ ctx.shadowColor = '#ff4d00'; ctx.shadowBlur = 24; ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(s[0], s[1], 10, 0, 6.2832); ctx.fill(); ctx.shadowBlur = 0; });
+    for(k = sparks.length - 1; k >= 0; k--){ var s = sparks[k]; s.t -= dt; if(s.t <= 0){ sparks.splice(k, 1); continue; } s.x += s.vx * dt; s.y += s.vy * dt; ctx.globalAlpha = Math.min(1, s.t * 2); ctx.fillStyle = s.c; ctx.beginPath(); ctx.arc(s.x, s.y, 5, 0, 6.2832); ctx.fill(); }
+    ctx.globalAlpha = 1;
 
-  /* ---------- Twitch chat drops in: !join gets a bee with your name, flown by the page ---------- */
-  var sock = null, joined = false;
+    if(now - hudAt > 250 && live){
+      hudAt = now;
+      var left = phaseEnds - sim, closing = Math.min(60, roundLen * .4) * 1000, people = 0;
+      $('mass').textContent = me ? Math.round(me.m) : 0;
+      $('sub').textContent = auto ? 'Click to fly your bee' : myName + (wins ? ' · ' + wins + (wins === 1 ? ' round won' : ' rounds won') : '');
+      var fb = me ? me.fb : 0; $('ammo').hidden = !fb; $('ammo').textContent = fb ? '🔥 x' + fb + '  (right-click or F)' : ''; $('padFire').hidden = !fb;
+      $('clock').hidden = false; $('clock').classList.toggle('closing', phase === 'play' && left < closing);
+      $('clockK').textContent = phase === 'rest' ? 'Next round in' : left < closing ? 'The fire is closing in' : 'Round ' + roundNo;
+      $('clockT').textContent = mmss(left);
+      if(phase === 'rest') $('restNext').textContent = 'Next round in ' + mmss(left); else if(!$('rest').hidden){ $('rest').hidden = true; card(); }
+      var top = $('top'); top.textContent = '';
+      all.slice().reverse().filter(function(a){ return (roster[a[0]] || {}).kind !== 'w'; }).slice(0, 8).forEach(function(a, n){
+        var info = roster[a[0]] || {name: '?'}, li = document.createElement('li'), s1 = document.createElement('span'), s2 = document.createElement('span'), s3 = document.createElement('span');
+        li.className = (a[0] === myId ? 'you' : '') + (info.kind === 'p' ? ' person' : '');
+        s1.textContent = (n + 1) + '.'; s2.textContent = (a[0] === myId ? 'You' : info.name) + (info.owner ? ' ★' : ''); s3.textContent = Math.round(a[1].m);
+        li.appendChild(s1); li.appendChild(s2); li.appendChild(s3); top.appendChild(li);
+      });
+      Object.keys(roster).forEach(function(id){ if(roster[id].kind === 'p') people++; });
+      $('boardH').textContent = 'Biggest bees · ' + people + (people === 1 ? ' person on' : ' people on');
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  /* ---------- the owner's page passes Twitch chat on to the game ---------- */
+  var sock = null;
   function twitchJoin(channel){
     if(sock || !channel || !window.WebSocket) return;
     sock = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
-    sock.onopen = function(){ sock.send('NICK justinfan' + Math.floor(10000 + Math.random() * 80000)); sock.send('JOIN #' + channel); joined = true; $('hint').innerHTML = 'Watching on Twitch? Type <b>!join</b> in chat to drop your own bee into the arena.'; };
+    sock.onopen = function(){ sock.send('NICK justinfan' + Math.floor(10000 + Math.random() * 80000)); sock.send('JOIN #' + channel); $('hint').innerHTML = 'On Twitch? Type <b>!join</b> for a bee of your own, <b>!fire</b> to set a fire in my path, <b>!honey</b> to feed me.'; };
     sock.onmessage = function(e){
       String(e.data).split('\r\n').forEach(function(l){
         if(l.indexOf('PING') === 0){ sock.send('PONG :tmi.twitch.tv'); return; }
-        var m = /^:(\w+)!\S+ PRIVMSG #\w+ :\s*!join\b/i.exec(l);
-        if(!m || bees.some(function(b){ return b.chat && b.name === m[1]; }) || bees.filter(function(b){ return b.chat; }).length >= 30) return;
-        bee(m[1], {chat: true, m: START * 1.5});
-        say('<b>' + esc(m[1]) + '</b> flew in from chat');
+        var m = /^:(\w+)!\S+ PRIVMSG #\w+ :\s*!(join|fire|honey)\b/i.exec(l);
+        if(m) send({t: 'chat', k: m[2].toLowerCase(), name: m[1]});
       });
     };
     sock.onclose = function(){ sock = null; setTimeout(function(){ twitchJoin(channel); }, 10000); };
   }
-  var asked = (/[?&]twitch=([A-Za-z0-9_]{3,25})\b/.exec(q) || [])[1];
-  if(asked) twitchJoin(asked.toLowerCase());
-  else fetch(API + '/overlay/state', {cache: 'no-store'}).then(function(r){ return r.json(); }).then(function(d){
-    var t = d.live && d.live.twitch ? String(d.live.twitch).replace(/^.*twitch\.tv\//i, '').replace(/[^A-Za-z0-9_].*$/, '') : '';
-    if(t) twitchJoin(t.toLowerCase());
-  }).catch(function(){});
+  var relayed = false;
+  function chatRelay(){
+    if(relayed) return; relayed = true;
+    var asked = (/[?&]twitch=([A-Za-z0-9_]{3,25})\b/.exec(q) || [])[1];
+    if(asked){ twitchJoin(asked.toLowerCase()); return; }
+    fetch(API + '/overlay/state', {cache: 'no-store'}).then(function(r){ return r.json(); }).then(function(d){
+      var t = d.live && d.live.twitch ? String(d.live.twitch).replace(/^.*twitch\.tv\//i, '').replace(/[^A-Za-z0-9_].*$/, '') : '';
+      if(t) twitchJoin(t.toLowerCase());
+    }).catch(function(){});
+  }
 })();
 </script>
 </body>

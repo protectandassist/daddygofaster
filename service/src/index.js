@@ -39,6 +39,8 @@ import {
 } from './social.js';
 import { record, report, tidy, liveNow } from './stats.js';
 import { gamesState, gamesSetting, setGames, postPick, player } from './games.js';
+import { Arena, arenaJoin, arenaSocket, arenaSetting, setArena } from './arena.js';
+export { Arena };
 import ADMIN_HTML from './admin.html';
 import REPORTS_HTML from './reports.html';
 
@@ -837,6 +839,7 @@ async function adminState(env, s, now, showJobs) {
     comments: auction ? await recentComments(env, auction.day) : [],
     live: await liveState(env),
     games: await gamesSetting(env, now),
+    arena: await arenaSetting(env),
     chat: await recentChat(env),
     members: await listMembers(env),
     checks: await recentChecks(env),
@@ -963,6 +966,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
   if (request.method === 'POST' && path === '/admin/api/overlay/test') return sendOverlayTest(env, s, now);
   if (request.method === 'POST' && path === '/admin/api/schedule') return adminSchedule(request, env, s, now);
   if (request.method === 'POST' && path === '/admin/api/games') return setGames(env, await request.json().catch(() => null), now);
+  if (request.method === 'POST' && path === '/admin/api/arena') return setArena(env, await request.json().catch(() => null), now);
   if (request.method === 'POST' && path === '/admin/api/live') {
     const body = await request.json().catch(() => null);
     const [status, out] = await setLive(env, body, now);
@@ -1031,7 +1035,7 @@ async function adminRoute(request, env, s, ctx, path, now) {
 
 // ---- entry ------------------------------------------------------------------------
 
-const PUBLIC = new Set(['/overlay/test', '/overlay/state', '/board', '/live', '/chat', '/check', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/auth/google', '/me', '/me/activity', '/me/seen', '/me/delete', '/push/sub', '/push/unsub', '/push/next', '/votes', '/comments', '/comments/report', '/a', '/games', '/games/pick']);
+const PUBLIC = new Set(['/overlay/test', '/overlay/state', '/board', '/live', '/chat', '/check', '/bids', '/bids/confirm', '/pledges', '/pledges/confirm', '/mine', '/auth/start', '/auth/finish', '/auth/end', '/auth/google', '/me', '/me/activity', '/me/seen', '/me/delete', '/push/sub', '/push/unsub', '/push/next', '/votes', '/comments', '/comments/report', '/a', '/games', '/games/pick', '/arena/join']);
 // Signing in, votes and comments: [method, path] to handler. Each answers [status, body].
 const SOCIAL = {
   'POST /auth/start': (request, env, s, now) => authStart(request, env, s, now),
@@ -1053,6 +1057,13 @@ const SOCIAL = {
   'GET /live': (request, env) => getLive(env, new URL(request.url)),
   // The free games on the stream: the round on now, and a pick for it. No account is needed.
   'GET /games': async (request, env, s, now) => [200, await gamesState(env, now, player(await sessionUser(request, env, now), new URL(request.url).searchParams.get('g')))],
+  // Hive Arena: a ticket to open the game's socket with. The bees the service flies take the day's bidders' names.
+  'POST /arena/join': async (request, env, s, now) => {
+    const body = await request.json().catch(() => null), user = await sessionUser(request, env, now);
+    const board = await getBoard(env, s, now).catch(() => null);
+    const bidders = [...new Set(((board && board.bids) || []).map((b) => b.name).filter(Boolean))].slice(0, 12);
+    return arenaJoin(env, player(user, body?.g), Boolean(user && user.email && isAdminEmail(env, user.email)), bidders);
+  },
   'POST /games/pick': async (request, env, s, now) => {
     const body = await request.json().catch(() => null);
     return postPick(env, player(await sessionUser(request, env, now), body?.g), body, now);
@@ -1137,6 +1148,7 @@ export default {
     const cors = corsHeaders(request, s);
 
     try {
+      if (path === '/arena/ws') return arenaSocket(env, request);
       if (PUBLIC.has(path) || path === '/creators' || path.startsWith('/creators/') || path === '/me/creator' || path.startsWith('/me/creator/')) {
         if (request.method === 'OPTIONS') {
           return new Response(null, {

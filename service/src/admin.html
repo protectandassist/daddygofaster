@@ -132,6 +132,13 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
         <button id="gamesOn" type="button">Start the games</button>
         <button id="gamesOff" type="button" class="bad" hidden>Stop the games</button>
       </div>
+      <h3 style="margin:18px 0 4px">Hive Arena</h3>
+      <p class="muted small" style="margin:0 0 8px">The shared arena at torchhive.com/arena: anyone can fly a bee in it from a phone or a computer. It plays in rounds; a ring of fire closes in at the end of each, and the break between rounds shows the day's bids. A change here starts with the next round.</p>
+      <div class="row">
+        <label class="small">A round lasts <select id="arenaRound"><option value="60">1 minute</option><option value="120">2 minutes</option><option value="180">3 minutes</option><option value="300">5 minutes</option><option value="600">10 minutes</option></select></label>
+        <label class="small">The break lasts <select id="arenaRest"><option value="15">15 seconds</option><option value="30">30 seconds</option><option value="45">45 seconds</option><option value="60">1 minute</option><option value="90">90 seconds</option></select></label>
+        <button id="arenaSave" type="button">Save</button>
+      </div>
       <div id="chatList"></div>
     </section>
 
@@ -310,6 +317,9 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       $('liveNote').textContent += live.fixedClose ? ' The close is fixed: late bids add no time.' : ' Late bids still add time to the clock.';
     }
     $('liveOn').textContent = live.on ? 'Change the links' : 'Save';
+    var arena = d.arena || {round: 180, rest: 30};
+    if(document.activeElement !== $('arenaRound')) $('arenaRound').value = arena.round;
+    if(document.activeElement !== $('arenaRest')) $('arenaRest').value = arena.rest;
     var games = d.games || {on: false};
     $('gamesNote').textContent = games.on
       ? 'The games are running on the overlay now, one round after another. Viewers play free at torchhive.com/play, and Twitch viewers can type their pick in chat. Changing the game keeps everyone\'s points. They stop by themselves after six hours.'
@@ -475,6 +485,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   $('liveOff').addEventListener('click', function(){ act('/admin/api/live', {on: false}); });
   $('gamesOn').addEventListener('click', function(){ act('/admin/api/games', {on: true, mode: $('gamesMode').value}); });
   $('gamesOff').addEventListener('click', function(){ act('/admin/api/games', {on: false}); });
+  $('arenaSave').addEventListener('click', function(){ act('/admin/api/arena', {round: Number($('arenaRound').value), rest: Number($('arenaRest').value)}); });
   /* "8:15 PM" on this device's clock: today if that is still ahead, otherwise tomorrow */
   function closeAtFromClock(value){
     var m = /^(\d{1,2}):(\d{2})$/.exec(value || '');

@@ -12,6 +12,15 @@ database_id = "7689b940-06a7-432a-a0a4-be60e2c4ac8e"
 [triggers]
 crons = ["* * * * *"]
 
+# Hive Arena (torchhive.com/arena): one shared game that the pages reach over WebSockets.
+[[durable_objects.bindings]]
+name = "ARENA"
+class_name = "Arena"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Arena"]
+
 [vars]
 # "true" opens bidding. Anything else and the site shows "Bidding opens soon".
 OPEN = "true"
