@@ -26,14 +26,15 @@ import { getSetting, setSetting } from './store.js';
 export const ROUNDS = [60, 120, 180, 300, 600];   // seconds a round may last
 export const RESTS = [15, 30, 45, 60, 90];        // seconds between rounds
 const DEFAULTS = { round: 180, rest: 30 };
-const VERSION = 8;   // sent to each page as it joins, so it can be seen which build a running arena is on
+const VERSION = 9;   // sent to each page as it joins, so it can be seen which build a running arena is on
 const R = 1500;                 // the arena is a circle this wide from its middle, which is at (R, R)
 const RING_MIN = 320;           // how small the ring of fire gets
 const START = 20, EAT = 1.2, POLLEN = 520, BEES = 18, MIN_BOTS = 6, MAX_CHAT = 25, MAX_PATCHES = 500;
-// Someone else's fire takes this share of a bee's size each second it is in it. A bee chasing a
-// dasher down its trail is in fire about half the time, so it loses about 8% a second against the
-// 5.5% a second the dasher spends: it can power through, at a price a little higher than the runner's.
-export const BURN = 0.16;
+// Dashing is a steady boost for as long as it is held, and costs this share of a bee's size a second.
+// Someone else's fire takes BURN of a bee's size each second it is in it. A bee chasing a dasher
+// down its trail is in fire about half the time, so it loses about 4% a second against the 3% a
+// second the dasher spends: it can power through, at a price a little higher than the runner's.
+export const BOOST = 0.03, BURN = 0.08;
 const HOT_MS = 8000;   // how long dropped size stays on the field
 const KINDS = ['fireball', 'smoke', 'honey', 'jelly', 'queen'];
 const WASP = { m: 60, dead: 20, fireball: 15, fire: 25, prize: 40 };   // three fireballs, or about a second and a half in fire
@@ -247,14 +248,17 @@ export class World {
       const p = b.key && this.players.get(b.key), flown = b.kind !== 'p' || (p && p.auto);
       if (flown) { b.think -= dt; if (b.think <= 0) { b.think = this.rnd(0.18, 0.4); this.think(b); } }
       const r = rad(b.m);
-      for (const k of ['dashT', 'dashCd', 'shotCd', 'smoke', 'honey', 'queen', 'hitCd']) if (b[k] > 0) b[k] -= dt;
-      // dashing: a burst of speed that costs a little size and leaves a trail (fire, or honey after that pickup)
-      // (a smaller bee near a queen cannot dash at all, and the queen dashes for nothing)
-      if (b.dash && b.dashCd <= 0 && b.m > 24 && b.kind !== 'w' && !(b.pulled > this.t)) {
-        b.dashT = 0.45; b.dashCd = 0.9;
-        if (b.queen > 0) b.spent = 0; else { b.spent = b.m * 0.05 / 8; b.m *= 0.95; }
-      }   // what the dash cost is left along its trail, an eighth at a time
-      if (b.dashT > 0) { b.trail -= dt; if (b.trail <= 0) { b.trail = 0.06; this.patch(b.x - Math.cos(b.a) * r, b.y - Math.sin(b.a) * r, 18 + r * 0.3, b.honey > 0 ? 5000 : 3500, b.id, b.honey > 0 ? 'h' : 'f', b.spent || 0); } }
+      for (const k of ['shotCd', 'smoke', 'honey', 'queen', 'hitCd']) if (b[k] > 0) b[k] -= dt;
+      // dashing: a steady boost while it is held. It costs a little size all the while and leaves a
+      // trail (fire, or honey after that pickup); what it cost is left along the trail when that
+      // burns out. A smaller bee near a queen cannot dash at all, and the queen dashes for nothing.
+      const boosting = b.dash && b.m > 24 && b.kind !== 'w' && !(b.pulled > this.t);
+      b.dashT = boosting ? 1 : 0;
+      if (boosting) {
+        const cost = b.queen > 0 ? 0 : b.m * BOOST * dt;
+        b.m -= cost; b.owed = (b.owed || 0) + cost; b.trail -= dt;
+        if (b.trail <= 0) { b.trail = 0.06; this.patch(b.x - Math.cos(b.a) * r, b.y - Math.sin(b.a) * r, 18 + r * 0.3, b.honey > 0 ? 5000 : 3500, b.id, b.honey > 0 ? 'h' : 'f', b.owed); b.owed = 0; }
+      }
       if (b.fire) {
         b.fire = false;
         if (b.fb > 0 && b.shotCd <= 0) { b.fb--; b.shotCd = 0.35; this.shots.push({ x: b.x + Math.cos(b.a) * (r + 12), y: b.y + Math.sin(b.a) * (r + 12), vx: Math.cos(b.a) * 780, vy: Math.sin(b.a) * 780, owner: b.id, until: this.t + 1100 }); }

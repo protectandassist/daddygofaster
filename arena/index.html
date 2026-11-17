@@ -314,11 +314,9 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
     if(!b || !b.c || auto || phase !== 'play'){ pred = null; return null; }
     var s = b.c, r = radius(s.m);
     if(!pred || Math.hypot(pred.x - s.x, pred.y - s.y) > 240) pred = {x: s.x, y: s.y, a: s.a};
-    if(predCd > 0) predCd -= dt;
-    if(predDash > 0) predDash -= dt;
-    if(dashing() && predCd <= 0 && s.m > 24 && !(b.flags & 64)){ predDash = .45; predCd = .9; }   /* no dashing near a queen */
+    predDash = dashing() && s.m > 24 && !(b.flags & 64) ? 1 : 0;   /* a steady boost while held; no dashing near a queen */
     var t = target(pred), dx = t.x - pred.x, dy = t.y - pred.y, d = Math.hypot(dx, dy), vx = 0, vy = 0;
-    var speed = 300 / (1 + r / 70) * (predDash > 0 || b.flags & 1 ? 2.3 : 1) * Math.min(1, d / 30);
+    var speed = 300 / (1 + r / 70) * (predDash > 0 ? 2.3 : 1) * Math.min(1, d / 30);
     if(d > 1){
       var turn = ((Math.atan2(dy, dx) - pred.a + 9.42478) % 6.28318) - 3.14159;
       pred.a += Math.max(-8 * dt, Math.min(8 * dt, turn));
