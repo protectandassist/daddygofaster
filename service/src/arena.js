@@ -2,13 +2,17 @@
 //
 // Pollen makes a bee bigger and a bee swallows any bee a fifth smaller than itself. On top of that:
 //   - dashing leaves a trail of fire that shrinks every other bee that crosses it;
+//   - size that is spent or knocked off is not lost: what a dash cost is left where its fire burns
+//     out, and what a fireball knocks off drops around the bee it hit, as glowing food that
+//     anyone can eat for eight seconds before it is gone;
 //   - the game runs in rounds whose length the owner picks: near the end a ring of fire closes in,
 //     the biggest bee left when the round ends wins it, and then there is a break (the page
 //     shows the day's bids during it) before the next round starts with everyone small again;
 //   - pickups: fireballs to shoot, smoke (the other bees lose sight of you), honey (your trail
 //     slows instead of burns), royal jelly (instant growth), the queen (for 15 seconds every
 //     smaller bee nearby is drawn toward you, and only a dash gets it clear);
-//   - the biggest bee wears the crown: a wasp comes for it every so often, and burning it down pays extra;
+//   - the biggest bee wears the crown: a wasp comes for it every so often, and burning it down pays extra.
+//     The wasp can be killed: fire and fireballs wear it down, and a big enough bee can swallow it;
 //   - bees flown by the service fill the arena, named after the day's bidders where there are any;
 //   - the owner's page passes on Twitch chat: !join drops in a bee, !fire and !honey drop
 //     trouble or food by the owner's bee.
@@ -24,7 +28,9 @@ const DEFAULTS = { round: 180, rest: 30 };
 const R = 1500;                 // the arena is a circle this wide from its middle, which is at (R, R)
 const RING_MIN = 320;           // how small the ring of fire gets
 const START = 20, EAT = 1.2, POLLEN = 520, BEES = 18, MIN_BOTS = 6, MAX_CHAT = 25, MAX_PATCHES = 500;
+const HOT_MS = 8000;   // how long dropped size stays on the field
 const KINDS = ['fireball', 'smoke', 'honey', 'jelly', 'queen'];
+const WASP = { m: 60, dead: 20, fireball: 15, fire: 25, prize: 40 };   // three fireballs, or about a second and a half in fire
 export const QUEEN = { secs: 15, reach: 520, pull: 0.9 };   // the pull is nine tenths of a bee's own flying speed: flying away only holds it off, and a dash gets it clear
 const ADJ = ['Lucky', 'Swift', 'Golden', 'Smoky', 'Bold', 'Sly', 'Sunny', 'Mighty', 'Quiet', 'Wild', 'Amber', 'Brave', 'Fuzzy', 'Nimble', 'Rusty', 'Jolly'];
 const NOUN = ['Drone', 'Ember', 'Spark', 'Comet', 'Badger', 'Falcon', 'Otter', 'Hornet', 'Lantern', 'Rocket', 'Maple', 'Bandit', 'Pepper', 'Tiger', 'Walrus', 'Moose'];
@@ -55,13 +61,19 @@ export class World {
     this.fresh = true; this.rosterDirty = true;
   }
 
-  grain(x, y, m = 1) {
+  // Pollen. With `ms` it is dropped size: it glows, and is gone after that long.
+  grain(x, y, m = 1, ms = 0) {
     if (x === undefined) [x, y] = this.spot(Math.max(RING_MIN, this.ring) - 20);
-    const g = { id: this.id++, x, y, m };
-    this.pollen.set(g.id, g); this.pAdd.push([g.id, Math.round(g.x), Math.round(g.y), m]);
+    const g = { id: this.id++, x, y, m: Math.round(m * 100) / 100, until: ms ? this.t + ms : 0 };
+    this.pollen.set(g.id, g); this.pAdd.push([g.id, Math.round(g.x), Math.round(g.y), g.m, ms ? 1 : 0]);
     return g;
   }
   scatter(x, y, n, m = 2) { for (let i = 0; i < n; i++) this.grain(x + this.rnd(-45, 45), y + this.rnd(-45, 45), m); }
+  // Size knocked off a bee, all of it, thrown clear of it (so it does not just swallow it back) as food that does not last.
+  drop(x, y, mass, r) {
+    const n = Math.max(1, Math.min(12, Math.ceil(mass / 4)));
+    for (let i = 0; i < n; i++) { const a = this.rnd(0, 6.2832), d = r + this.rnd(30, 110); this.grain(x + Math.cos(a) * d, y + Math.sin(a) * d, mass / n, HOT_MS); }
+  }
 
   spawn(name, kind, more = {}) {
     const b = { id: this.id++, name, kind, x: R, y: R, a: this.rnd(0, 6.28), m: START, tx: R, ty: R, think: 0, dashT: 0, dashCd: 0, trail: 0, fb: 0, shotCd: 0, smoke: 0, honey: 0, queen: 0, slow: 0, burn: 0, streak: 0, hitCd: 0, dash: false, fire: false, key: null, ...more };
@@ -172,9 +184,9 @@ export class World {
 
   // ---- fire -------------------------------------------------------------------------
 
-  patch(x, y, r, ms, owner, kind) {
+  patch(x, y, r, ms, owner, kind, drop = 0) {
     if (this.patches.size >= MAX_PATCHES) return;
-    const f = { id: this.id++, x, y, r, until: this.t + ms, owner, kind };
+    const f = { id: this.id++, x, y, r, until: this.t + ms, owner, kind, drop };
     this.patches.set(f.id, f); this.fAdd.push([f.id, Math.round(x), Math.round(y), Math.round(r), ms, kind]);
   }
   kill(b, by, how) {
@@ -182,6 +194,7 @@ export class World {
     this.rosterDirty = true;
     this.scatter(b.x, b.y, Math.min(14, Math.floor(b.m / 6)));
     if (by) { by.streak++; if ([3, 5, 8, 12].includes(by.streak)) this.say('streak', { a: by.name, n: by.streak }); }
+    if (by && b.kind === 'w') by.m += WASP.prize;
     if (by && b.id === this.crown) { by.m += 30; this.say('crown', { a: by.name, b: b.name }); }   // bringing down the crowned bee pays extra
     this.say(how, { a: by ? by.name : null, b: b.name, ai: by ? by.id : 0, bi: b.id, x: Math.round(b.x), y: Math.round(b.y) });
     const p = b.key && this.players.get(b.key);
@@ -203,7 +216,7 @@ export class World {
     // the wasp: comes for whoever wears the crown, and leaves after 18 seconds
     if (this.t >= this.nextWasp && left > 25000) {
       this.nextWasp = this.t + 75000;
-      const w = this.spawn('The Wasp', 'w', { m: 60, leaves: this.t + 18000 }); const a = this.rnd(0, 6.28);
+      const w = this.spawn('The Wasp', 'w', { m: WASP.m, leaves: this.t + 18000 }); const a = this.rnd(0, 6.28);
       w.x = R + Math.cos(a) * (this.ring - 60); w.y = R + Math.sin(a) * (this.ring - 60);
       this.say('wasp', {});
     }
@@ -218,8 +231,8 @@ export class World {
       const r = rad(b.m);
       for (const k of ['dashT', 'dashCd', 'shotCd', 'smoke', 'honey', 'queen', 'hitCd']) if (b[k] > 0) b[k] -= dt;
       // dashing: a burst of speed that costs a little size and leaves a trail (fire, or honey after that pickup)
-      if (b.dash && b.dashCd <= 0 && b.m > 24 && b.kind !== 'w') { b.dashT = 0.45; b.dashCd = 0.9; b.m *= 0.95; }
-      if (b.dashT > 0) { b.trail -= dt; if (b.trail <= 0) { b.trail = 0.06; this.patch(b.x - Math.cos(b.a) * r, b.y - Math.sin(b.a) * r, 18 + r * 0.3, b.honey > 0 ? 5000 : 3500, b.id, b.honey > 0 ? 'h' : 'f'); } }
+      if (b.dash && b.dashCd <= 0 && b.m > 24 && b.kind !== 'w') { b.dashT = 0.45; b.dashCd = 0.9; b.spent = b.m * 0.05 / 8; b.m *= 0.95; }   // what the dash cost is left along its trail, an eighth at a time
+      if (b.dashT > 0) { b.trail -= dt; if (b.trail <= 0) { b.trail = 0.06; this.patch(b.x - Math.cos(b.a) * r, b.y - Math.sin(b.a) * r, 18 + r * 0.3, b.honey > 0 ? 5000 : 3500, b.id, b.honey > 0 ? 'h' : 'f', b.spent || 0); } }
       if (b.fire) {
         b.fire = false;
         if (b.fb > 0 && b.shotCd <= 0) { b.fb--; b.shotCd = 0.35; this.shots.push({ x: b.x + Math.cos(b.a) * (r + 12), y: b.y + Math.sin(b.a) * (r + 12), vx: Math.cos(b.a) * 780, vy: Math.sin(b.a) * 780, owner: b.id, until: this.t + 1100 }); }
@@ -236,6 +249,13 @@ export class World {
       if (b.kind === 'w') {
         const c = this.bees.get(this.crown);
         if (c && b.hitCd <= 0 && Math.hypot(c.x - b.x, c.y - b.y) < r + rad(c.m)) { b.hitCd = 1.2; const loss = c.m * 0.3; c.m -= loss; this.scatter(c.x, c.y, Math.min(12, Math.floor(loss / 3))); this.say('sting', { b: c.name, bi: c.id }); }
+        // fire wears the wasp down, and whoever laid it gets the kill
+        b.burn = 0;
+        for (const f of this.patches.values()) {
+          if (f.kind !== 'f' || Math.hypot(f.x - b.x, f.y - b.y) > f.r + r * 0.6) continue;
+          b.m -= WASP.fire * dt; b.burn = f.owner || -1;
+        }
+        if (b.m < WASP.dead) this.kill(b, b.burn > 0 ? this.bees.get(b.burn) : null, 'waspdown');
         continue;
       }
       if (b.m > 150) b.m -= b.m * 0.004 * dt;   // the big ones slowly shrink, so nobody stays on top for free
@@ -274,9 +294,10 @@ export class World {
       s.x += s.vx * dt; s.y += s.vy * dt;
       if (this.t > s.until || Math.hypot(s.x - R, s.y - R) > R) return false;
       for (const b of this.bees.values()) {
-        if (b.id === s.owner || b.kind === 'w' || Math.hypot(b.x - s.x, b.y - s.y) > rad(b.m) + 10) continue;
-        const loss = b.m * 0.25; b.m -= loss; this.scatter(b.x, b.y, Math.min(10, Math.floor(loss / 3)));
+        if (b.id === s.owner || Math.hypot(b.x - s.x, b.y - s.y) > rad(b.m) + 10) continue;
         const by = this.bees.get(s.owner);
+        if (b.kind === 'w') { b.m -= WASP.fireball; this.say('hit', { a: by ? by.name : null, b: b.name, bi: b.id }); if (b.m < WASP.dead) this.kill(b, by, 'waspdown'); return false; }
+        const loss = b.m * 0.25; b.m -= loss; this.drop(b.x, b.y, loss, rad(b.m));
         this.say('hit', { a: by ? by.name : null, b: b.name, bi: b.id });
         if (b.m < 9) this.kill(b, by, 'burn');
         return false;
@@ -284,19 +305,23 @@ export class World {
       return true;
     });
 
-    // swallowing: the bigger bee must be a fifth bigger and cover most of the smaller one
-    const list = [...this.bees.values()].filter((b) => b.kind !== 'w').sort((a, b) => b.m - a.m);
+    // Swallowing: the bigger bee must be a fifth bigger and reach just past the smaller one's middle.
+    // (It used to have to cover most of it. A page draws its own bee a touch ahead of where the
+    // service has it and the others a touch behind, so a bee plainly on top of another on screen
+    // often was not yet, here, and the swallow did not come.) The wasp can be swallowed too.
+    const list = [...this.bees.values()].sort((a, b) => b.m - a.m);
     for (const a of list) {
-      if (!this.bees.has(a.id)) continue;
+      if (a.kind === 'w' || !this.bees.has(a.id)) continue;
       for (const b of list) {
         if (a === b || !this.bees.has(b.id) || a.m < b.m * EAT) continue;
-        if (Math.hypot(a.x - b.x, a.y - b.y) < rad(a.m) - rad(b.m) * 0.35) {
-          a.m += b.m * 0.8;
-          this.kill(b, a, 'eat');
+        if (Math.hypot(a.x - b.x, a.y - b.y) < rad(a.m) + rad(b.m) * 0.15) {
+          if (b.kind !== 'w') a.m += b.m * 0.8;
+          this.kill(b, a, b.kind === 'w' ? 'waspdown' : 'eat');
         }
       }
     }
-    for (const f of this.patches.values()) if (f.until <= this.t) this.patches.delete(f.id);
+    for (const f of this.patches.values()) if (f.until <= this.t) { if (f.drop) this.grain(f.x, f.y, f.drop, HOT_MS); this.patches.delete(f.id); }
+    for (const g of this.pollen.values()) if (g.until && g.until <= this.t) { this.pollen.delete(g.id); this.pDel.push(g.id); }
     for (let n = 0; n < 6 && this.pollen.size < POLLEN; n++) this.grain();
     for (const p of this.players.values()) if (!p.bee && p.auto && this.t - p.deadAt > 2500) this.enter(p);
 
@@ -321,7 +346,7 @@ export class World {
   head(t) { return { t, n: Math.round(this.t), round: this.round, ph: this.phase, left: Math.max(0, Math.round(this.phaseEnds - this.t)), ring: Math.round(this.ring), win: this.winner, b: this.beesNow(), sh: this.shots.map((s) => [Math.round(s.x), Math.round(s.y)]), pk: [...this.pickups.values()].map((k) => [k.id, Math.round(k.x), Math.round(k.y), k.kind]) }; }
   // Everything, for a page that has just arrived or a round that has just begun.
   full() {
-    return { ...this.head('f'), R, cfg: this.cfg, ro: this.roster(), p: [...this.pollen.values()].map((g) => [g.id, Math.round(g.x), Math.round(g.y), g.m]),
+    return { ...this.head('f'), R, cfg: this.cfg, ro: this.roster(), p: [...this.pollen.values()].map((g) => [g.id, Math.round(g.x), Math.round(g.y), g.m, g.until ? 1 : 0]),
       f: [...this.patches.values()].map((f) => [f.id, Math.round(f.x), Math.round(f.y), Math.round(f.r), Math.round(f.until - this.t), f.kind]) };
   }
   // What changed since the last one.
