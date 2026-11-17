@@ -447,7 +447,7 @@ export class Arena {
 
   send(conn, data) { try { conn.ws.send(typeof data === 'string' ? data : JSON.stringify(data)); } catch { try { conn.ws.close(1011, 'Lost.'); } catch {} } }
 
-  // Thirty steps a second; the pages are sent what changed fifteen times a second.
+  // Up to thirty steps a second; the pages are sent what changed about twenty times a second.
   tick() {
     const w = this.world;
     if (!w) return;
@@ -456,7 +456,7 @@ export class Arena {
       this.last = now;
       w.step(dt);
       if (w.fresh) { const all = w.full(); w.settle(); for (const [key, c] of this.conns) this.send(c, { ...all, you: w.you(key) }); }
-      else if (++this.n % 2 === 0) { const s = JSON.stringify(w.snap()); for (const c of this.conns.values()) this.send(c, s); }
+      else if (now - this.n >= 45) { this.n = now; const s = JSON.stringify(w.snap()); for (const c of this.conns.values()) this.send(c, s); }
       for (const [key, msg] of w.outbox.splice(0)) { const c = this.conns.get(key); if (c) this.send(c, msg); }
     } catch (error) { console.error('[ARENA] tick', error && error.stack ? error.stack : String(error)); }
   }

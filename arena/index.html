@@ -336,7 +336,7 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
   /* Where another bee is right now: a little behind the service, eased between its last two reports. */
   function pos(id){
     var b = bees[id]; if(!b || !b.c) return null;
-    var t = simNow() - 85, f = b.c.n === b.p.n ? 1 : Math.max(0, Math.min(1.2, (t - b.p.n) / (b.c.n - b.p.n)));
+    var t = simNow() - 70, f = b.c.n === b.p.n ? 1 : Math.max(0, Math.min(1.2, (t - b.p.n) / (b.c.n - b.p.n)));
     var da = ((b.c.a - b.p.a + 9.42478) % 6.28318) - 3.14159;
     return {x: b.p.x + (b.c.x - b.p.x) * f, y: b.p.y + (b.c.y - b.p.y) * f, m: b.p.m + (b.c.m - b.p.m) * Math.min(1, f), a: b.p.a + da * Math.min(1, f), flags: b.flags, fb: b.fb};
   }
