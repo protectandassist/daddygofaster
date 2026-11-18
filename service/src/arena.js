@@ -26,7 +26,7 @@ import { getSetting, setSetting } from './store.js';
 export const ROUNDS = [60, 120, 180, 300, 600];   // seconds a round may last
 export const RESTS = [15, 30, 45, 60, 90];        // seconds between rounds
 const DEFAULTS = { round: 180, rest: 30 };
-const VERSION = 9;   // sent to each page as it joins, so it can be seen which build a running arena is on
+const VERSION = 10;   // sent to each page as it joins, so it can be seen which build a running arena is on
 const R = 1500;                 // the arena is a circle this wide from its middle, which is at (R, R)
 const RING_MIN = 320;           // how small the ring of fire gets
 const START = 20, EAT = 1.2, POLLEN = 520, BEES = 18, MIN_BOTS = 6, MAX_CHAT = 25, MAX_PATCHES = 500;
@@ -125,6 +125,7 @@ export class World {
     if (Number.isFinite(m.x) && Number.isFinite(m.y)) { b.tx = Math.max(0, Math.min(2 * R, m.x)); b.ty = Math.max(0, Math.min(2 * R, m.y)); }
     b.dash = Boolean(m.d);
     if (m.f) b.fire = true;
+    if (Number.isInteger(m.eat)) this.claim(b, m.eat);
   }
   // Twitch chat, passed on by the owner's page. Each name may do one thing every 20 seconds.
   chat(kind, name) {
@@ -206,6 +207,21 @@ export class World {
     this.say(how, { a: by ? by.name : null, b: b.name, ai: by ? by.id : 0, bi: b.id, x: Math.round(b.x), y: Math.round(b.y) });
     const p = b.key && this.players.get(b.key);
     if (p) { p.bee = null; p.deadAt = this.t; p.killer = by ? by.name : how === 'ring' ? 'the ring of fire' : 'the fire'; this.outbox.push([p.key, this.you(p.key)]); }
+  }
+
+  swallow(a, b) {
+    if (b.kind !== 'w') a.m += b.m * 0.8;
+    this.kill(b, a, b.kind === 'w' ? 'waspdown' : 'eat');
+  }
+  // A page says its bee is on top of another. Each page draws its own bee a little ahead of where
+  // it is here and the others a little behind, more so on a slow connection, so a bee can fly
+  // right over another on its own screen and not be over it here. What the player saw is taken
+  // as what happened, as long as it is not far off: the size rule holds, and the two must be
+  // within 150 of touching here.
+  claim(a, id) {
+    const b = this.bees.get(id);
+    if (!b || b === a || a.kind === 'w' || !this.bees.has(a.id) || a.m < b.m * EAT) return;
+    if (Math.hypot(a.x - b.x, a.y - b.y) < rad(a.m) + rad(b.m) + 150) this.swallow(a, b);
   }
 
   // ---- one step of the game ---------------------------------------------------------
@@ -328,10 +344,7 @@ export class World {
       if (a.kind === 'w' || !this.bees.has(a.id)) continue;
       for (const b of list) {
         if (a === b || !this.bees.has(b.id) || a.m < b.m * EAT) continue;
-        if (Math.hypot(a.x - b.x, a.y - b.y) < rad(a.m) + rad(b.m) * 0.15) {
-          if (b.kind !== 'w') a.m += b.m * 0.8;
-          this.kill(b, a, b.kind === 'w' ? 'waspdown' : 'eat');
-        }
+        if (Math.hypot(a.x - b.x, a.y - b.y) < rad(a.m) + rad(b.m) * 0.15) this.swallow(a, b);
       }
     }
     for (const f of this.patches.values()) if (f.until <= this.t) { if (f.drop) this.grain(f.x, f.y, f.drop, HOT_MS); this.patches.delete(f.id); }

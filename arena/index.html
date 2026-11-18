@@ -72,7 +72,6 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
 #pad{right:14px;bottom:76px;display:none;gap:10px;pointer-events:auto}
 #pad button{width:76px;height:76px;border-radius:50%;border:2px solid rgba(239,149,2,.7);background:rgba(21,23,28,.8);color:#fff;font:800 .9rem "Archivo",sans-serif;-webkit-tap-highlight-color:transparent}
 #pad button:active{background:var(--accent);color:#1b0a02}
-@media(pointer:coarse){#pad{display:flex}}
 [hidden]{display:none!important}
 @media(max-width:700px){#board{width:156px;padding:8px 10px}#board li:nth-child(n+6){display:none}#banner{font-size:.78rem;white-space:normal;width:92vw}#banner span{display:none}#feed{display:none}#brand span{display:none}#clock{top:64px;left:auto;right:16px;transform:none}#score{top:64px}}
 </style>
@@ -178,7 +177,7 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
     var c = $('center'), show = true;
     if(!live){ $('cTitle').textContent = 'Hive Arena'; $('cText').textContent = 'Joining the arena...'; }
     else if(phase === 'rest') show = false;
-    else if(auto){ $('cTitle').textContent = 'Hive Arena'; $('cText').innerHTML = 'Everyone here is in the same arena. Grow, leave fire, and be the biggest when the ring closes.<br><b>Click or tap to fly your bee.</b>'; }
+    else if(auto){ $('cTitle').textContent = 'Hive Arena'; $('cText').innerHTML = 'Everyone here is in the same arena. Grow, leave fire, and be the biggest when the ring closes.<br><b>Click or tap to fly your bee.</b>' + (matchMedia('(pointer:coarse)').matches ? '<br>Your first finger is a joystick wherever you put it. A second finger dashes, and shoots if you have fireballs.' : ''); }
     else if(!myId){ $('cTitle').textContent = killer ? 'Burned by ' + killer : 'Out'; if(killer && !/fire/.test(killer)) $('cTitle').textContent = 'Swallowed by ' + killer; $('cText').innerHTML = '<b>Click, tap or press Space</b> to fly again.'; }
     else show = false;
     c.hidden = !show;
@@ -272,12 +271,29 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
   canvas.addEventListener('contextmenu', function(e){ e.preventDefault(); });
   canvas.addEventListener('dblclick', function(e){ fire(); e.preventDefault(); });
   addEventListener('mouseup', function(){ mouse.down = false; });
-  var tapAt = 0;   /* two taps within a third of a second shoot a fireball */
-  canvas.addEventListener('touchstart', function(e){ var t = e.touches[0], now = performance.now(); mouse.x = t.clientX; mouse.y = t.clientY; if(e.touches.length === 1 && now - tapAt < 330){ tapAt = 0; fire(); } else { tapAt = now; took(); } e.preventDefault(); }, {passive: false});
-  canvas.addEventListener('touchmove', function(e){ var t = e.touches[0]; mouse.x = t.clientX; mouse.y = t.clientY; lastInput = performance.now(); e.preventDefault(); }, {passive: false});
-  $('padDash').addEventListener('touchstart', function(e){ padDash = true; took(); steer(); e.preventDefault(); }, {passive: false});
-  $('padDash').addEventListener('touchend', function(){ padDash = false; });
-  $('padFire').addEventListener('touchstart', function(e){ fire(); e.preventDefault(); }, {passive: false});
+  /* On a phone: the first finger down is a joystick wherever it lands (drag away from where it
+     touched to steer), and a second finger dashes while it is held and shoots a fireball as it lands. */
+  var joy = null, heading = null, dashTouch = null;
+  canvas.addEventListener('touchstart', function(e){
+    for(var k = 0; k < e.changedTouches.length; k++){
+      var t = e.changedTouches[k];
+      if(!joy){ joy = {id: t.identifier, x0: t.clientX, y0: t.clientY, x: t.clientX, y: t.clientY}; took(); }
+      else if(dashTouch === null){ dashTouch = t.identifier; padDash = true; took(); send({t: 'i', f: 1}); steer(); }
+    }
+    e.preventDefault();
+  }, {passive: false});
+  canvas.addEventListener('touchmove', function(e){
+    for(var k = 0; k < e.changedTouches.length; k++){ var t = e.changedTouches[k]; if(joy && t.identifier === joy.id){ joy.x = t.clientX; joy.y = t.clientY; lastInput = performance.now(); } }
+    e.preventDefault();
+  }, {passive: false});
+  function touchEnd(e){
+    for(var k = 0; k < e.changedTouches.length; k++){
+      var t = e.changedTouches[k];
+      if(joy && t.identifier === joy.id) joy = null;
+      if(t.identifier === dashTouch){ dashTouch = null; padDash = false; steer(); }
+    }
+  }
+  canvas.addEventListener('touchend', touchEnd); canvas.addEventListener('touchcancel', touchEnd);
   addEventListener('keydown', function(e){
     if(e.repeat) return;
     keys[e.code] = true;
@@ -306,7 +322,10 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
   var pred = null, predDash = 0, predCd = 0;
   function target(me){
     var kx = (keys.ArrowRight || keys.KeyD ? 1 : 0) - (keys.ArrowLeft || keys.KeyA ? 1 : 0), ky = (keys.ArrowDown || keys.KeyS ? 1 : 0) - (keys.ArrowUp || keys.KeyW ? 1 : 0);
-    return kx || ky ? {x: me.x + kx * 400, y: me.y + ky * 400} : {x: cam.x + (mouse.x - W / 2) / cam.z, y: cam.y + (mouse.y - H / 2) / cam.z};
+    if(kx || ky) return {x: me.x + kx * 400, y: me.y + ky * 400};
+    if(joy){ var jx = joy.x - joy.x0, jy = joy.y - joy.y0, jm = Math.hypot(jx, jy); if(jm > 10) heading = {x: jx / jm, y: jy / jm}; }
+    if(heading) return {x: me.x + heading.x * 400, y: me.y + heading.y * 400};   /* a phone: keep going the way the joystick last pointed */
+    return {x: cam.x + (mouse.x - W / 2) / cam.z, y: cam.y + (mouse.y - H / 2) / cam.z};
   }
   function dashing(){ return (mouse.down && performance.now() - mouse.at > 130) || keys.Space || padDash; }   /* a held button, not a click: a double-click shoots */
   function predict(dt){
@@ -335,7 +354,7 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
   /* Where another bee is right now: a little behind the service, eased between its last two reports. */
   function pos(id){
     var b = bees[id]; if(!b || !b.c) return null;
-    var t = simNow() - 70, f = b.c.n === b.p.n ? 1 : Math.max(0, Math.min(1.2, (t - b.p.n) / (b.c.n - b.p.n)));
+    var t = simNow() - 120, f = b.c.n === b.p.n ? 1 : Math.max(0, Math.min(1.2, (t - b.p.n) / (b.c.n - b.p.n)));
     var da = ((b.c.a - b.p.a + 9.42478) % 6.28318) - 3.14159;
     return {x: b.p.x + (b.c.x - b.p.x) * f, y: b.p.y + (b.c.y - b.p.y) * f, m: b.p.m + (b.c.m - b.p.m) * Math.min(1, f), a: b.p.a + da * Math.min(1, f), flags: b.flags, fb: b.fb};
   }
@@ -368,11 +387,17 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
     ctx.strokeText(label, p.x, p.y - r - fs * .9); ctx.fillText(label, p.x, p.y - r - fs * .9);
   }
 
-  var last = performance.now(), hudAt = 0, meNow = null;
+  var last = performance.now(), hudAt = 0, meNow = null, claimed = {};
   function frame(now){
     var dt = Math.min(.05, (now - last) / 1000); last = now;
     var sim = simNow(), all = [], me = null, biggest = null, mine = predict(dt);
     Object.keys(bees).forEach(function(id){ id = Number(id); var p = id === myId && mine ? mine : pos(id); if(!p) return; all.push([id, p]); if(id === myId) me = p; if(!biggest || p.m > biggest.m) biggest = p; });
+    /* On top of a smaller bee on this screen: tell the service, which takes that as a swallow if it is close to true there. */
+    if(me && !auto && phase === 'play') all.forEach(function(o){
+      if(o[0] === myId || me.m < o[1].m * 1.2 || Math.hypot(me.x - o[1].x, me.y - o[1].y) > radius(me.m) + radius(o[1].m) * .15) return;
+      if(now - (claimed[o[0]] || 0) < 250) return;
+      claimed[o[0]] = now; send({t: 'i', eat: o[0]});
+    });
     meNow = me;
     var f = me || biggest;
     if(f){ var z = Math.max(.42, Math.min(1.15, 1.25 / (1 + radius(f.m) / 110))) * Math.min(1.4, Math.max(.6, Math.min(W, H) / 800)); cam.x += (f.x - cam.x) * Math.min(1, dt * 10); cam.y += (f.y - cam.y) * Math.min(1, dt * 10); cam.z += (z - cam.z) * Math.min(1, dt * 2); }
@@ -420,12 +445,19 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
     for(k = sparks.length - 1; k >= 0; k--){ var s = sparks[k]; s.t -= dt; if(s.t <= 0){ sparks.splice(k, 1); continue; } s.x += s.vx * dt; s.y += s.vy * dt; ctx.globalAlpha = Math.min(1, s.t * 2); ctx.fillStyle = s.c; ctx.beginPath(); ctx.arc(s.x, s.y, 5, 0, 6.2832); ctx.fill(); }
     ctx.globalAlpha = 1;
 
+    if(joy){   /* the joystick, drawn where the finger went down */
+      var jx = joy.x - joy.x0, jy = joy.y - joy.y0, jm = Math.hypot(jx, jy) || 1, jr = Math.min(jm, 46);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.fillStyle = 'rgba(255,255,255,.06)'; ctx.beginPath(); ctx.arc(joy.x0, joy.y0, 52, 0, 6.2832); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(239,149,2,.8)'; ctx.beginPath(); ctx.arc(joy.x0 + jx / jm * jr, joy.y0 + jy / jm * jr, 22, 0, 6.2832); ctx.fill();
+    }
+
     if(now - hudAt > 250 && live){
       hudAt = now;
       var left = phaseEnds - sim, closing = Math.min(60, roundLen * .4) * 1000, people = 0;
       $('mass').textContent = me ? Math.round(me.m) : 0;
       $('sub').textContent = auto ? 'Click to fly your bee' : me && me.flags & 64 ? 'A queen is near: you cannot dash' : myName + (wins ? ' · ' + wins + (wins === 1 ? ' round won' : ' rounds won') : '');
-      var fb = me ? me.fb : 0; $('ammo').hidden = !fb; $('ammo').textContent = fb ? '🔥 x' + fb + (matchMedia('(pointer:coarse)').matches ? '  (double-tap)' : '  (double-click or F)') : ''; $('padFire').hidden = !fb;
+      var fb = me ? me.fb : 0; $('ammo').hidden = !fb; $('ammo').textContent = fb ? '🔥 x' + fb + (matchMedia('(pointer:coarse)').matches ? '  (second finger)' : '  (double-click or F)') : ''; $('padFire').hidden = !fb;
       $('clock').hidden = false; $('clock').classList.toggle('closing', phase === 'play' && left < closing);
       $('clockK').textContent = phase === 'rest' ? 'Next round in' : left < closing ? 'The fire is closing in' : 'Round ' + roundNo;
       $('clockT').textContent = mmss(left);
