@@ -42,8 +42,8 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
 #clock.closing{border-color:#ff6b70}
 #clock.closing span,#clock.closing b{color:#ff8a70}
 #board{right:16px;top:14px;width:236px}
-#board h2,#rest h2{margin:0 0 6px;font:800 .8rem "Archivo",sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--hot)}
-#board ol,#rest ol{list-style:none;margin:0;padding:0}
+#board h2{margin:0 0 6px;font:800 .8rem "Archivo",sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--hot)}
+#board ol{list-style:none;margin:0;padding:0}
 #board li{display:grid;grid-template-columns:1.6em 1fr auto;gap:6px;padding:2px 0;font-size:.88rem;white-space:nowrap}
 #board li span:nth-child(2){overflow:hidden;text-overflow:ellipsis}
 #board li.you{color:var(--hot)}
@@ -55,23 +55,43 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
 #banner b{color:var(--hot)}
 #banner span{display:block;font-size:.8rem;color:#B9BCC6;font-weight:500}
 #center{left:50%;top:40%;transform:translate(-50%,-50%);text-align:center;padding:18px 28px;max-width:min(520px,92vw)}
-#center h1,#rest h1{margin:0 0 6px;font:800 1.9rem "Archivo",sans-serif}
+#center h1{margin:0 0 6px;font:800 1.9rem "Archivo",sans-serif}
 #center p{margin:0;color:#C9CBD3;font-weight:500}
 #center p b{color:var(--hot)}
-#rest{left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,94vw);padding:20px 24px;text-align:center}
-#rest h1 b{color:var(--hot)}
-#rest .sub{color:#C9CBD3;font-weight:500;margin:0 0 14px}
-#rest ol{text-align:left;margin:0 0 12px}
-#rest li{display:grid;grid-template-columns:1fr auto;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.12)}
-#rest li:last-child{border-bottom:0}
-#rest li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#rest li small{display:block;font-weight:500;color:#B9BCC6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#rest li b{font:800 1.15rem "Archivo",sans-serif;color:var(--hot)}
-#rest .cta{display:inline-block;background:var(--accent);color:#1b0a02;font-weight:700;border-radius:99px;padding:9px 18px}
-#rest .next{margin-top:12px;font:800 1.2rem "Archivo",sans-serif;font-variant-numeric:tabular-nums}
 #pad{right:14px;bottom:76px;display:none;gap:10px;pointer-events:auto}
 #pad button{width:76px;height:76px;border-radius:50%;border:2px solid rgba(239,149,2,.7);background:rgba(21,23,28,.8);color:#fff;font:800 .9rem "Archivo",sans-serif;-webkit-tap-highlight-color:transparent}
 #pad button:active{background:var(--accent);color:#1b0a02}
+#curtain{position:fixed;inset:0;z-index:5;background:#000;pointer-events:none;clip-path:circle(0 at 50% 50%);transition:clip-path 1.15s cubic-bezier(.3,.1,.3,1)}
+#curtain.on{clip-path:circle(150% at 50% 50%)}
+#curtain.now{transition:none}
+#fx{position:fixed;inset:0;z-index:6;width:100vw;height:100vh;pointer-events:none}
+.hud{z-index:7}
+body.resting #board,body.resting #score,body.resting #feed,body.resting #banner{display:none}
+#rest{left:50%;top:50%;transform:translate(-50%,-50%);width:min(620px,94vw);text-align:center;opacity:0;transition:opacity .6s .9s}
+#rest.on{opacity:1}
+#rest .kicker{font:800 .95rem "Archivo",sans-serif;letter-spacing:.3em;text-transform:uppercase;color:var(--hot)}
+#rest .amount{font:800 clamp(3.4rem,13vw,6.5rem)/1 "Archivo",sans-serif;color:#fff;margin:6px 0 4px;text-shadow:0 0 40px rgba(255,120,20,.7),0 0 90px rgba(255,80,0,.45);font-variant-numeric:tabular-nums;animation:throb 1.4s ease-in-out infinite}
+#rest .who{font:800 1.5rem "Archivo",sans-serif;color:var(--hot)}
+#rest .task{color:#D9DBE1;font-weight:500;margin:6px auto 14px;max-width:34em}
+#rest ol{list-style:none;margin:0 auto 14px;padding:0;max-width:420px;text-align:left}
+#rest li{display:grid;grid-template-columns:1fr auto;gap:10px;padding:6px 0;border-top:1px solid rgba(255,255,255,.14);color:#C9CBD3}
+#rest li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#rest li b{font:800 1.05rem "Archivo",sans-serif;color:#fff}
+#rest .cta{display:inline-block;background:var(--accent);color:#1b0a02;font-weight:800;border-radius:99px;padding:11px 22px;font-size:1.05rem}
+#rest .winner{margin-top:16px;color:#C9CBD3;font-weight:600}
+#rest .winner b{color:var(--hot)}
+#rest .next{margin-top:4px;font:800 1.1rem "Archivo",sans-serif;font-variant-numeric:tabular-nums}
+#dead{margin-top:14px;display:grid;gap:10px}
+#dead > div{border-radius:12px;padding:10px 14px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.14)}
+#dead span{display:block;font:800 .7rem "Archivo",sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#B9BCC6}
+#dead b{display:block;font:800 1.5rem/1.2 "Archivo",sans-serif;color:#fff}
+#dead i{display:block;font-style:normal;font-weight:500;color:#D9DBE1}
+#dead u{display:block;text-decoration:none;font-weight:700;color:var(--hot)}
+#lead{border-color:rgba(239,149,2,.7)!important;animation:leadglow 1.2s ease-in-out infinite}
+#lead b{font-size:2.3rem;color:var(--hot);text-shadow:0 0 26px rgba(255,120,20,.7)}
+#lead em{display:block;font-style:normal;font-weight:800;color:#1b0a02;background:var(--accent);border-radius:99px;padding:6px 14px;margin-top:8px}
+@keyframes throb{50%{transform:scale(1.045)}}
+@keyframes leadglow{50%{box-shadow:0 0 34px rgba(255,120,20,.55)}}
 [hidden]{display:none!important}
 @media(max-width:700px){#board{width:156px;padding:8px 10px}#board li:nth-child(n+6){display:none}#banner{font-size:.78rem;white-space:normal;width:92vw}#banner span{display:none}#feed{display:none}#brand span{display:none}#clock{top:64px;left:auto;right:16px;transform:none}#score{top:64px}}
 </style>
@@ -84,13 +104,22 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
 <div class="hud card" id="board"><h2 id="boardH">Biggest bees</h2><ol id="top"></ol></div>
 <div class="hud" id="feed"></div>
 <div class="hud card" id="banner"><div>The real game: <b>bid on what I do tomorrow</b> at <b>torchhive.com</b></div><span id="hint">Steer with the mouse. Hold the button or Space to dash and leave fire. Double-click, right-click or F shoots a fireball.</span></div>
-<div class="hud card" id="center"><h1 id="cTitle">Hive Arena</h1><p id="cText">Joining the arena...</p></div>
-<div class="hud card" id="rest" hidden>
-  <h1 id="restTitle"></h1>
-  <p class="sub" id="restSub"></p>
-  <h2>Today's bids</h2>
+<div class="hud card" id="center"><h1 id="cTitle">Hive Arena</h1><p id="cText">Joining the arena...</p>
+  <div id="dead" hidden>
+    <div id="spon" hidden><span>Brought to you by</span><b id="sponName"></b><i id="sponLine"></i><u id="sponLink"></u></div>
+    <div id="lead" hidden><span id="leadK">Leading bid for tomorrow</span><b id="leadAmt"></b><i id="leadWho"></i><em id="leadCta">Outbid them at torchhive.com</em></div>
+  </div>
+</div>
+<div id="curtain"></div>
+<canvas id="fx"></canvas>
+<div class="hud" id="rest" hidden>
+  <div class="kicker" id="showK">Leading bid</div>
+  <div class="amount" id="showAmt"></div>
+  <div class="who" id="showWho"></div>
+  <div class="task" id="showTask"></div>
   <ol id="bids"></ol>
-  <div class="cta">Bid on what I do tomorrow at torchhive.com</div>
+  <div class="cta" id="showCta">Outbid them at torchhive.com</div>
+  <div class="winner" id="restTitle"></div>
   <div class="next" id="restNext"></div>
 </div>
 <div class="hud" id="pad"><button id="padFire" type="button" hidden>FIRE</button><button id="padDash" type="button">DASH</button></div>
@@ -154,7 +183,8 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
     if(m.you) onYou(m.you);
     if(m.name !== undefined){ myName = m.name; owner = Boolean(m.owner); if(owner) chatRelay(); }
     live = true;
-    if(phase === 'rest') showRest(); else $('rest').hidden = true;
+    sponsors = (m.cfg && m.cfg.sponsors) || sponsors;
+    if(phase === 'rest') showRest(true); else endRest();
     card();
   }
   function onSnap(m){
@@ -168,44 +198,150 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
   }
   function onYou(m){
     var had = myId; myId = m.id; killer = m.killer; wins = m.wins || 0;
-    if(had && !myId && phase === 'play'){ boom(180, .5, .14, 'sawtooth'); shake = 14; }
+    if(had && !myId && phase === 'play') died();
     card();
   }
 
   /* ---------- the card in the middle: joining, on autopilot, swallowed ---------- */
   function card(){
-    var c = $('center'), show = true;
+    var c = $('center'), show = true, dead = false;
     if(!live){ $('cTitle').textContent = 'Hive Arena'; $('cText').textContent = 'Joining the arena...'; }
     else if(phase === 'rest') show = false;
+    else if(!myId && killer){   /* swallowed: the advertiser and the leading bid get the screen until you fly again */
+      dead = true;
+      $('cTitle').textContent = (/fire/.test(killer) ? 'Burned by ' : 'Swallowed by ') + killer;
+      $('cText').innerHTML = auto ? 'Back in the air in a moment.' : '<b>Click, tap or press Space</b> to fly again.';
+    }
     else if(auto){ $('cTitle').textContent = 'Hive Arena'; $('cText').innerHTML = 'Everyone here is in the same arena. Grow, leave fire, and be the biggest when the ring closes.<br><b>Click or tap to fly your bee.</b>' + (matchMedia('(pointer:coarse)').matches ? '<br>Your first finger is a joystick wherever you put it. A second finger dashes, and shoots if you have fireballs.' : ''); }
-    else if(!myId){ $('cTitle').textContent = killer ? 'Burned by ' + killer : 'Out'; if(killer && !/fire/.test(killer)) $('cTitle').textContent = 'Swallowed by ' + killer; $('cText').innerHTML = '<b>Click, tap or press Space</b> to fly again.'; }
+    else if(!myId){ $('cTitle').textContent = 'Out'; $('cText').innerHTML = '<b>Click, tap or press Space</b> to fly again.'; }
     else show = false;
-    c.hidden = !show;
+    c.hidden = !show; $('dead').hidden = !dead;
+  }
+
+  /* ---------- the day's bids, for the break and for the moment you are swallowed ---------- */
+  var board = null, boardAt = -1e9, sponsors = [], sponsorN = 0;
+  function withBoard(then){
+    if(board && performance.now() - boardAt < 20000){ then(board); return; }
+    fetch(API + '/board', {cache: 'no-store'}).then(function(r){ return r.json(); }).then(function(d){ board = d; boardAt = performance.now(); then(d); }).catch(function(){ then(board || {bids: []}); });
+  }
+  function dollars(cents){ return '$' + (cents / 100).toFixed(2); }
+  /* Swallowed: fire along the bottom, the flame sound, one advertiser (they take turns) and the leading bid. */
+  function died(){
+    boom(180, .5, .14, 'sawtooth'); shake = 14;
+    ignite('floor', .7, 2200); fireSound(false);
+    var a = sponsors.length ? sponsors[sponsorN++ % sponsors.length] : null;
+    $('spon').hidden = !a;
+    if(a){ $('sponName').textContent = a.name; $('sponLine').textContent = a.line; $('sponLine').hidden = !a.line; $('sponLink').textContent = a.link; $('sponLink').hidden = !a.link; }
+    $('lead').hidden = true;
+    withBoard(function(d){
+      var top = (d.bids || [])[0];
+      $('leadK').textContent = top ? 'Leading bid for tomorrow' : 'No bids yet today';
+      $('leadAmt').textContent = top ? dollars(top.amountCents) : '50¢ takes the lead';
+      $('leadWho').textContent = top ? top.name + (top.task ? ': ' + top.task : '') : 'The highest bid decides what I do tomorrow, on camera.';
+      $('leadCta').textContent = top ? 'Outbid them at torchhive.com' : 'Be first at torchhive.com';
+      $('lead').hidden = false;
+    });
   }
 
   /* ---------- the break between rounds: who won, and the day's bids ---------- */
-  function showRest(){
-    $('restTitle').innerHTML = winner ? '<b>' + esc(winner.name) + '</b> wins round ' + roundNo : 'Round ' + roundNo + ' is over';
-    $('restSub').textContent = winner ? (winner.name === myName ? 'That is you. ' : '') + 'Biggest bee when the fire closed, at ' + winner.m + '.' : '';
-    $('rest').hidden = false; card();
-    var list = $('bids');
-    fetch(API + '/board', {cache: 'no-store'}).then(function(r){ return r.json(); }).then(function(d){
-      var bids = (d.bids || []).slice(0, 5); list.textContent = '';
-      if(!bids.length){ var li = document.createElement('li'), s = document.createElement('span'); s.textContent = d.status === 'open' ? 'No bids yet. The reserve is 50¢, so the first bid leads.' : 'Bidding is closed right now.'; li.appendChild(s); list.appendChild(li); return; }
-      bids.forEach(function(b, n){
+  /* The round is over: fire bursts from the middle of the screen with the flame sound, black follows
+     it out, and on the black the leading bid is shown, big, with the next few under it and who won. */
+  function showRest(late){
+    var c = $('curtain'), r = $('rest');
+    document.body.classList.add('resting');
+    c.classList.toggle('now', Boolean(late)); c.classList.add('on');
+    r.hidden = false; r.classList.remove('on'); void r.offsetWidth; r.classList.add('on');
+    if(!late){ ignite('burst', 1, 1500); fireSound(true); setTimeout(function(){ if(phase === 'rest') ignite('floor', .55, 5000); }, 1500); }
+    $('restTitle').innerHTML = winner ? '<b>' + esc(winner.name === myName && myName ? 'You' : winner.name) + '</b> won round ' + roundNo + ', biggest bee at ' + winner.m : 'Round ' + roundNo + ' is over';
+    card();
+    withBoard(function(d){
+      var bids = d.bids || [], top = bids[0], list = $('bids'); list.textContent = '';
+      $('showK').textContent = top ? 'Leading bid for tomorrow' : d.status === 'open' ? 'No bids yet today' : 'Bidding is closed right now';
+      $('showAmt').textContent = top ? dollars(top.amountCents) : '50¢';
+      $('showWho').textContent = top ? top.name : top === undefined && d.status === 'open' ? 'takes the lead' : '';
+      $('showTask').textContent = top ? (top.task || '') : 'The highest bid decides what I do tomorrow, on camera.';
+      $('showCta').textContent = top ? 'Outbid them at torchhive.com' : 'Bid at torchhive.com';
+      bids.slice(1, 4).forEach(function(b, n){
         var li = document.createElement('li'), s = document.createElement('span'), amt = document.createElement('b');
-        s.textContent = (n + 1) + '. ' + b.name;
-        if(b.task){ var t = document.createElement('small'); t.textContent = b.task; s.appendChild(t); }
-        amt.textContent = '$' + (b.amountCents / 100).toFixed(2);
+        s.textContent = (n + 2) + '. ' + b.name + (b.task ? ': ' + b.task : ''); amt.textContent = dollars(b.amountCents);
         li.appendChild(s); li.appendChild(amt); list.appendChild(li);
       });
-    }).catch(function(){});
+    });
+  }
+  function endRest(){
+    if($('rest').hidden && !document.body.classList.contains('resting')) return;
+    $('rest').hidden = true; $('rest').classList.remove('on');
+    $('curtain').classList.add('now'); $('curtain').classList.remove('on');
+    document.body.classList.remove('resting'); card();
+  }
+
+  /* ---------- fire: soft sparks of light that cool from yellow to red, as on the home page ---------- */
+  var fx = $('fx'), pen = null, flames = [], fxUntil = 0, fxMode = 'floor', fxPower = 0, fxFrame = null, sprites = null;
+  function sprite(r, g, b){
+    var c = document.createElement('canvas'); c.width = c.height = 64;
+    var p = c.getContext('2d'), grad = p.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',1)'); grad.addColorStop(.35, 'rgba(' + r + ',' + g + ',' + b + ',.55)'); grad.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+    p.fillStyle = grad; p.fillRect(0, 0, 64, 64);
+    return c;
+  }
+  /* 'burst' throws the fire outward from the middle of the screen; 'floor' lets it rise along the bottom. */
+  function ignite(mode, power, ms){
+    if(!fx.getContext) return;
+    if(!pen){ pen = fx.getContext('2d'); sprites = [sprite(255, 214, 120), sprite(255, 158, 44), sprite(244, 98, 18), sprite(170, 36, 8)]; }
+    fx.width = Math.ceil(innerWidth / 2); fx.height = Math.ceil(innerHeight / 2);
+    fxMode = mode; fxPower = power; fxUntil = performance.now() + ms;
+    if(!fxFrame) fxFrame = requestAnimationFrame(burn);
+  }
+  function burn(now){
+    var w = fx.width, h = fx.height, tall = h / 400, i;
+    pen.globalCompositeOperation = 'source-over'; pen.clearRect(0, 0, w, h);
+    if(now < fxUntil){
+      var fresh = Math.min(fxMode === 'burst' ? 70 : 46, Math.round(w / 22 * fxPower) + (fxMode === 'burst' ? 30 : 0));
+      for(i = 0; i < fresh; i++){
+        if(fxMode === 'burst'){
+          var a = Math.random() * 6.2832, v = (1.5 + Math.random() * 9) * Math.max(tall, w / 700);
+          flames.push({x: w / 2, y: h / 2, vx: Math.cos(a) * v, vy: Math.sin(a) * v, size: (18 + Math.random() * 34) * tall, life: 1, fade: .011 + Math.random() * .014, sway: Math.random() * 6.3});
+        } else flames.push({x: Math.random() * w, y: h + Math.random() * 8 * tall, vx: (Math.random() - .5) * .5, vy: -(1.5 + Math.random() * 2.7) * fxPower * tall, size: (12 + Math.random() * 24) * tall * (.75 + fxPower * .45), life: 1, fade: .013 + Math.random() * .022, sway: Math.random() * 6.3});
+      }
+    }
+    pen.globalCompositeOperation = 'lighter';   /* light adds up, the way overlapping flame does */
+    for(i = flames.length - 1; i >= 0; i--){
+      var f = flames[i];
+      f.sway += .13; f.x += f.vx + Math.sin(f.sway) * .8 * tall; f.y += f.vy; f.vx *= .988; f.vy *= .988; f.size *= .989; f.life -= f.fade;
+      if(f.life <= 0){ flames.splice(i, 1); continue; }
+      pen.globalAlpha = Math.min(1, f.life * 1.1) * .22;
+      pen.drawImage(sprites[f.life > .86 ? 0 : f.life > .58 ? 1 : f.life > .28 ? 2 : 3], f.x - f.size, f.y - f.size * 1.9, f.size * 2, f.size * 3.1);
+    }
+    pen.globalAlpha = 1;
+    if(flames.length || now < fxUntil) fxFrame = requestAnimationFrame(burn);
+    else { pen.clearRect(0, 0, w, h); fxFrame = null; }
+  }
+  /* The flame sound, made here: a rush of low noise with crackles. */
+  function fireSound(big){
+    if(!soundOn || !audio || audio.state !== 'running') return;
+    try {
+      var dur = big ? 2.6 : 1.6, rate = audio.sampleRate, buf = audio.createBuffer(1, Math.floor(rate * dur), rate), d = buf.getChannelData(0), was = 0;
+      for(var i = 0; i < d.length; i++){
+        var white = Math.random() * 2 - 1;
+        was = (was + .035 * white) / 1.035; d[i] = was * 3.4 + white * .05;
+        if(Math.random() < (big ? .0016 : .0011)) d[i] += (Math.random() * 2 - 1) * .85;
+      }
+      var src = audio.createBufferSource(), low = audio.createBiquadFilter(), high = audio.createBiquadFilter(), gain = audio.createGain(), t = audio.currentTime;
+      src.buffer = buf;
+      low.type = 'lowpass'; low.frequency.setValueAtTime(500, t); low.frequency.linearRampToValueAtTime(big ? 3600 : 2600, t + .25); low.frequency.linearRampToValueAtTime(700, t + dur);
+      high.type = 'highpass'; high.frequency.value = 70;
+      gain.gain.setValueAtTime(.0001, t); gain.gain.exponentialRampToValueAtTime(big ? .55 : .38, t + .14); gain.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      src.connect(high); high.connect(low); low.connect(gain); gain.connect(audio.destination);
+      src.start(t); src.stop(t + dur);
+    } catch (e) {}
   }
 
   /* ---------- sound, sparks and the feed ---------- */
+  /* Made at once where the browser allows it (a stream's browser source does), otherwise on the first click or tap. */
   var audio = null;
+  try { if(soundOn) audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
   function boom(hz, len, vol, type){
-    if(!soundOn || !audio) return;
+    if(!soundOn || !audio || audio.state !== 'running') return;
     try {
       var o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime;
       o.type = type || 'sine'; o.frequency.setValueAtTime(hz, t); o.frequency.exponentialRampToValueAtTime(hz * 1.6, t + len);
@@ -262,6 +398,7 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
   function took(){
     lastInput = performance.now();
     if(!audio && soundOn) try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+    if(audio && audio.state === 'suspended') try { audio.resume(); } catch (e) {}
     if(auto){ auto = false; send({t: 'i', auto: false, go: 1}); card(); }
     else if(!myId && phase === 'play') send({t: 'i', go: 1});
   }
@@ -461,7 +598,7 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
       $('clock').hidden = false; $('clock').classList.toggle('closing', phase === 'play' && left < closing);
       $('clockK').textContent = phase === 'rest' ? 'Next round in' : left < closing ? 'The fire is closing in' : 'Round ' + roundNo;
       $('clockT').textContent = mmss(left);
-      if(phase === 'rest') $('restNext').textContent = 'Next round in ' + mmss(left); else if(!$('rest').hidden){ $('rest').hidden = true; card(); }
+      if(phase === 'rest') $('restNext').textContent = 'Next round in ' + mmss(left); else endRest();
       var top = $('top'); top.textContent = '';
       all.slice().reverse().filter(function(a){ return (roster[a[0]] || {}).kind !== 'w'; }).slice(0, 8).forEach(function(a, n){
         var info = roster[a[0]] || {name: '?'}, li = document.createElement('li'), s1 = document.createElement('span'), s2 = document.createElement('span'), s3 = document.createElement('span');

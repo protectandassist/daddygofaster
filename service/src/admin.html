@@ -139,6 +139,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
         <label class="small">The break lasts <select id="arenaRest"><option value="15">15 seconds</option><option value="30">30 seconds</option><option value="45">45 seconds</option><option value="60">1 minute</option><option value="90">90 seconds</option></select></label>
         <button id="arenaSave" type="button">Save</button>
       </div>
+      <p class="muted small" style="margin:10px 0 4px">Advertisers, shown to a player each time their bee is swallowed, one after another, next to the leading bid. One to a line, up to eight: <b>Name | what to say | web address</b>. They show as plain words, not as links.</p>
+      <textarea id="arenaSponsors" rows="4" style="width:100%" placeholder="Joe's Tire Shop | Tires and brakes on Main Street | joestires.com"></textarea>
       <div id="chatList"></div>
     </section>
 
@@ -320,6 +322,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     var arena = d.arena || {round: 180, rest: 30};
     if(document.activeElement !== $('arenaRound')) $('arenaRound').value = arena.round;
     if(document.activeElement !== $('arenaRest')) $('arenaRest').value = arena.rest;
+    if(document.activeElement !== $('arenaSponsors')) $('arenaSponsors').value = (arena.sponsors || []).map(function(a){ return [a.name, a.line, a.link].filter(function(x, i){ return x || i < 2; }).join(' | '); }).join('\n');
     var games = d.games || {on: false};
     $('gamesNote').textContent = games.on
       ? 'The games are running on the overlay now, one round after another. Viewers play free at torchhive.com/play, and Twitch viewers can type their pick in chat. Changing the game keeps everyone\'s points. They stop by themselves after six hours.'
@@ -485,7 +488,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   $('liveOff').addEventListener('click', function(){ act('/admin/api/live', {on: false}); });
   $('gamesOn').addEventListener('click', function(){ act('/admin/api/games', {on: true, mode: $('gamesMode').value}); });
   $('gamesOff').addEventListener('click', function(){ act('/admin/api/games', {on: false}); });
-  $('arenaSave').addEventListener('click', function(){ act('/admin/api/arena', {round: Number($('arenaRound').value), rest: Number($('arenaRest').value)}); });
+  $('arenaSave').addEventListener('click', function(){ act('/admin/api/arena', {round: Number($('arenaRound').value), rest: Number($('arenaRest').value), sponsors: $('arenaSponsors').value}); });
   /* "8:15 PM" on this device's clock: today if that is still ahead, otherwise tomorrow */
   function closeAtFromClock(value){
     var m = /^(\d{1,2}):(\d{2})$/.exec(value || '');

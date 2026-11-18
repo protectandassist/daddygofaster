@@ -25,8 +25,8 @@ import { getSetting, setSetting } from './store.js';
 
 export const ROUNDS = [60, 120, 180, 300, 600];   // seconds a round may last
 export const RESTS = [15, 30, 45, 60, 90];        // seconds between rounds
-const DEFAULTS = { round: 180, rest: 30 };
-const VERSION = 10;   // sent to each page as it joins, so it can be seen which build a running arena is on
+const DEFAULTS = { round: 180, rest: 30, sponsors: [] };
+const VERSION = 11;   // sent to each page as it joins, so it can be seen which build a running arena is on
 const R = 1500;                 // the arena is a circle this wide from its middle, which is at (R, R)
 const RING_MIN = 320;           // how small the ring of fire gets
 const START = 20, EAT = 1.2, POLLEN = 520, BEES = 18, MIN_BOTS = 6, MAX_CHAT = 25, MAX_PATCHES = 500;
@@ -42,7 +42,15 @@ export const QUEEN = { secs: 15, reach: 520, food: 260 };   // how long, how far
 const ADJ = ['Lucky', 'Swift', 'Golden', 'Smoky', 'Bold', 'Sly', 'Sunny', 'Mighty', 'Quiet', 'Wild', 'Amber', 'Brave', 'Fuzzy', 'Nimble', 'Rusty', 'Jolly'];
 const NOUN = ['Drone', 'Ember', 'Spark', 'Comet', 'Badger', 'Falcon', 'Otter', 'Hornet', 'Lantern', 'Rocket', 'Maple', 'Bandit', 'Pepper', 'Tiger', 'Walrus', 'Moose'];
 export const rad = (m) => Math.sqrt(m) * 4.2;
-const cleanCfg = (c) => ({ round: ROUNDS.includes(Number(c?.round)) ? Number(c.round) : DEFAULTS.round, rest: RESTS.includes(Number(c?.rest)) ? Number(c.rest) : DEFAULTS.rest });
+// The owner's advertisers, shown to a player whose bee has just been swallowed: up to eight, each a
+// name, a line to say and a web address. Typed on the owner page one to a line as "Name | line | address".
+// They are shown as plain words, never as a link or a picture.
+function cleanSponsors(v) {
+  const rows = typeof v === 'string' ? v.split('\n').map((l) => { const [name, line, link] = l.split('|').map((x) => x.trim()); return { name, line, link }; }) : Array.isArray(v) ? v : [];
+  return rows.filter((r) => r && typeof r.name === 'string' && r.name.trim()).slice(0, 8)
+    .map((r) => ({ name: r.name.trim().slice(0, 40), line: String(r.line || '').trim().slice(0, 90), link: String(r.link || '').trim().replace(/^https?:\/\//i, '').replace(/\s.*$/, '').slice(0, 60) }));
+}
+const cleanCfg = (c) => ({ round: ROUNDS.includes(Number(c?.round)) ? Number(c.round) : DEFAULTS.round, rest: RESTS.includes(Number(c?.rest)) ? Number(c.rest) : DEFAULTS.rest, sponsors: cleanSponsors(c?.sponsors) });
 
 export class World {
   constructor(cfg, bidders = [], rand = Math.random) {
@@ -350,7 +358,7 @@ export class World {
     for (const f of this.patches.values()) if (f.until <= this.t) { if (f.drop) this.grain(f.x, f.y, f.drop, HOT_MS); this.patches.delete(f.id); }
     for (const g of this.pollen.values()) if (g.until && g.until <= this.t) { this.pollen.delete(g.id); this.pDel.push(g.id); }
     for (let n = 0; n < 6 && this.pollen.size < POLLEN; n++) this.grain();
-    for (const p of this.players.values()) if (!p.bee && p.auto && this.t - p.deadAt > 2500) this.enter(p);
+    for (const p of this.players.values()) if (!p.bee && p.auto && this.t - p.deadAt > 5000) this.enter(p);   // five seconds: long enough for the advertiser and the leading bid to be read
 
     if (this.t >= this.phaseEnds) {
       const first = [...this.bees.values()].filter((b) => b.kind !== 'w').sort((a, b) => b.m - a.m)[0] || null;
@@ -394,7 +402,8 @@ const stub = (env) => env.ARENA.get(env.ARENA.idFromName('main'));
 export async function arenaSetting(env) {
   try { return cleanCfg(JSON.parse((await getSetting(env, 'arena')) || '{}')); } catch { return { ...DEFAULTS }; }
 }
-// Owner: POST /admin/api/arena { round, rest } in seconds. Takes effect from the next round.
+// Owner: POST /admin/api/arena { round, rest, sponsors }: the lengths in seconds, the advertisers as
+// typed. The lengths take effect from the next round, the advertisers as each page next joins.
 export async function setArena(env, body, now) {
   const cfg = cleanCfg(body);
   await setSetting(env, 'arena', JSON.stringify(cfg), now);
