@@ -26,7 +26,7 @@ import { getSetting, setSetting } from './store.js';
 export const ROUNDS = [60, 120, 180, 300, 600];   // seconds a round may last
 export const RESTS = [15, 30, 45, 60, 90];        // seconds between rounds
 const DEFAULTS = { round: 180, rest: 30, sponsors: [] };
-const VERSION = 11;   // sent to each page as it joins, so it can be seen which build a running arena is on
+const VERSION = 12;   // sent to each page as it joins, so it can be seen which build a running arena is on
 const R = 1500;                 // the arena is a circle this wide from its middle, which is at (R, R)
 const RING_MIN = 320;           // how small the ring of fire gets
 const START = 20, EAT = 1.2, POLLEN = 520, BEES = 18, MIN_BOTS = 6, MAX_CHAT = 25, MAX_PATCHES = 500;
@@ -113,6 +113,8 @@ export class World {
     let p = this.players.get(key);
     if (!p) this.players.set(key, p = { key, name, owner: Boolean(owner), bee: null, auto: true, deadAt: 0, killer: null, wins: 0 });
     p.name = name; p.owner = Boolean(owner);
+    const mine = this.bees.get(p.bee);
+    if (mine && mine.name !== name) { mine.name = name; this.rosterDirty = true; }   // came back under a new name
     this.enter(p);
   }
   removePlayer(key) {

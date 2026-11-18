@@ -40,6 +40,8 @@ import {
 import { record, report, tidy, liveNow } from './stats.js';
 import { gamesState, gamesSetting, setGames, postPick, player } from './games.js';
 import { Arena, arenaJoin, arenaSocket, arenaSetting, setArena } from './arena.js';
+import { badLanguage, posesAsSite } from './language.js';
+import { nameKey } from './social.js';
 export { Arena };
 import ADMIN_HTML from './admin.html';
 import REPORTS_HTML from './reports.html';
@@ -1062,7 +1064,18 @@ const SOCIAL = {
     const body = await request.json().catch(() => null), user = await sessionUser(request, env, now);
     const board = await getBoard(env, s, now).catch(() => null);
     const bidders = [...new Set(((board && board.bids) || []).map((b) => b.name).filter(Boolean))].slice(0, 12);
-    return arenaJoin(env, player(user, body?.g), Boolean(user && user.email && isAdminEmail(env, user.email)), bidders, request.headers.get('CF-Connecting-IP') || '');
+    const who = player(user, body?.g);
+    // A guest may fly under a name they type. It is held to the rules for usernames, and cannot be a name an account holds.
+    const typed = typeof body?.name === 'string' ? body.name.normalize('NFKC').replace(/\s+/g, ' ').trim() : '';
+    if (who && typed && who.player.startsWith('g:')) {
+      if (!/^[\p{L}\p{N} _.-]{2,16}$/u.test(typed) || nameKey(typed).length < 2) return [400, { message: 'Use a name of 2 to 16 letters or numbers.', field: 'name' }];
+      if (badLanguage(typed)) return [400, { message: 'Pick a different name.', field: 'name' }];
+      if (posesAsSite(typed)) return [400, { message: 'That name is reserved. Pick another.', field: 'name' }];
+      if (await env.DB.prepare('SELECT id FROM users WHERE name_key = ?').bind(nameKey(typed)).first()) return [400, { message: 'That name belongs to an account. Sign in at torchhive.com to use it, or pick another.', field: 'name' }];
+      who.name = typed;
+    }
+    const [status, out] = await arenaJoin(env, who, Boolean(user && user.email && isAdminEmail(env, user.email)), bidders, request.headers.get('CF-Connecting-IP') || '');
+    return [status, status === 200 ? { ...out, account: Boolean(who && who.player.startsWith('u:')) } : out];
   },
   'POST /games/pick': async (request, env, s, now) => {
     const body = await request.json().catch(() => null);

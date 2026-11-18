@@ -89,9 +89,22 @@ body.resting #board,body.resting #score,body.resting #feed,body.resting #banner{
 #dead u{display:block;text-decoration:none;font-weight:700;color:var(--hot)}
 #lead{border-color:rgba(239,149,2,.7)!important;animation:leadglow 1.2s ease-in-out infinite}
 #lead b{font-size:2.3rem;color:var(--hot);text-shadow:0 0 26px rgba(255,120,20,.7)}
-#lead em{display:block;font-style:normal;font-weight:800;color:#1b0a02;background:var(--accent);border-radius:99px;padding:6px 14px;margin-top:8px}
+#lead a{display:block;font-weight:800;color:#1b0a02;background:var(--accent);border-radius:99px;padding:6px 14px;margin-top:8px}
 @keyframes throb{50%{transform:scale(1.045)}}
 @keyframes leadglow{50%{box-shadow:0 0 34px rgba(255,120,20,.55)}}
+#go{margin-top:14px;pointer-events:auto;display:grid;gap:8px}
+#go label{display:grid;gap:4px;text-align:left}
+#go label span{font:800 .7rem "Archivo",sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#B9BCC6}
+#nameIn{width:100%;min-height:46px;padding:8px 12px;border-radius:12px;border:2px solid rgba(255,255,255,.22);background:rgba(0,0,0,.4);color:#fff;font:700 1.05rem "Inter",system-ui,sans-serif;user-select:text;-webkit-user-select:text}
+#nameIn:focus{outline:0;border-color:var(--accent)}
+#nameAs{margin:0;color:#C9CBD3;font-weight:600}
+#nameErr{margin:0;color:#ff8f93;font-weight:600;min-height:0}
+#nameErr:empty{display:none}
+#goBtn{min-height:54px;border:0;border-radius:99px;background:var(--accent);color:#1b0a02;font:800 1.25rem "Archivo",sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#goBtn:disabled{opacity:.6}
+#goBtn:active{transform:scale(.98)}
+a.cta,#lead a,#banner a{pointer-events:auto;cursor:pointer;text-decoration:none}
+#banner a{color:inherit}
 [hidden]{display:none!important}
 @media(max-width:700px){#board{width:156px;padding:8px 10px}#board li:nth-child(n+6){display:none}#banner{font-size:.78rem;white-space:normal;width:92vw}#banner span{display:none}#feed{display:none}#brand span{display:none}#clock{top:64px;left:auto;right:16px;transform:none}#score{top:64px}}
 </style>
@@ -103,11 +116,17 @@ body.resting #board,body.resting #score,body.resting #feed,body.resting #banner{
 <div class="hud card" id="clock" hidden><span id="clockK">Round 1</span><b id="clockT">0:00</b></div>
 <div class="hud card" id="board"><h2 id="boardH">Biggest bees</h2><ol id="top"></ol></div>
 <div class="hud" id="feed"></div>
-<div class="hud card" id="banner"><div>The real game: <b>bid on what I do tomorrow</b> at <b>torchhive.com</b></div><span id="hint">Steer with the mouse. Hold the button or Space to dash and leave fire. Double-click, right-click or F shoots a fireball.</span></div>
+<div class="hud card" id="banner"><a href="/" target="_blank" rel="noopener">The real game: <b>bid on what I do tomorrow</b> at <b>torchhive.com</b></a><span id="hint">Steer with the mouse. Hold the button or Space to dash and leave fire. Double-click, right-click or F shoots a fireball.</span></div>
 <div class="hud card" id="center"><h1 id="cTitle">Hive Arena</h1><p id="cText">Joining the arena...</p>
   <div id="dead" hidden>
     <div id="spon" hidden><span>Brought to you by</span><b id="sponName"></b><i id="sponLine"></i><u id="sponLink"></u></div>
-    <div id="lead" hidden><span id="leadK">Leading bid for tomorrow</span><b id="leadAmt"></b><i id="leadWho"></i><em id="leadCta">Outbid them at torchhive.com</em></div>
+    <div id="lead" hidden><span id="leadK">Leading bid for tomorrow</span><b id="leadAmt"></b><i id="leadWho"></i><a id="leadCta" href="/" target="_blank" rel="noopener">Outbid them at torchhive.com</a></div>
+  </div>
+  <div id="go" hidden>
+    <label id="nameRow"><span>Your name</span><input id="nameIn" type="text" maxlength="16" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="go"></label>
+    <p id="nameAs" hidden></p>
+    <p id="nameErr" role="alert"></p>
+    <button id="goBtn" type="button">Play</button>
   </div>
 </div>
 <div id="curtain"></div>
@@ -118,7 +137,7 @@ body.resting #board,body.resting #score,body.resting #feed,body.resting #banner{
   <div class="who" id="showWho"></div>
   <div class="task" id="showTask"></div>
   <ol id="bids"></ol>
-  <div class="cta" id="showCta">Outbid them at torchhive.com</div>
+  <a class="cta" id="showCta" href="/" target="_blank" rel="noopener">Outbid them at torchhive.com</a>
   <div class="winner" id="restTitle"></div>
   <div class="next" id="restNext"></div>
 </div>
@@ -129,7 +148,7 @@ body.resting #board,body.resting #score,body.resting #feed,body.resting #banner{
   var $ = function(id){ return document.getElementById(id); };
   var q = location.search, soundOn = !/[?&]sound=0\b/.test(q);
   var canvas = $('c'), ctx = canvas.getContext('2d'), W = 0, H = 0, DPR = 1;
-  function size(){ DPR = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight; canvas.width = W * DPR; canvas.height = H * DPR; }
+  function size(){ DPR = Math.min(matchMedia('(pointer:coarse)').matches ? 1.5 : 2, window.devicePixelRatio || 1);   /* a phone draws fewer pixels, to keep its frame rate up */ W = innerWidth; H = innerHeight; canvas.width = W * DPR; canvas.height = H * DPR; }
   addEventListener('resize', size); size();
 
   var COLORS = ['#ff5a3c', '#ff9f1c', '#ffd23f', '#3dd68c', '#4cc9f0', '#b388ff', '#ff7ab6', '#aab3c2', '#7bd389', '#f4a261'];
@@ -158,16 +177,24 @@ body.resting #board,body.resting #score,body.resting #feed,body.resting #banner{
   var mouse = {x: innerWidth / 2, y: innerHeight / 2, down: false}, keys = {}, padDash = false;
   function simNow(){ return offset === null ? 0 : performance.now() + offset; }
 
+  var late = 0, delay = 110;
   function take(m){
     var now = performance.now(), est = m.n - now;
     /* the service's clock, as seen from here: the freshest packet sets it, and it drifts back slowly */
     offset = offset === null || est > offset ? est : offset + (est - offset) * .02;
+    /* How late packets are running. On a phone they arrive unevenly, and a bee drawn right behind the
+       newest packet stutters each time one is late. So the others are drawn far enough behind to
+       ride that out: about a tenth of a second on a steady line, more on an uneven one. */
+    late = Math.max(late * .995, now + offset - m.n);
+    delay += (Math.min(380, 100 + late * 1.15) - delay) * .1;
     lastN = m.n; ring = m.ring; phase = m.ph; phaseEnds = m.n + m.left; roundNo = m.round; winner = m.win;
     var seen = {};
     m.b.forEach(function(v){
-      var b = bees[v[0]] || (bees[v[0]] = {});
+      var b = bees[v[0]] || (bees[v[0]] = {h: []});
       b.p = b.c || {n: m.n - 100, x: v[1], y: v[2], m: v[3], a: v[4]};
       b.c = {n: m.n, x: v[1], y: v[2], m: v[3], a: v[4]}; b.flags = v[5]; b.fb = v[6];
+      if(!b.h.length) b.h.push(b.p);
+      b.h.push(b.c); if(b.h.length > 12) b.h.shift();   /* the last few reports, to draw between */
       seen[v[0]] = 1;
     });
     Object.keys(bees).forEach(function(id){ if(!seen[id]) delete bees[id]; });
@@ -204,18 +231,25 @@ body.resting #board,body.resting #score,body.resting #feed,body.resting #banner{
 
   /* ---------- the card in the middle: joining, on autopilot, swallowed ---------- */
   function card(){
-    var c = $('center'), show = true, dead = false;
+    var c = $('center'), show = true, dead = false, button = '';
     if(!live){ $('cTitle').textContent = 'Hive Arena'; $('cText').textContent = 'Joining the arena...'; }
     else if(phase === 'rest') show = false;
-    else if(!myId && killer){   /* swallowed: the advertiser and the leading bid get the screen until you fly again */
+    else if(!myId && killer){   /* swallowed: the advertiser and the leading bid get the screen until you press Go again */
       dead = true;
       $('cTitle').textContent = (/fire/.test(killer) ? 'Burned by ' : 'Swallowed by ') + killer;
-      $('cText').innerHTML = auto ? 'Back in the air in a moment.' : '<b>Click, tap or press Space</b> to fly again.';
+      $('cText').textContent = auto ? 'Back in the air in a moment.' : '';
+      button = auto ? 'Play' : 'Go again';
     }
-    else if(auto){ $('cTitle').textContent = 'Hive Arena'; $('cText').innerHTML = 'Everyone here is in the same arena. Grow, leave fire, and be the biggest when the ring closes.<br><b>Click or tap to fly your bee.</b>' + (matchMedia('(pointer:coarse)').matches ? '<br>Your first finger is a joystick wherever you put it. A second finger dashes, and shoots if you have fireballs.' : ''); }
-    else if(!myId){ $('cTitle').textContent = 'Out'; $('cText').innerHTML = '<b>Click, tap or press Space</b> to fly again.'; }
+    else if(auto){ $('cTitle').textContent = 'Hive Arena'; $('cText').innerHTML = 'Everyone here is in the same arena. Grow, leave fire, and be the biggest when the ring closes.' + (matchMedia('(pointer:coarse)').matches ? '<br>Your first finger is a joystick wherever you put it. A second finger dashes, and shoots if you have fireballs.' : ''); button = 'Play'; }
+    else if(!myId){ $('cTitle').textContent = 'Out'; $('cText').textContent = ''; button = 'Go again'; }
     else show = false;
     c.hidden = !show; $('dead').hidden = !dead;
+    $('go').hidden = !button; $('goBtn').textContent = button || 'Play';
+    $('cText').hidden = !$('cText').textContent;
+    $('nameRow').hidden = account;
+    $('nameAs').hidden = !account; $('nameAs').textContent = account ? 'Playing as ' + myName : '';
+    if(!account && document.activeElement !== $('nameIn') && !$('nameIn').value && chosen) $('nameIn').value = chosen;
+    $('nameIn').placeholder = myName && !chosen ? myName + ' (or type your own)' : 'Your name';
   }
 
   /* ---------- the day's bids, for the break and for the moment you are swallowed ---------- */
@@ -375,33 +409,70 @@ body.resting #board,body.resting #score,body.resting #feed,body.resting #banner{
 
   /* ---------- talking to the service ---------- */
   function send(m){ if(ws && ws.readyState === 1) ws.send(JSON.stringify(m)); }
-  function connect(){
-    var headers = {'Content-Type': 'application/json'};
+  /* Joining: the service is asked for a ticket (and told the name you typed, if you did), then the
+     game's socket is opened with it. Asking again under a new name swaps the socket over. */
+  var account = false, chosen = '';
+  try { chosen = localStorage.getItem('thArenaName') || ''; } catch (e) {}
+  function connect(name, then){
+    var headers = {'Content-Type': 'application/json'}, body = {g: guest};
     if(session) headers['Authorization'] = 'Bearer ' + session;
-    fetch(API + '/arena/join', {method: 'POST', headers: headers, body: JSON.stringify({g: guest}), cache: 'no-store'})
-      .then(function(r){ return r.json().then(function(d){ if(!r.ok) throw new Error(d.message || 'The arena is not answering.'); return d; }); })
-      .then(function(d){
+    if(name === undefined) name = chosen;
+    if(name) body.name = name;
+    fetch(API + '/arena/join', {method: 'POST', headers: headers, body: JSON.stringify(body), cache: 'no-store'})
+      .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, d: d}; }); })
+      .then(function(res){
+        var d = res.d;
+        if(!res.ok){
+          if(d.field === 'name'){   /* the name was turned down: say why, and carry on under the old one */
+            if(then) then(d.message); else { chosen = ''; try { localStorage.removeItem('thArenaName'); } catch (e) {} connect(''); }
+            return;
+          }
+          throw new Error(d.message || 'The arena is not answering.');
+        }
+        account = Boolean(d.account); chosen = account ? '' : name;
+        try { if(name && !account) localStorage.setItem('thArenaName', name); } catch (e) {}
+        /* the socket before this one, if any, is closed by the service as this one joins, so the arena is never left empty in between */
         var s = ws = new WebSocket(API.replace(/^http/, 'ws') + '/arena/ws?t=' + d.ticket);
         s.onmessage = function(e){
           var m; try { m = JSON.parse(e.data); } catch (err) { return; }
-          if(m.t === 'f'){ onFull(m); if(!auto) send({t: 'i', auto: false}); }
-          else if(m.t === 's'){ if(live) onSnap(m); }
+          if(ws !== s) return;
+          if(m.t === 'f'){ var first = m.name !== undefined; onFull(m); if(!auto) send({t: 'i', auto: false, go: 1}); if(first && then){ var done = then; then = null; done(''); } }
+          else if(m.t === 's'){ if(live && ws === s) onSnap(m); }
           else if(m.t === 'y') onYou(m);
         };
         s.onclose = function(e){ if(ws !== s) return; ws = null; live = false; offset = null; $('sub').textContent = e.code === 4000 ? 'Opened in another tab.' : 'Reconnecting...'; card(); if(e.code !== 4000) setTimeout(connect, 2000); };
       })
-      .catch(function(err){ $('cText').textContent = (err && err.message) || 'The arena is not answering. Trying again...'; $('center').hidden = false; setTimeout(connect, 5000); });
+      .catch(function(err){ if(then){ then('The arena is not answering. Try again.'); return; } $('cText').textContent = (err && err.message) || 'The arena is not answering. Trying again...'; $('center').hidden = false; setTimeout(connect, 5000); });
   }
   connect();
 
   /* ---------- input ---------- */
+  /* Anything the player does counts as being at the controls, and wakes the sound. It does not start
+     a bee: that takes the Play / Go again button, so a stray tap never throws you back in. */
   function took(){
     lastInput = performance.now();
     if(!audio && soundOn) try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
     if(audio && audio.state === 'suspended') try { audio.resume(); } catch (e) {}
-    if(auto){ auto = false; send({t: 'i', auto: false, go: 1}); card(); }
-    else if(!myId && phase === 'play') send({t: 'i', go: 1});
   }
+  /* The button: fly (again), under the name in the box if one was typed. */
+  var going = false;
+  function go(){
+    if(!live || going || phase !== 'play') return;
+    took();
+    var typed = $('nameIn').value.replace(/\s+/g, ' ').trim(), err = $('nameErr');
+    err.textContent = '';
+    function start(){ auto = false; send({t: 'i', auto: false, go: 1}); card(); }
+    if(account || typed === chosen || (!typed && !chosen)){ start(); return; }
+    going = true; $('goBtn').disabled = true;
+    connect(typed, function(problem){
+      going = false; $('goBtn').disabled = false;
+      if(problem){ err.textContent = problem; return; }
+      start();
+    });
+  }
+  $('goBtn').addEventListener('click', go);
+  $('nameIn').addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); go(); } e.stopPropagation(); });
+  $('nameIn').addEventListener('keyup', function(e){ e.stopPropagation(); });
   function fire(){ took(); send({t: 'i', f: 1}); }
   canvas.addEventListener('mousemove', function(e){ mouse.x = e.clientX; mouse.y = e.clientY; if(!auto) lastInput = performance.now(); });
   canvas.addEventListener('mousedown', function(e){ mouse.x = e.clientX; mouse.y = e.clientY; if(e.button === 2){ fire(); return; } var was = auto || !myId; took(); if(!was){ mouse.down = true; mouse.at = performance.now(); } });
@@ -434,7 +505,7 @@ body.resting #board,body.resting #score,body.resting #feed,body.resting #banner{
   addEventListener('keydown', function(e){
     if(e.repeat) return;
     keys[e.code] = true;
-    if(e.code === 'Space' || e.code === 'Enter'){ took(); steer(); e.preventDefault(); }
+    if(e.code === 'Space' || e.code === 'Enter'){ if(!$('go').hidden && !$('center').hidden) go(); else { took(); steer(); } e.preventDefault(); }
     else if(e.code === 'KeyF' || e.code === 'KeyE') fire();
     else if(/^(Arrow|Key[WASD])/.test(e.code)) took();
   });
@@ -442,6 +513,7 @@ body.resting #board,body.resting #score,body.resting #feed,body.resting #banner{
   /* fifteen times a second: where the bee should head, and whether it is dashing (a dash is also sent the moment it is pressed) */
   setInterval(function(){
     if(!live || auto) return;
+    if(joy || padDash || mouse.down) lastInput = performance.now();   /* a finger held still is still at the controls */
     if(performance.now() - lastInput > 25000){ auto = true; send({t: 'i', auto: true}); card(); return; }   /* nobody at the controls: the service takes the stick back */
     steer();
   }, 66);
@@ -491,9 +563,13 @@ body.resting #board,body.resting #score,body.resting #feed,body.resting #banner{
   /* Where another bee is right now: a little behind the service, eased between its last two reports. */
   function pos(id){
     var b = bees[id]; if(!b || !b.c) return null;
-    var t = simNow() - 120, f = b.c.n === b.p.n ? 1 : Math.max(0, Math.min(1.2, (t - b.p.n) / (b.c.n - b.p.n)));
-    var da = ((b.c.a - b.p.a + 9.42478) % 6.28318) - 3.14159;
-    return {x: b.p.x + (b.c.x - b.p.x) * f, y: b.p.y + (b.c.y - b.p.y) * f, m: b.p.m + (b.c.m - b.p.m) * Math.min(1, f), a: b.p.a + da * Math.min(1, f), flags: b.flags, fb: b.fb};
+    var t = simNow() - delay, h = b.h, i = h.length - 1;
+    while(i > 0 && h[i].n > t) i--;
+    var p = h[i], c = h[i + 1] || h[i], p0 = c === p && i > 0 ? h[i - 1] : p;
+    if(c === p) c = p, p = p0;   /* past the newest report: carry on along the last stretch, a little way */
+    var f = c.n === p.n ? 1 : Math.max(0, Math.min(1.35, (t - p.n) / (c.n - p.n)));
+    var da = ((c.a - p.a + 9.42478) % 6.28318) - 3.14159;
+    return {x: p.x + (c.x - p.x) * f, y: p.y + (c.y - p.y) * f, m: p.m + (c.m - p.m) * Math.min(1, f), a: p.a + da * Math.min(1, f), flags: b.flags, fb: b.fb};
   }
   function drawBee(id, p, now){
     var info = roster[id] || {name: '', kind: 'b'}, r = radius(p.m), mine = id === myId, wasp = info.kind === 'w', flap = Math.sin(now / 38 + id) * .35;
@@ -593,7 +669,7 @@ body.resting #board,body.resting #score,body.resting #feed,body.resting #banner{
       hudAt = now;
       var left = phaseEnds - sim, closing = Math.min(60, roundLen * .4) * 1000, people = 0;
       $('mass').textContent = me ? Math.round(me.m) : 0;
-      $('sub').textContent = auto ? 'Click to fly your bee' : me && me.flags & 64 ? 'A queen is near: you cannot dash' : myName + (wins ? ' · ' + wins + (wins === 1 ? ' round won' : ' rounds won') : '');
+      $('sub').textContent = auto ? 'Press Play to fly your bee' : me && me.flags & 64 ? 'A queen is near: you cannot dash' : myName + (wins ? ' · ' + wins + (wins === 1 ? ' round won' : ' rounds won') : '');
       var fb = me ? me.fb : 0; $('ammo').hidden = !fb; $('ammo').textContent = fb ? '🔥 x' + fb + (matchMedia('(pointer:coarse)').matches ? '  (second finger)' : '  (double-click or F)') : ''; $('padFire').hidden = !fb;
       $('clock').hidden = false; $('clock').classList.toggle('closing', phase === 'play' && left < closing);
       $('clockK').textContent = phase === 'rest' ? 'Next round in' : left < closing ? 'The fire is closing in' : 'Round ' + roundNo;
